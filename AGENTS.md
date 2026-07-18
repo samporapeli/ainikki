@@ -1,17 +1,17 @@
 # AGENTS.md
 
-## Kielen ja kommenttien säännöt
+## Language and comment rules
 
-- **Älä kommentoi nimiä.** Tiedoston, funktion tai muun nimikkeen nimen pitäisi puhua puolestaan. Jos nimi vaatii selityksen, se on huono nimi - valitse parempi nimi sen sijaan.
-- Älä kommentoi triviaaleja asioita (esim. `set -euo pipefail` ei tarvitse kommenttia).
-- Kommentit ovat "why", ei "what". Jos "what" ei ole itsestäänselvä koodista, koodi on liian vaikeaa.
+- **Do not comment on names.** The name of a file, function, or other identifier should speak for itself. If a name needs explanation, it is a bad name - choose a better name instead.
+- Do not comment on trivial things (e.g. `set -euo pipefail` does not need a comment).
+- Comments are "why", not "what". If "what" is not self-evident from the code, the code is too hard.
 
-## Koodityyli
+## Code style
 
-- Python 3.13, pytest - testit `def test_*()` + `pytest` tai `python -m pytest`
-- Kaikki promptit ja config suomeksi, koodikomentit suomeksi
-- Ei turhia dependencies: httpx, pydantic, pyyaml, trafilatura, pytest - kaikki jo `requirements.txt`:ssä
-- Ei emojisia tai turhia koristeita koodeissa
+- Python 3.13, pytest - tests `def test_*()` + `pytest` or `python -m pytest`
+- All prompts and config in Finnish, code comments in Finnish
+- No unnecessary dependencies: httpx, pydantic, pyyaml, trafilatura, pytest - all already in `requirements.txt`
+- No emojis or unnecessary decorations in code
 
 ## Pipeline
 
@@ -19,9 +19,18 @@ Collect → Dedup → Cluster → Score → Enrich → Compose → Overview → 
 
 - Failure policy: cluster = graceful degradation, score = hard failure, compose = per-item
 - OpenRouter LLM, paid models required
-- `strip_code_fences()` kaikille LLM-vastauksille ennen `json.loads()`
-- `response_format: {"type": "json_object"}` OpenAI-yhteensopivissa pyynnöissä
+- `strip_code_fences()` for all LLM responses before `json.loads()`
+- `response_format: {"type": "json_object"}` in OpenAI-compatible requests
 
-## Sivusto
+## Site
 
-Astro, staattinen HTML, zero JS. Skripti `pipeline.sh` = data-pipeline, ei sivustobuildi.
+Astro, static HTML, zero JS. Script `pipeline.sh` = data pipeline, not site build.
+
+## Commits
+
+- Commit messages in English
+- Conventional commit style: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:` etc.
+- Subject line max 50 characters, no period at the end
+- Body line wrap at 72 characters
+- Avoid lengthy explanations
+- Always ask for user verification before committing
