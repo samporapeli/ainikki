@@ -28,9 +28,13 @@ Astro, static HTML, zero JS. Script `pipeline.sh` = data pipeline, not site buil
 
 ## Commits
 
-- Commit messages in English
 - Conventional commit style: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:` etc.
 - Subject line max 50 characters, no period at the end
 - Body line wrap at 72 characters
-- Avoid lengthy explanations
-- Always ask for user verification before committing
+- Commit messages in English. Preserve original Finnish terms when referencing Finnish text changes (e.g. `fix: typo (tomittaja -> toimittaja)`)
+- Only stage changes relevant to the commit
+- Prefer single-line commits, but do not force brevity over clarity. If a commit message starts to read like documentation, the explanation belongs in code comments or docs instead
+- After committing, verify the commit contains exactly what was intended - nothing extra, nothing missing
+- Never commit or amend without explicit user permission. When amending, verify the updated message is still accurate
+- Run tests before committing, do not commit if tests fail
+- Propose commits with a drafted message when it seems appropriate
