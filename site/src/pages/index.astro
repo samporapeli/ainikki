@@ -30,9 +30,6 @@ if (fs.existsSync(dataDir)) {
       mukaan ja kirjoittaa jokaisesta lyhyen suomenkielisen tiivistelmän.
       Tulokset julkaistaan staattisena verkkosivustona.
     </p>
-    <p class="meta">
-      Avoin lähdekoodi · <a href="https://github.com/samporapeli/ainikki">GitHub</a>
-    </p>
   </section>
 
   {topics.length === 0 ? (
@@ -46,32 +43,27 @@ if (fs.existsSync(dataDir)) {
       ))}
     </nav>
   )}
+
+  <p class="footer">
+    Avoin lähdekoodi · <a href="https://github.com/samporapeli/ainikki">GitHub</a>
+  </p>
 </Layout>
 
 <style>
   header {
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
   }
 
   .tagline {
     color: var(--fg-muted);
     font-size: 1.05rem;
-    margin-top: 0.3rem;
+    margin-top: 0.35rem;
   }
 
   .about {
     margin-bottom: 2.5rem;
     color: var(--fg-muted);
     line-height: 1.7;
-  }
-
-  .about p {
-    margin-bottom: 0.75rem;
-  }
-
-  .meta {
-    font-size: 0.9rem;
-    color: var(--fg-subtle);
   }
 
   .empty {
@@ -81,20 +73,27 @@ if (fs.existsSync(dataDir)) {
   .topics {
     display: flex;
     flex-direction: column;
-    gap: 0;
   }
 
   .topic-link {
     display: block;
-    padding: 0.85rem 0;
+    padding: 1rem 0;
     border-bottom: 1px solid var(--border);
-    font-weight: 700;
+    font-weight: 600;
     font-size: 1.1rem;
-    letter-spacing: 0.03em;
+  }
+
+  .topic-link:first-child {
+    padding-top: 0;
   }
 
   .topic-link:hover {
     text-decoration: none;
-    background: var(--card-bg);
+  }
+
+  .footer {
+    margin-top: 3rem;
+    font-size: 0.85rem;
+    color: var(--fg-subtle);
   }
 </style>

@@ -55,9 +55,7 @@ function fiDate(iso: string): string {
       const dd = b.display_date || b.period_start;
       return (
         <a href={`${dd}/`} class="entry">
-          <div class="entry-head">
-            <span class="date">{fiDate(dd)}</span>
-          </div>
+          <span class="date">{fiDate(dd)}</span>
           <p class="overview">{b.overview}</p>
         </a>
       );
@@ -67,41 +65,40 @@ function fiDate(iso: string): string {
 
 <style>
   .back {
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
     font-size: 0.9rem;
   }
 
   header {
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
   }
 
   .list {
     display: flex;
     flex-direction: column;
-    gap: 0;
   }
 
   .entry {
     display: block;
-    padding: 1rem 0;
+    padding: 1.25rem 0;
     border-bottom: 1px solid var(--border);
     text-decoration: none;
     color: var(--fg);
   }
 
-  .entry:hover {
-    color: var(--fg);
-    text-decoration: none;
-    background: var(--card-bg);
+  .entry:first-child {
+    padding-top: 0;
   }
 
-  .entry-head {
-    margin-bottom: 0.3rem;
+  .entry:hover {
+    text-decoration: none;
   }
 
   .date {
-    font-variant-numeric: tabular-nums;
+    display: block;
     font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.35rem;
   }
 
   .overview {

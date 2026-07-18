@@ -4,7 +4,7 @@ const { warnings } = Astro.props as { warnings: string[] };
 
 {warnings.length > 0 && (
   <details class="warnings">
-    <summary>Huomautukset ({warnings.length})</summary>
+    <summary>{warnings.length} huomiota</summary>
     <ul>
       {warnings.map(w => <li>{w}</li>)}
     </ul>
@@ -13,18 +13,14 @@ const { warnings } = Astro.props as { warnings: string[] };
 
 <style>
   .warnings {
-    margin-top: 2rem;
-    border: 1px solid var(--warning-border);
-    background: var(--warning-bg);
-    border-radius: 6px;
-    padding: 0.75rem 1rem;
+    margin-top: 2.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
   }
 
   .warnings summary {
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--fg-muted);
+    font-size: 0.85rem;
+    color: var(--fg-subtle);
   }
 
   .warnings ul {

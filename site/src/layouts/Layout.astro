@@ -14,7 +14,6 @@ const { title, description = 'AI-uutiskooste' } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <title>{title}</title>
-    <!-- Privacy-friendly analytics by Plausible -->
     <script async src="https://plausible.sampo.website/js/pa-C6_88dp755AMB63LNeTcV.js"></script>
     <script>
       window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
@@ -25,13 +24,10 @@ const { title, description = 'AI-uutiskooste' } = Astro.props;
         --bg: #fff;
         --fg: #1a1a1a;
         --fg-muted: #555;
-        --fg-subtle: #888;
-        --border: #ddd;
-        --card-bg: #f8f8f8;
+        --fg-subtle: #999;
+        --border: #e0e0e0;
         --link: #0055aa;
         --link-hover: #003d7a;
-        --warning-bg: #fff8e1;
-        --warning-border: #f0d060;
       }
 
       @media (prefers-color-scheme: dark) {
@@ -39,13 +35,10 @@ const { title, description = 'AI-uutiskooste' } = Astro.props;
           --bg: #111;
           --fg: #e4e4e4;
           --fg-muted: #aaa;
-          --fg-subtle: #777;
-          --border: #333;
-          --card-bg: #1a1a1a;
+          --fg-subtle: #666;
+          --border: #2a2a2a;
           --link: #6aa8ff;
           --link-hover: #99c4ff;
-          --warning-bg: #2a2510;
-          --warning-border: #8a7a30;
         }
       }
 
@@ -61,14 +54,15 @@ const { title, description = 'AI-uutiskooste' } = Astro.props;
           Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
         color: var(--fg);
         background: var(--bg);
-        line-height: 1.6;
+        line-height: 1.65;
         font-size: 17px;
+        -webkit-font-smoothing: antialiased;
       }
 
       body {
-        max-width: 65ch;
+        max-width: 68ch;
         margin: 0 auto;
-        padding: 2rem 1.25rem 4rem;
+        padding: 3rem 1.5rem 5rem;
       }
 
       a {
@@ -82,9 +76,10 @@ const { title, description = 'AI-uutiskooste' } = Astro.props;
       }
 
       h1 {
-        font-size: clamp(1.5rem, 4vw, 2rem);
+        font-size: clamp(1.6rem, 4vw, 2.1rem);
         line-height: 1.2;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.25rem;
+        letter-spacing: -0.01em;
       }
 
       h2 {
@@ -95,7 +90,20 @@ const { title, description = 'AI-uutiskooste' } = Astro.props;
       hr {
         border: none;
         border-top: 1px solid var(--border);
-        margin: 2rem 0;
+        margin: 2.5rem 0;
+      }
+
+      details {
+        font-size: 0.9rem;
+        color: var(--fg-subtle);
+      }
+
+      details summary {
+        cursor: pointer;
+      }
+
+      details summary:hover {
+        color: var(--fg-muted);
       }
     </style>
   </head>

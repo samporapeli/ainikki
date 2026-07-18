@@ -3,8 +3,6 @@ interface Source {
   url: string;
   title: string;
   source_type: string;
-  published_at?: string;
-  raw_signal?: Record<string, unknown>;
 }
 
 interface NewsItem {
@@ -12,55 +10,44 @@ interface NewsItem {
   summary: string;
   sources: Source[];
   rank: number;
-  tags?: string[];
-  selection_reason?: string;
 }
 
 const { item } = Astro.props as { item: NewsItem };
 
-function hostname(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return url;
-  }
-}
+const primarySource = item.sources[0];
 ---
 
-<article class="card">
+<article class="story">
   <h2>{item.headline}</h2>
   <p class="summary">{item.summary}</p>
-  <div class="meta">
-    <span class="sources">
-      {item.sources.map((s, i) => (
-        <span>
-          {i > 0 && ' / '}
-          <a href={s.url} target="_blank" rel="noopener">{hostname(s.url)}</a>
-        </span>
-      ))}
-    </span>
-  </div>
+  {primarySource && (
+    <p class="source">
+      <a href={primarySource.url} target="_blank" rel="noopener">Lähde ↗</a>
+    </p>
+  )}
 </article>
 
 <style>
-  .card {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1.25rem;
-    margin-bottom: 1rem;
+  .story {
+    padding: 1.5rem 0;
+  }
+
+  .story + .story {
+    border-top: 1px solid var(--border);
+  }
+
+  h2 {
+    margin-bottom: 0.5rem;
   }
 
   .summary {
     color: var(--fg-muted);
-    margin-bottom: 0.6rem;
     font-size: 0.95rem;
+    line-height: 1.65;
+    margin-bottom: 0.5rem;
   }
 
-  .meta {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+  .source {
     font-size: 0.85rem;
     color: var(--fg-subtle);
   }

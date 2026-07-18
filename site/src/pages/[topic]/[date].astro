@@ -46,14 +46,17 @@ function fiDate(iso: string): string {
   </nav>
 
   <header>
-    <h1>{topicUpper} / {fiDate(dateStr)}</h1>
+    <h1>{topicUpper}</h1>
+    <p class="date">{fiDate(dateStr)}</p>
     <p class="generated">
-      Generoitu {new Date(briefing.meta.generated_at).toLocaleString('fi-FI')}
+      Generoitu {new Date(briefing.meta.generated_at).toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}
     </p>
     <ModelBadge modelsUsed={briefing.meta.models_used} />
   </header>
 
   <Overview text={briefing.overview} />
+
+  <hr />
 
   <section class="stories">
     {briefing.items
@@ -67,23 +70,28 @@ function fiDate(iso: string): string {
 
 <style>
   .back {
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
     font-size: 0.9rem;
   }
 
   header {
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .date {
+    font-size: 1.1rem;
+    color: var(--fg-muted);
+    margin-top: 0.25rem;
   }
 
   .generated {
     color: var(--fg-subtle);
-    font-size: 0.85rem;
-    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    margin-top: 0.35rem;
   }
 
   .stories {
     display: flex;
     flex-direction: column;
-    gap: 0;
   }
 </style>
