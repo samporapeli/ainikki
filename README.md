@@ -58,7 +58,7 @@ puuttuvat, Telegram-vaihe ohitetaan hiljaa.
 | 1 | **Collect** | Ei | source-URL:t, aikaikkuna | `list[RawItem]` per lähde | `sources/{topic}.yaml` |
 | 2 | **Dedup** | Ei | kaikki RawItemit | `list[Candidate]` (exact-URL dedup) | — |
 | 3 | **Cluster** | Kyllä | deduped candidates | `list[Candidate]` ryhmiteltynä | — |
-| 4 | **Score** | Kyllä | klusteroidut candidaatit | ranking + `selection_reason` | `rubrics/{topic}_v*.yaml` |
+| 4 | **Score** | Kyllä | klusteroidut kandidaatit | ranking + `selection_reason` | `rubrics/{topic}_v*.yaml` |
 | 5 | **Enrich** | Ei | top N valittua | täysi artikkelisisältö per item | — |
 | 6 | **Compose** | Kyllä (per item) | 1 itemin sisältö + persona + guardrails | headline + summary suomeksi | `personas/*`, `guardrails/*`, `golden_examples/*` |
 | 7 | **Overview** | Kyllä | kaikki composed itemit | 1-2 lauseen päivän yleiskatsaus | — |

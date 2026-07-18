@@ -41,7 +41,7 @@ def test_dedup_merges_cross_source_duplicate():
     candidates = dedup_candidates(all_items)
 
     # 4 uniikkia HN-storya, joista yksi (Anthropic) yhdistyy RSS-duplikaatin kanssa
-    assert len(candidates) == 4, f"odotettiin 4 candidaattia, saatiin {len(candidates)}"
+    assert len(candidates) == 4, f"odotettiin 4 kandidaattia, saatiin {len(candidates)}"
 
     anthropic_candidate = next(
         c for c in candidates if "anthropic.com" in c.normalized_url

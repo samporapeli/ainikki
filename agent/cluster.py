@@ -1,5 +1,5 @@
 """
-Cluster-step: ryhmittelee samaa tarinaa käsittelevät candidaatit yhteen,
+Cluster-step: ryhmittelee samaa tarinaa käsittelevät kandidaatit yhteen,
 vaikka niillä olisi eri URL (esim. TechCrunch ja alkuperäinen yhtiön blogi
 molemmat samasta julkaisusta). Tämä on ero dedup-stepiin, joka yhdisti
 vain kirjaimellisesti saman URL:n.
@@ -128,7 +128,7 @@ def cluster_candidates(candidates: list[Candidate], llm_call: LlmCall) -> Cluste
         return _fallback_singletons(candidates, f"mallin vastaus ei ole validia JSON:ia ({e})")
 
     if not _validate_full_coverage(response, len(candidates)):
-        return _fallback_singletons(candidates, "mallin vastaus ei kattanut kaikkia candidaatteja täsmälleen kerran")
+        return _fallback_singletons(candidates, "mallin vastaus ei kattanut kaikkia kandidaatteja täsmälleen kerran")
 
     result = []
     for cluster in response.clusters:

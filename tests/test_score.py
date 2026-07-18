@@ -13,7 +13,7 @@ REAL_RUBRIC = Path("config/rubrics/ai_scoring_rubric_v1.yaml")
 
 
 def _build_test_clusters() -> list[ClusteredCandidate]:
-    """4 klusteroitua candidaattia (tässä: singleton-klustereita, cluster-stepin
+    """4 klusteroitua kandidaattia (tässä: singleton-klustereita, cluster-stepin
     tarkka toiminta ei ole tämän testin vastuulla - ks. tests/test_cluster.py)."""
     fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
     hn_items = parse_hn_hits(fixture["hits"])
@@ -36,7 +36,7 @@ def test_score_clusters_happy_path():
     clusters = _build_test_clusters()
 
     def mock_llm(system_prompt: str, user_prompt: str) -> str:
-        # valitaan candidaatit 0 ja 3, rank-järjestys käännettynä testataksemme sortin
+        # valitaan kandidaatit 0 ja 3, rank-järjestys käännettynä testataksemme sortin
         return json.dumps({"selected": [
             {"candidate_index": 3, "rank": 2, "selection_reason": "kiinnostava tutkimustulos"},
             {"candidate_index": 0, "rank": 1, "selection_reason": "laaja vaikutus, uusi mallijulkaisu"},
@@ -110,7 +110,7 @@ def test_prompt_builds_with_real_production_rubric():
 
 def test_rejects_irrelevant_candidates():
     """Varmistaa että score.py käsittelee oikein tilanteen jossa osa
-    candidaateista hylätään relevanssin perusteella (mock-LLM valitsee
+    kandidaateista hylätään relevanssin perusteella (mock-LLM valitsee
     vain osan)."""
     clusters = _build_test_clusters()
     n_clusters = len(clusters)

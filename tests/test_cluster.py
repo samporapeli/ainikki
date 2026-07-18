@@ -9,7 +9,7 @@ from agent.schema import RawItem, SourceType, Candidate
 
 
 def _build_test_candidates() -> list[Candidate]:
-    """5 candidaattia: 4 alkuperäisestä HN-fixturesta + 1 TechCrunch-artikkeli
+    """5 kandidaattia: 4 alkuperäisestä HN-fixturesta + 1 TechCrunch-artikkeli
     joka käsittelee SAMAA Anthropic-uutista eri URL:illa kuin HN-linkki.
     Dedup ei yhdistä näitä (eri URL) - se on juuri Cluster-stepin tehtävä.
     """
@@ -48,7 +48,7 @@ def _mock_llm_group_anthropic_stories(system_prompt: str, user_prompt: str) -> s
 
 def test_cross_url_clustering():
     candidates = _build_test_candidates()
-    assert len(candidates) == 5, f"odotettiin 5 candidaattia ennen klusterointia, saatiin {len(candidates)}"
+    assert len(candidates) == 5, f"odotettiin 5 kandidaattia ennen klusterointia, saatiin {len(candidates)}"
 
     result = cluster_candidates(candidates, _mock_llm_group_anthropic_stories)
     clustered = result.clusters
@@ -72,18 +72,18 @@ def test_singletons_preserved():
 def test_fallback_on_malformed_json():
     candidates = _build_test_candidates()
     result = cluster_candidates(candidates, lambda s, u: "tämä ei ole JSON:ia ollenkaan")
-    assert len(result.clusters) == len(candidates), "fallbackissa pitäisi olla yhtä monta ryhmää kuin candidaattia"
+    assert len(result.clusters) == len(candidates), "fallbackissa pitäisi olla yhtä monta ryhmää kuin kandidaattia"
     assert all(c.cluster_reason and "fallback" in c.cluster_reason for c in result.clusters)
     assert result.warning is not None, "fallback EI saa olla hiljainen - warning pitää palautua"
     assert "degradoitui" in result.warning
 
 
 def test_fallback_on_incomplete_coverage():
-    """Malli unohti yhden candidaatin kokonaan vastauksesta - pitää havaita ja fallbackata."""
+    """Malli unohti yhden kandidaatin kokonaan vastauksesta - pitää havaita ja fallbackata."""
     candidates = _build_test_candidates()
 
     def bad_response(system_prompt: str, user_prompt: str) -> str:
-        # vain 3 ekaa candidaattia mainittu 5:stä - puutteellinen kattavuus
+        # vain 3 ekaa kandidaattia mainittu 5:stä - puutteellinen kattavuus
         clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(3)]
         return json.dumps({"clusters": clusters})
 

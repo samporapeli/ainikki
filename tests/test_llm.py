@@ -119,7 +119,7 @@ def test_make_llm_call_end_to_end_with_cluster():
     """
     fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
     hn_items = parse_hn_hits(fixture["hits"])
-    candidates = dedup_candidates(hn_items)  # 4 candidaattia
+    candidates = dedup_candidates(hn_items)  # 4 kandidaattia
 
     def handler(request: httpx.Request) -> httpx.Response:
         # ei klusteroida mitään yhteen tässä testissä - kaikki singleton-ryhmiksi

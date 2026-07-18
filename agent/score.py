@@ -1,5 +1,5 @@
 """
-Score-step: valitsee ja järjestää klusteroidut candidaatit rubriikin (ks.
+Score-step: valitsee ja järjestää klusteroidut kandidaatit rubriikin (ks.
 config/rubrics/*.yaml) perusteella. Tämä on KRIITTINEN step (ks. README.md
 "Failure-policy stepeittäin") - toisin kuin cluster-step, tässä EI degradoida
 hiljaisesti jos mallin vastaus on rikki. Ei ole periaatteellista tapaa arvata
