@@ -1,5 +1,5 @@
 """
-Overview-step: kirjoittaa 1-2 lauseen yleiskatsauksen koko koosteelle,
+Overview-step: kirjoittaa 2-3 lauseen yleiskatsauksen koko koosteelle,
 käyttäen VAIN jo Compose-stepin tuottamia headline+summary-tekstejä -
 ei koskaan raakalähteitä tai artikkelisisältöä. Tämä pitää kontekstin
 pienenä ja faktavirheriskin minimaalisena, koska tekstit on jo kertaalleen
@@ -7,7 +7,7 @@ guardrailsien läpi vietyjä.
 
 Erikoistapaus muihin ei-kriittisiin stepeihin verrattuna: Briefing.overview
 on PAKOLLINEN kenttä schemassa, joten pelkkä "pudota pois" ei ole vaihtoehto
-jos LLM epäonnistuu. Sen sijaan käytetään deterministista fallbackia (koostettu
+jos LLM epäonnistuu. Sen sijaan käytetään determinististä fallbackia (koostettu
 suoraan jo validoiduista otsikoista ilman LLM:ää) - aina toimiva, mutta
 näkyvästi lokitettu ja merkitty warningiksi.
 """
@@ -24,16 +24,19 @@ from agent.cluster import LlmCall
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """Olet uutistoimittaja. Saat listan tämän päivän julkaistuista
-otsikoista ja niiden yhteenvedoista. Kirjoita 1-2 lauseen suomenkielinen
-yleiskatsaus joka kokoaa päivän aiheet yhteen - älä toista jokaista otsikkoa
-erikseen, vaan nosta esiin yhteinen teema/teemat jos niitä on, tai kerro
-lyhyesti mistä päivä koostui jos aiheet ovat hajanaisia.
 
-Käytä VAIN annettua tekstiä, älä lisää tietoa jota siinä ei ole.
+def _build_system_prompt(topic: str) -> str:
+    return f"""Olet uutistoimittaja. Saat listan artikkeleista aiheesta "{topic}".
+Artikkelit on jo suodatettu aiheen mukaan, joten älä erikseen kerro mistä aiheesta on kyse.
 
-Vastaa VAIN JSON-muodossa, ei muuta tekstiä:
-{"overview": "..."}"""
+Kirjoita 2-3 lauseen yleiskatsaus: nosta esiin yhteiset teemat ja
+keskeiset toimijat nimeltä (kerro lyhyesti kuka tai mikä entiteetti on kyseessä, jos
+se ei ole ilmeistä). Jos aiheet ovat hajanaisia, kerro lyhyesti mistä aiheista koosteessa puhutaan.
+
+Käytä VAIN annettuja otsikoita ja yhteenvetoja, älä lisää tietoa joita niissä ei ole.
+
+Vastaa VAIN JSON-muodossa:
+{{"overview": "..."}}"""
 
 
 class OverviewResponse(BaseModel):
@@ -45,11 +48,11 @@ class OverviewResult(NamedTuple):
     warning: str | None
 
 
-def build_overview_prompt(items: list[NewsItem]) -> tuple[str, str]:
+def build_overview_prompt(items: list[NewsItem], topic: str) -> tuple[str, str]:
     ordered = sorted(items, key=lambda i: i.rank)
     lines = [f"{i.rank}. {i.headline} — {i.summary}" for i in ordered]
     user_prompt = "Tämän päivän jutut:\n" + "\n".join(lines)
-    return SYSTEM_PROMPT, user_prompt
+    return _build_system_prompt(topic), user_prompt
 
 
 def _fallback_overview(items: list[NewsItem], max_headlines: int = 3) -> str:
@@ -60,11 +63,12 @@ def _fallback_overview(items: list[NewsItem], max_headlines: int = 3) -> str:
     return "Tämän päivän aiheita: " + "; ".join(top_headlines) + "."
 
 
-def generate_overview(items: list[NewsItem], llm_call: LlmCall) -> OverviewResult:
+def generate_overview(items: list[NewsItem], llm_call: LlmCall,
+                       topic: str) -> OverviewResult:
     if not items:
         return OverviewResult(overview="Ei julkaistavia juttuja tälle ajalle.", warning=None)
 
-    system_prompt, user_prompt = build_overview_prompt(items)
+    system_prompt, user_prompt = build_overview_prompt(items, topic)
     raw_response = llm_call(system_prompt, user_prompt)
 
     try:

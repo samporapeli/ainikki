@@ -15,7 +15,7 @@ def test_build_overview_prompt_uses_only_headline_and_summary():
         _make_news_item("Uusi malli julkaistu", "Lyhyt kuvaus mallista.", rank=2),
         _make_news_item("Tutkimus yllättää", "Tutkijat löysivät jotain uutta.", rank=1),
     ]
-    _, user_prompt = build_overview_prompt(items)
+    _, user_prompt = build_overview_prompt(items, "testi-aihe")
 
     assert "Tutkimus yllättää" in user_prompt
     assert "Uusi malli julkaistu" in user_prompt
@@ -30,7 +30,7 @@ def test_generate_overview_happy_path():
     def mock_llm(system_prompt: str, user_prompt: str) -> str:
         return json.dumps({"overview": "Päivän isoin aihe oli uusi mallijulkaisu."})
 
-    result = generate_overview(items, mock_llm)
+    result = generate_overview(items, mock_llm, "testi-aihe")
     assert result.overview == "Päivän isoin aihe oli uusi mallijulkaisu."
     assert result.warning is None
 
@@ -40,7 +40,7 @@ def test_generate_overview_fallback_on_malformed_response():
              _make_news_item("Juttu B", "Kuvaus B.", rank=2),
              _make_news_item("Juttu C", "Kuvaus C.", rank=3)]
 
-    result = generate_overview(items, lambda s, u: "ei json:ia ollenkaan")
+    result = generate_overview(items, lambda s, u: "ei json:ia ollenkaan", "testi-aihe")
 
     assert result.warning is not None
     assert "fallback" in result.warning
@@ -56,7 +56,7 @@ def test_generate_overview_empty_items_skips_llm_call():
         call_count["n"] += 1
         return json.dumps({"overview": "ei pitäisi tulla tänne"})
 
-    result = generate_overview([], mock_llm)
+    result = generate_overview([], mock_llm, "testi-aihe")
 
     assert call_count["n"] == 0, "tyhjällä item-listalla ei pitäisi kutsua LLM:ää ollenkaan"
     assert "Ei julkaistavia" in result.overview
@@ -70,7 +70,7 @@ def test_fallback_respects_rank_order_not_list_order():
         _make_news_item("Ensimmäinen", "...", rank=1),
         _make_news_item("Toinen", "...", rank=2),
     ]
-    result = generate_overview(items, lambda s, u: "rikki")
+    result = generate_overview(items, lambda s, u: "rikki", "testi-aihe")
     idx_first = result.overview.index("Ensimmäinen")
     idx_second = result.overview.index("Toinen")
     idx_third = result.overview.index("Kolmas")
@@ -85,7 +85,7 @@ def test_code_fenced_json_is_parsed():
         inner = json.dumps({"overview": "Koodiblokki-yleiskatsaus."})
         return f"```json\n{inner}\n```"
 
-    result = generate_overview(items, mock_llm_code_fence)
+    result = generate_overview(items, mock_llm_code_fence, "testi-aihe")
     assert result.overview == "Koodiblokki-yleiskatsaus."
     assert result.warning is None
 

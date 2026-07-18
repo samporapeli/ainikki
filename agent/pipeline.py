@@ -137,7 +137,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     # 7. Overview
     llm_overview = _resolve_llm_call("overview", models_config, config_paths, model_overrides,
                                       llm_client, models_used)
-    overview_result = generate_overview(compose_result.items, llm_overview)
+    overview_result = generate_overview(compose_result.items, llm_overview, topic)
 
     # 8. Validate (KRIITTINEN - EmptyBriefingError jos ei mitään jäljellä)
     briefing = assemble_briefing(

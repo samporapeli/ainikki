@@ -51,7 +51,7 @@ def _make_llm_handler(score_min=3, score_max=10):
         elif "AI-uutiskoosteen toimittaja" in system_prompt:
             content = json.dumps({"headline": "Testiotsikko juttu",
                                    "summary": "Testiyhteenveto joka kuvaa juttua lyhyesti."})
-        elif "julkaistuista" in system_prompt:
+        elif "suodatettu aiheen" in system_prompt:
             content = json.dumps({"overview": "Päivän aiheet liittyivät tekoälyyn ja sen kehitykseen."})
         else:
             raise AssertionError(f"tunnistamaton system prompt: {system_prompt[:100]}")
