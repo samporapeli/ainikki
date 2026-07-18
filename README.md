@@ -44,10 +44,12 @@ Generoitu HTML päätyy `site/dist/`. Deployaus:
 Cron-sääntö (päivittäin klo 06:30):
 
 ```
-30 6 * * * OPENROUTER_API_KEY='sk-...' DEPLOY_TARGET='user@host:/var/www/ainikki' /path/to/ainikki/daily.sh >> /path/to/ainikki-cron.log 2>&1
+30 6 * * * OPENROUTER_API_KEY='sk-...' DEPLOY_TARGET='user@host:/var/www/ainikki' TELEGRAM_BOT_TOKEN='...' TELEGRAM_CHAT_ID='...' /path/to/ainikki/daily.sh >> /path/to/ainikki-cron.log 2>&1
 ```
 
 Aseta avaimet ja kohde suoraan croniin, ei profiilitiedostoihin.
+Telegram-viesti on vapaaehtoinen: jos `TELEGRAM_BOT_TOKEN` ja `TELEGRAM_CHAT_ID`
+puuttuvat, Telegram-vaihe ohitetaan hiljaa.
 
 ## Vaiheet
 
