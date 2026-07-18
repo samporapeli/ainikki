@@ -114,10 +114,15 @@ class Briefing(BaseModel):
     period: Period
     period_start: date
     period_end: date
+    display_date: date | None = None  # päivä joka näkyy käyttäjälle; None = period_start
     overview: str
     items: list[NewsItem]
     meta: GenerationMeta
     # Ei-kriittiset degradoinnit (esim. cluster-step epäonnistui ja fallbackasi
-    # singletoneihin) kirjataan tänne - näkyy lopullisessa JSON:issa, ei jää
+    # singletoneihin) kirjataan tänne - näkyy lopullisessa JSON:assa, ei jää
     # vain lokeihin piiloon. Tyhjä lista = kaikki stepit toimivat odotetusti.
     warnings: list[str] = Field(default_factory=list)
+
+    @property
+    def effective_display_date(self) -> date:
+        return self.display_date or self.period_start

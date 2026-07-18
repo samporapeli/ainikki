@@ -22,7 +22,8 @@ class EmptyBriefingError(Exception):
 def assemble_briefing(topic: str, period: Period, period_start: date, period_end: date,
                        overview_result: OverviewResult, compose_result: ComposeResult,
                        models_used: dict[str, str], pipeline_version: str,
-                       rubric_version: str, extra_warnings: list[str] | None = None) -> Briefing:
+                       rubric_version: str, display_date: date | None = None,
+                       extra_warnings: list[str] | None = None) -> Briefing:
     if not compose_result.items:
         raise EmptyBriefingError(
             f"Ei yhtään validoitua itemiä jäljellä topicille '{topic}' "
@@ -46,6 +47,6 @@ def assemble_briefing(topic: str, period: Period, period_start: date, period_end
 
     return Briefing(
         topic=topic, period=period, period_start=period_start, period_end=period_end,
-        overview=overview_result.overview, items=compose_result.items, meta=meta,
-        warnings=all_warnings,
+        display_date=display_date, overview=overview_result.overview,
+        items=compose_result.items, meta=meta, warnings=all_warnings,
     )

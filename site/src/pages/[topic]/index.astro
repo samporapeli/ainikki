@@ -20,7 +20,8 @@ export function getStaticPaths() {
   }
 
   return [...byTopic.entries()].map(([topic, briefings]) => {
-    briefings.sort((a: any, b: any) => b.period_start.localeCompare(a.period_start));
+    briefings.sort((a: any, b: any) =>
+      (b.display_date || b.period_start).localeCompare(a.display_date || a.period_start));
     return {
       params: { topic },
       props: { topic, briefings },
@@ -50,14 +51,17 @@ function fiDate(iso: string): string {
   </header>
 
   <section class="list">
-    {briefings.map((b: any) => (
-      <a href={`${b.period_start}/`} class="entry">
-        <div class="entry-head">
-          <span class="date">{fiDate(b.period_start)}</span>
-        </div>
-        <p class="overview">{b.overview}</p>
-      </a>
-    ))}
+    {briefings.map((b: any) => {
+      const dd = b.display_date || b.period_start;
+      return (
+        <a href={`${dd}/`} class="entry">
+          <div class="entry-head">
+            <span class="date">{fiDate(dd)}</span>
+          </div>
+          <p class="overview">{b.overview}</p>
+        </a>
+      );
+    })}
   </section>
 </Layout>
 

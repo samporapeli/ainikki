@@ -17,6 +17,7 @@ if [ -z "${DEPLOY_TARGET:-}" ]; then
 fi
 
 YESTERDAY="$(date -d yesterday +%Y-%m-%d)"
+TODAY="$(date +%Y-%m-%d)"
 
 echo "== Kerää ja prosessoi eilisen uutiset ($YESTERDAY) =="
 cd "$SCRIPT_DIR"
@@ -24,6 +25,7 @@ cd "$SCRIPT_DIR"
   --topic ai \
   --since "$YESTERDAY" \
   --until "$YESTERDAY" \
+  --display-date "$TODAY" \
   --verbose
 
 echo "== Buildataan ja deployataan =="

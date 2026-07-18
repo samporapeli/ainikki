@@ -18,7 +18,7 @@ class WriteRoundtripError(Exception):
 
 def write_briefing(briefing: Briefing, output_dir: Path = Path("data/output")) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
-    filename = f"{briefing.topic}_{briefing.period.value}_{briefing.period_start.isoformat()}.json"
+    filename = f"{briefing.topic}_{briefing.period.value}_{briefing.effective_display_date.isoformat()}.json"
     path = output_dir / filename
 
     payload = briefing.model_dump(mode="json")

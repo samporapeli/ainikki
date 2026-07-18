@@ -63,6 +63,7 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
 def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
                   config_dir: Path = Path("config"), data_dir: Path = Path("data"),
                   out_dir: Path | None = None, min_points: int = 20,
+                  display_date: date | None = None,
                   model_overrides: dict[str, tuple[str | None, str | None]] | None = None,
                   raw_items_override: list[RawItem] | None = None,
                   llm_client: httpx.Client | None = None,
@@ -140,6 +141,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     briefing = assemble_briefing(
         topic=topic, period=period, period_start=since.date(),
         period_end=(until - timedelta(seconds=1)).date(),
+        display_date=display_date,
         overview_result=overview_result, compose_result=compose_result,
         models_used=models_used, pipeline_version=PIPELINE_VERSION,
         rubric_version=str(rubric.get("version", "unknown")),
@@ -179,6 +181,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--min-points", type=int, default=20)
     parser.add_argument("--model-override", action="append", default=[],
                          help="step=provider:model, esim. score=openai:gpt-4o-mini. Voi antaa useita.")
+    parser.add_argument("--display-date", default=None,
+                         help="Päivä joka näkyy käyttäjälle (oletus: sama kuin --since)")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
 
@@ -191,12 +195,14 @@ def main(argv: list[str] | None = None) -> None:
     until_dt = datetime.combine(until_date + timedelta(days=1), time.min, tzinfo=timezone.utc)
 
     model_overrides = _parse_model_overrides(args.model_override)
+    display_date = date.fromisoformat(args.display_date) if args.display_date else None
 
     try:
         path = run_pipeline(
             topic=args.topic, period=Period(args.period), since=since_dt, until=until_dt,
             config_dir=args.config_dir, data_dir=args.data_dir, out_dir=args.out_dir,
-            min_points=args.min_points, model_overrides=model_overrides,
+            min_points=args.min_points, display_date=display_date,
+            model_overrides=model_overrides,
         )
     except ScoreValidationError as e:
         print(f"VIRHE (score-step, kriittinen): {e}", file=sys.stderr)
