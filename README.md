@@ -80,7 +80,7 @@ puuttuvat, Telegram-vaihe ohitetaan hiljaa.
 
 Jokainen pipeline-askeli käyttää omaansa mallia. JSON-tuloksessa `models_used`
 -kenttä kertoo minkä mallin kukin askeli käytti. Sivustolla nämä näkyvät
-otsikon alla pieninä badgeina:
+pieninä riveinä otsikon alla.
 
 | Askeli     | Rooli                                      |
 | ---------- | ------------------------------------------ |
@@ -91,6 +91,8 @@ otsikon alla pieninä badgeina:
 
 ## Suunnitteluperiaatteet
 
+### Pipeline
+
 - **Enrich vasta scoringin jälkeen** - säästää verkkokutsuja ja kontekstia, koska
   haetaan täysi sisältö vain jutuille jotka oikeasti päätyvät koosteeseen.
 - **Yksi LLM-kutsu per item Compose-stepissä** - pieni konteksti, rinnakkaistettavissa
@@ -99,6 +101,19 @@ otsikon alla pieninä badgeina:
   päätymisen levylle ja sitä kautta Astro-buildiin asti.
 - **Config vs. runtime-override** - `config/models.yaml` määrittää oletukset, CLI-flagit
   (`--model-override`) voittavat ne AB-vertailua varten.
+
+### Frontti
+
+Sivusto on pieni päivälehti, ei SaaS-dashboard tai moderni feedsivu.
+Suunnittelun keskyskysymys: "Auttaako tämä lukijaa keskittymään päivän
+juttuihin?" Jos ei, poista.
+
+- **Typografia ensin** - välistys, hierarkia ja rivipituus kantavat visuaalista painoa, ei kortit, varjot tai koristeet
+- **Mukava lukukokemus** - runsas tyhjä tila, mukava riviväli, luettavuus ensin
+- **Näkymätön käyttöliittymä** - käyttäjä huomaa tekstin, ei elementtejä
+- **Järjestelmäfontit** - ei ulkoisia fontteja, kirjasin on suunnittelu
+- **Ei liikettä** - ei animaatioita, hover-tilat hillittyjä
+- **Zero JS** - staattinen HTML, upotettu CSS, ei ulkoisia resurssseja
 
 ## Käyttöoikeudet
 
