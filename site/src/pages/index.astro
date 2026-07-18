@@ -21,7 +21,19 @@ if (fs.existsSync(dataDir)) {
 <Layout title="Ainikki">
   <header>
     <h1>Ainikki</h1>
+    <p class="tagline">Tekoäly-uutisten automaattinen suomenkielinen kooste</p>
   </header>
+
+  <section class="about">
+    <p>
+      Ainikki kerää päivittäin uutisia Hacker Newsista, valitsee ne uutisarvon
+      mukaan ja kirjoittaa jokaisesta lyhyen suomenkielisen tiivistelmän.
+      Tulokset julkaistaan staattisena verkkosivustona.
+    </p>
+    <p class="meta">
+      Avoin lähdekoodi · <a href="https://github.com/samporapeli/ainikki">GitHub</a>
+    </p>
+  </section>
 
   {topics.length === 0 ? (
     <p class="empty">Ei koosteita vielä.</p>
@@ -39,6 +51,27 @@ if (fs.existsSync(dataDir)) {
 <style>
   header {
     margin-bottom: 2rem;
+  }
+
+  .tagline {
+    color: var(--fg-muted);
+    font-size: 1.05rem;
+    margin-top: 0.3rem;
+  }
+
+  .about {
+    margin-bottom: 2.5rem;
+    color: var(--fg-muted);
+    line-height: 1.7;
+  }
+
+  .about p {
+    margin-bottom: 0.75rem;
+  }
+
+  .meta {
+    font-size: 0.9rem;
+    color: var(--fg-subtle);
   }
 
   .empty {
