@@ -1,0 +1,17 @@
+version: test
+topic: ai
+
+criteria:
+  - name: "uutuusarvo"
+    description: "Onko kyseessä uusi julkaisu tai tapahtuma."
+    weight: high
+  - name: "vaikutuksen laajuus"
+    description: "Koskeeko tämä laajaa yleisöä."
+    weight: medium
+
+exclude:
+  - "puhtaasti markkinointisisältö"
+
+items_per_briefing:
+  min: 2
+  max: 3

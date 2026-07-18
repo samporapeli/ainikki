@@ -1,0 +1,65 @@
+# scoring_rubric.yaml
+# Käytetään scoring-stepissä (ennen kompositiota, ennen persoonaa).
+# Tarkoitus: tehdä "mikä on iso juttu" -arviosta toistettava ja
+# säädettävä, vaikka se on lopulta silti jonkun (sinun, tässä
+# tapauksessa kirjoitetun rubriikin kautta) mielipide siitä mikä
+# on tärkeää. Ei väitetä objektiivisuutta - väitetään johdonmukaisuutta.
+
+version: v1
+topic: ai
+
+# Kriteerit joita malli soveltaa pisteyttäessään ehdokkaita.
+# Kirjoita nämä niin konkreettisiksi kuin mahdollista - mitä
+# tarkempi kriteeri, sitä helpompi debugata miksi jokin valittiin/hylättiin.
+criteria:
+  - name: "aihepiirin ydinolennaisuus"
+    description: >
+      Onko tekoäly/koneoppiminen jutun VARSINAINEN pääaihe, ei vain
+      sivumaininta tai käytetty työkalu. Tunnista tämä sisällön perusteella,
+      älä vaadi tiettyjä avainsanoja - uusi malli, yritys tai tuote jota et
+      tunnista nimeltä on silti AI-uutinen jos sen ydinsisältö koskee
+      tekoälyä/koneoppimista/LLM:iä. Esimerkkejä EI-valittavista: tutkimus
+      joka käytti LLM:ää data-analyysin apuna mutta käsittelee jotain muuta
+      aihetta; uutinen jossa AI mainitaan ohimennen kontekstina.
+    weight: high
+
+  - name: "uutuusarvo"
+    description: >
+      Onko kyseessä uusi julkaisu, malli, työkalu tai tapahtuma -
+      ei mielipidekirjoitus tai vanhan asian uudelleenkäsittely.
+    weight: high
+
+  - name: "vaikutuksen laajuus"
+    description: >
+      Koskeeko tämä laajaa kehittäjäkuntaa/toimialaa, vai on kyseessä
+      kapea nice-tapaus jolla on merkitystä vain pienelle ryhmälle.
+    weight: high
+
+  - name: "lähteiden riippumattomuus"
+    description: >
+      Onko useampi riippumaton lähde nostanut saman asian, vai
+      perustuuko nousu yhteen viraaliin HN-postaukseen.
+    weight: medium
+
+  - name: "yhteisösignaali"
+    description: >
+      HN-pisteet/kommentit, Reddit-upvotet tms - käytetään
+      TUKENA muille kriteereille, ei ainoana perusteena. Korkea
+      yhteisösignaali ilman muuta relevanssia ei riitä.
+    weight: low
+
+  - name: "aihepiirien monipuolisuus"
+    description: >
+      Vältä valitsemasta montaa itemiä samasta kapeasta aihepiiristä
+      (esim. kolme eri uutista samasta mallikategoriasta) ellei
+      jokainen ole itsenäisesti merkittävä. Klusterointi hoitaa
+      suurimman osan tästä jo aiemmin putkessa, tämä on lisäturva.
+    weight: medium
+
+exclude:
+  - "puhtaasti markkinointisisältö ilman uutisarvoa"
+  - "duplikaatit jotka eivät tuo uutta näkökulmaa jo valittuun juttuun"
+
+items_per_briefing:
+  min: 3
+  max: 10

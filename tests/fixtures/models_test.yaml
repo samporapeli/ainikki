@@ -1,0 +1,16 @@
+default_provider: openrouter
+
+steps:
+  cluster:
+    provider: openrouter
+    model: "openai/gpt-4o-mini"
+  compose:
+    provider: anthropic
+    model: "claude-sonnet-4-6"
+  local_step:
+    provider: local
+    model: "llama3.1:8b"
+    base_url: "http://localhost:11434/v1"
+  broken_step:
+    provider: openrouter
+    # model puuttuu tahallaan - testaa virheenkäsittelyä

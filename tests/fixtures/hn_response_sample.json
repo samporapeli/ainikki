@@ -1,0 +1,56 @@
+{
+  "hits": [
+    {
+      "created_at": "2026-07-14T09:12:33.000Z",
+      "title": "Anthropic announces Claude Fable 5 and Claude Mythos 5",
+      "url": "https://www.anthropic.com/news/fable-mythos",
+      "author": "someuser1",
+      "points": 412,
+      "story_text": null,
+      "num_comments": 231,
+      "created_at_i": 1752480753,
+      "_tags": ["story", "author_someuser1", "story_111111"],
+      "objectID": "111111"
+    },
+    {
+      "created_at": "2026-07-14T11:05:10.000Z",
+      "title": "Show HN: I built a tool to visualize RAG pipeline quality",
+      "url": "https://github.com/someuser/rag-viz",
+      "author": "someuser2",
+      "points": 87,
+      "story_text": null,
+      "num_comments": 34,
+      "created_at_i": 1752488710,
+      "_tags": ["story", "show_hn", "author_someuser2", "story_222222"],
+      "objectID": "222222"
+    },
+    {
+      "created_at": "2026-07-14T14:40:02.000Z",
+      "title": "Ask HN: How are you evaluating LLM agent reliability in production?",
+      "url": null,
+      "author": "someuser3",
+      "points": 56,
+      "story_text": "Curious what others are doing here, especially for...",
+      "num_comments": 42,
+      "created_at_i": 1752500402,
+      "_tags": ["story", "ask_hn", "author_someuser3", "story_333333"],
+      "objectID": "333333"
+    },
+    {
+      "created_at": "2026-07-14T16:22:19.000Z",
+      "title": "New paper: chain-of-thought reasoning does not always reflect model computation",
+      "url": "https://arxiv.org/abs/2607.99999",
+      "author": "someuser4",
+      "points": 203,
+      "story_text": null,
+      "num_comments": 98,
+      "created_at_i": 1752506539,
+      "_tags": ["story", "author_someuser4", "story_444444"],
+      "objectID": "444444"
+    }
+  ],
+  "nbHits": 4,
+  "page": 0,
+  "nbPages": 1,
+  "hitsPerPage": 100
+}

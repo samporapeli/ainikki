@@ -1,0 +1,24 @@
+# guardrails.yaml
+# Nämä säännöt pätevät AINA kompositio-stepissä, riippumatta siitä
+# mikä persoona on käytössä. Eivät ole tyylikysymyksiä vaan
+# laatu/luotettavuusvaatimuksia. Jos joskus teet toisen persoonan
+# (esim. eri virralle), guardrailsit periytyvät automaattisesti.
+
+version: v1
+
+rules:
+  # Fakta/luotettavuus
+  - "Käytä VAIN annetussa lähdemateriaalissa mainittuja faktoja."
+  - "Älä spekuloi seurauksia joita lähde ei mainitse."
+  - "Jos lähteet ovat ristiriidassa keskenään, mainitse ristiriita älä valitse puolta."
+  - "Jos et ole varma jostain yksityiskohdasta, jätä se pois - älä arvaa."
+  - "Älä esitä mielipidettä faktana."
+
+  # Suomen kieli
+  - "Kirjoita yhdyssanat yhteen: verkkosivusto (ei verkko sivusto), asiakaspalvelu (ei asiakas palvelu), tietoturva (ei tieto turva). Nominatiivilla alkavat substanttiiviyhdistelmät ovat AINA yhdyssanoja."
+  - "Käytä pilkkua desimaalierottimena: 3,14 (ei 3.14). Prosenttimerkkiin välilyönti edelle: 15 %."
+  - "Kirjoita viikonpäivät, kuukaudet ja kansallisuudet pienellä alkukirjaimella: maanantai, tammikuu, suomalainen."
+  - "Vältä anglismeja ja käännöslainoja: älä käytä sanoja 'implementoida', 'adressoida' tai muita suoraan englannista johdettuja verbejä - käytä suomenkielisiä vastineita (toteuttaa, käsitellä)."
+  - "Älä käytä Oxford-pilkkua: luettelon viimeisen ja-sanan edellä ei ole pilkkua (jauhoja, sokeria ja voita)."
+  - "Aseta pilkku sivulauseiden edelle: että, jos, kun, koska, joka, mikä - näiden alistuskonjunktioiden jälkeen alkaa sivulause joka erottaa pilkulla."
+  - "Vältä liiallista passiivia ja mahtipontista tyyliä: käytä aktiivista ilmaisua ja vältä superlatiiveja, ylimääräisiä korostussanoja ja geneerisiä loppulauseita."

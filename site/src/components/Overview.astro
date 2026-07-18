@@ -1,0 +1,19 @@
+---
+const { text } = Astro.props as { text: string };
+---
+
+<section class="overview">
+  <p>{text}</p>
+</section>
+
+<style>
+  .overview {
+    margin-bottom: 2rem;
+  }
+
+  .overview p {
+    font-size: 1.05rem;
+    color: var(--fg-muted);
+    line-height: 1.7;
+  }
+</style>

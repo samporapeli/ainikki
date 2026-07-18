@@ -1,0 +1,36 @@
+# golden_examples_v1.yaml
+# Käsin kirjoitettu/kuratoitu esimerkkisetti Ainikin äänelle.
+# EI päivity automaattisesti julkaisujen myötä. Kun haluat muuttaa
+# tyyliä tietoisesti, kirjoita golden_examples_v2.yaml ja päivitä
+# viittaus persoonatiedostossa - tämä on editorial-päätös, ei
+# automaattinen prosessi.
+#
+# Kata eri tyyppisiä juttuja jotta malli näkee vaihtelua, ei vain
+# yhtä kaavaa toistettuna.
+
+version: v1
+
+examples:
+  - headline: "Anthropic julkaisi Claude Opus 4.8 -kielimallin"
+    summary: >
+      Malli tuo parannuksia koodauskykyyn ja pidemmän kontekstin
+      edeltäjäänsä verrattuna. Opus 4.8 on heti saatavilla API:n kautta
+      samalla hinnalla kuin Opus 4.7.
+
+  - headline: "Uusi tutkimus haastaa käsityksen chain-of-thought-mallinnuksesta"
+    summary: >
+      Tutkijoiden mukaan mallin ilmoittama päättelyketju ei aina
+      vastaa sitä mihin lopputulos oikeasti perustuu. Tulos koskee
+      useampaa yleisesti käytettyä mallia, ei vain yhtä.
+
+  - headline: "Kehittäjät kritisoivat X:n uutta käyttöehtomuutosta"
+    summary: >
+      Muutos laajentaa oikeutta käyttää käyttäjien sisältöä mallien
+      koulutukseen. Osa yhteisöstä on ilmoittanut siirtyvänsä
+      vaihtoehtoiseen palveluun. X ei ole toistaiseksi kommentoinut asiaa.
+
+  - headline: "Uusi avoimen lähdekoodin työkalu nopeuttaa RAG-putkien testausta"
+    summary: >
+      Työkalu automatisoi retrieval-vaiheen laadun mittaamisen ilman
+      erillistä evaluointidataa. Projekti on vielä varhaisessa
+      vaiheessa, mutta se on kerännyt nopeasti tähtiä GitHubissa.

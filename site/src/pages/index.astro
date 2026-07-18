@@ -1,0 +1,67 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+import Layout from '../layouts/Layout.astro';
+
+const dataDir = path.resolve('../data/output');
+
+let topics: string[] = [];
+
+if (fs.existsSync(dataDir)) {
+  const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json'));
+  const topicSet = new Set<string>();
+  for (const file of files) {
+    const data = JSON.parse(fs.readFileSync(path.join(dataDir, file), 'utf-8'));
+    topicSet.add(data.topic);
+  }
+  topics = [...topicSet].sort();
+}
+---
+
+<Layout title="Ainikki">
+  <header>
+    <h1>Ainikki</h1>
+  </header>
+
+  {topics.length === 0 ? (
+    <p class="empty">Ei koosteita vielä.</p>
+  ) : (
+    <nav class="topics">
+      {topics.map(t => (
+        <a href={`${t}/`} class="topic-link">
+          {t.toUpperCase()}
+        </a>
+      ))}
+    </nav>
+  )}
+</Layout>
+
+<style>
+  header {
+    margin-bottom: 2rem;
+  }
+
+  .empty {
+    color: var(--fg-subtle);
+  }
+
+  .topics {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .topic-link {
+    display: block;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 0.03em;
+  }
+
+  .topic-link:hover {
+    text-decoration: none;
+    background: var(--card-bg);
+  }
+</style>

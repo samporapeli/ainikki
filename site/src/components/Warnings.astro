@@ -1,0 +1,40 @@
+---
+const { warnings } = Astro.props as { warnings: string[] };
+---
+
+{warnings.length > 0 && (
+  <details class="warnings">
+    <summary>Huomautukset ({warnings.length})</summary>
+    <ul>
+      {warnings.map(w => <li>{w}</li>)}
+    </ul>
+  </details>
+)}
+
+<style>
+  .warnings {
+    margin-top: 2rem;
+    border: 1px solid var(--warning-border);
+    background: var(--warning-bg);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+  }
+
+  .warnings summary {
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--fg-muted);
+  }
+
+  .warnings ul {
+    margin-top: 0.5rem;
+    padding-left: 1.25rem;
+    font-size: 0.85rem;
+    color: var(--fg-subtle);
+  }
+
+  .warnings li {
+    margin-bottom: 0.35rem;
+  }
+</style>

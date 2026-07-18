@@ -1,0 +1,80 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+import Layout from '../../layouts/Layout.astro';
+import Overview from '../../components/Overview.astro';
+import StoryCard from '../../components/StoryCard.astro';
+import ModelBadge from '../../components/ModelBadge.astro';
+import Warnings from '../../components/Warnings.astro';
+
+export function getStaticPaths() {
+  const dataDir = path.resolve('../data/output');
+
+  if (!fs.existsSync(dataDir)) {
+    console.warn('Data directory not found:', dataDir);
+    return [];
+  }
+
+  const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json'));
+
+  return files.map(file => {
+    const data = JSON.parse(fs.readFileSync(path.join(dataDir, file), 'utf-8'));
+    return {
+      params: { topic: data.topic, date: data.period_start },
+      props: { briefing: data },
+    };
+  });
+}
+
+const { briefing } = Astro.props;
+const topicUpper = briefing.topic.toUpperCase();
+const dateStr = briefing.period_start;
+---
+
+<Layout title={`${topicUpper} — ${dateStr}`}>
+  <nav class="back">
+    <a href="../">← {topicUpper}</a>
+  </nav>
+
+  <header>
+    <h1>{topicUpper} / {dateStr}</h1>
+    <p class="generated">
+      Generoitu {new Date(briefing.meta.generated_at).toLocaleString('fi-FI')}
+    </p>
+    <ModelBadge modelsUsed={briefing.meta.models_used} />
+  </header>
+
+  <Overview text={briefing.overview} />
+
+  <section class="stories">
+    {briefing.items
+      .slice()
+      .sort((a: any, b: any) => a.rank - b.rank)
+      .map((item: any) => <StoryCard item={item} />)}
+  </section>
+
+  <Warnings warnings={briefing.warnings} />
+</Layout>
+
+<style>
+  .back {
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  header {
+    margin-bottom: 1.5rem;
+  }
+
+  .generated {
+    color: var(--fg-subtle);
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+  }
+
+  .stories {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+</style>

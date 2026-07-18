@@ -1,0 +1,64 @@
+---
+interface Props {
+  modelsUsed: Record<string, string>;
+}
+
+const { modelsUsed } = Astro.props;
+
+const LABELS: Record<string, string> = {
+  cluster: "yhdistäminen",
+  score: "arviointi",
+  compose: "toimittaja",
+  overview: "yleiskatsaus",
+};
+
+const STEPS = Object.entries(modelsUsed)
+  .filter(([k]) => LABELS[k])
+  .sort(([a], [b]) => {
+    const order = ["cluster", "score", "compose", "overview"];
+    return order.indexOf(a) - order.indexOf(b);
+  });
+---
+
+<div class="model-badge-row">
+  {STEPS.map(([step, model]) => {
+    const label = LABELS[step];
+    const short = model.split("/").pop();
+    return (
+      <span class="model-badge">
+        <span class="badge-label">{label}</span>
+        <span class="badge-model">{short}</span>
+      </span>
+    );
+  })}
+</div>
+
+<style>
+  .model-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .model-badge {
+    display: inline-flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.8rem;
+    line-height: 1.2;
+  }
+
+  .badge-label {
+    color: var(--fg-subtle);
+    font-size: 0.7rem;
+    text-transform: lowercase;
+  }
+
+  .badge-model {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+</style>

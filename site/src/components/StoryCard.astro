@@ -1,0 +1,67 @@
+---
+interface Source {
+  url: string;
+  title: string;
+  source_type: string;
+  published_at?: string;
+  raw_signal?: Record<string, unknown>;
+}
+
+interface NewsItem {
+  headline: string;
+  summary: string;
+  sources: Source[];
+  rank: number;
+  tags?: string[];
+  selection_reason?: string;
+}
+
+const { item } = Astro.props as { item: NewsItem };
+
+function hostname(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+---
+
+<article class="card">
+  <h2>{item.headline}</h2>
+  <p class="summary">{item.summary}</p>
+  <div class="meta">
+    <span class="sources">
+      {item.sources.map((s, i) => (
+        <span>
+          {i > 0 && ' / '}
+          <a href={s.url} target="_blank" rel="noopener">{hostname(s.url)}</a>
+        </span>
+      ))}
+    </span>
+  </div>
+</article>
+
+<style>
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .summary {
+    color: var(--fg-muted);
+    margin-bottom: 0.6rem;
+    font-size: 0.95rem;
+  }
+
+  .meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--fg-subtle);
+  }
+</style>

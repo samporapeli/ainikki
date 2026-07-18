@@ -1,0 +1,101 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+import Layout from '../../layouts/Layout.astro';
+
+export function getStaticPaths() {
+  const dataDir = path.resolve('../data/output');
+
+  if (!fs.existsSync(dataDir)) {
+    return [];
+  }
+
+  const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json'));
+  const byTopic = new Map<string, any[]>();
+
+  for (const file of files) {
+    const data = JSON.parse(fs.readFileSync(path.join(dataDir, file), 'utf-8'));
+    if (!byTopic.has(data.topic)) byTopic.set(data.topic, []);
+    byTopic.get(data.topic)!.push(data);
+  }
+
+  return [...byTopic.entries()].map(([topic, briefings]) => {
+    briefings.sort((a: any, b: any) => b.period_start.localeCompare(a.period_start));
+    return {
+      params: { topic },
+      props: { topic, briefings },
+    };
+  });
+}
+
+const { topic, briefings } = Astro.props;
+const topicUpper = topic.toUpperCase();
+---
+
+<Layout title={`${topicUpper} — Ainikki`}>
+  <nav class="back">
+    <a href="../">← Ainikki</a>
+  </nav>
+
+  <header>
+    <h1>{topicUpper}</h1>
+  </header>
+
+  <section class="list">
+    {briefings.map((b: any) => (
+      <a href={`${b.period_start}/`} class="entry">
+        <div class="entry-head">
+          <span class="date">{b.period_start}</span>
+        </div>
+        <p class="overview">{b.overview}</p>
+      </a>
+    ))}
+  </section>
+</Layout>
+
+<style>
+  .back {
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  header {
+    margin-bottom: 1.5rem;
+  }
+
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .entry {
+    display: block;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--fg);
+  }
+
+  .entry:hover {
+    color: var(--fg);
+    text-decoration: none;
+    background: var(--card-bg);
+  }
+
+  .entry-head {
+    margin-bottom: 0.3rem;
+  }
+
+  .date {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  .overview {
+    color: var(--fg-muted);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin: 0;
+  }
+</style>
