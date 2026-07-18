@@ -41,10 +41,10 @@ Generoitu HTML päätyy `site/dist/`. Deployaus:
 
 ## Automaattinen päivittäinen ajo
 
-Cron-sääntö (päivittäin klo 08:00):
+Cron-sääntö (päivittäin klo 06:30):
 
 ```
-0 8 * * * OPENROUTER_API_KEY='sk-...' DEPLOY_TARGET='user@host:/var/www/ainikki' /path/to/ainikki/daily.sh >> /path/to/ainikki-cron.log 2>&1
+30 6 * * * OPENROUTER_API_KEY='sk-...' DEPLOY_TARGET='user@host:/var/www/ainikki' /path/to/ainikki/daily.sh >> /path/to/ainikki-cron.log 2>&1
 ```
 
 Aseta avaimet ja kohde suoraan croniin, ei profiilitiedostoihin.
