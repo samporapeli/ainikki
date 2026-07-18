@@ -53,7 +53,7 @@ def test_max_chars_truncation():
 
 
 def test_enrich_candidates_mixed_outcomes():
-    """3 candidaattia: 1 onnistuu, 1 on paywallin takana, 1 palauttaa HTTP 500 -
+    """3 kandidaattia: 1 onnistuu, 1 on paywallin takana, 1 palauttaa HTTP 500 -
     varmistaa että vain onnistunut jää jäljelle ja molemmat epäonnistumiset näkyvät warningeina."""
     scored = [
         _make_scored("Toimiva artikkeli", "https://good.example.com/article", rank=1),
@@ -82,6 +82,10 @@ def test_enrich_candidates_mixed_outcomes():
     assert len(result.warnings) == 2, f"odotettiin 2 warningia, saatiin {len(result.warnings)}"
     assert any("Tilaajaseinän" in w for w in result.warnings)
     assert any("Palvelin kaatuu" in w for w in result.warnings)
+
+    assert len(result.dropped_stories) == 2, f"odotettiin 2 pudotettua juttua, saatiin {len(result.dropped_stories)}"
+    assert any(d.title == "Tilaajaseinän takana" for d in result.dropped_stories)
+    assert any(d.title == "Palvelin kaatuu" for d in result.dropped_stories)
 
 
 def test_enrich_preserves_scoring_fields():
@@ -131,6 +135,8 @@ def test_robots_txt_disallows_all():
     assert len(result.warnings) == 1
     assert "robots.txt" in result.warnings[0]
     assert "Kielletty artikkeli" in result.warnings[0]
+    assert len(result.dropped_stories) == 1
+    assert result.dropped_stories[0].title == "Kielletty artikkeli"
 
 
 def test_robots_txt_404_assumed_allowed():

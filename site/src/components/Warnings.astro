@@ -1,10 +1,31 @@
 ---
-const { warnings } = Astro.props as { warnings: string[] };
+interface DroppedStory {
+  title: string;
+  url: string;
+}
+
+const { warnings, droppedStories = [] } = Astro.props as {
+  warnings: string[];
+  droppedStories?: DroppedStory[];
+};
 ---
+
+{droppedStories.length > 0 && (
+  <section class="dropped">
+    <h3>Ei voitu sisällyttää</h3>
+    <ul>
+      {droppedStories.map(s => (
+        <li>
+          <a href={s.url} target="_blank" rel="noopener">{s.title} ↗</a>
+        </li>
+      ))}
+    </ul>
+  </section>
+)}
 
 {warnings.length > 0 && (
   <details class="warnings">
-    <summary>{warnings.length} huomiota</summary>
+    <summary>{warnings.length} vikaa</summary>
     <ul>
       {warnings.map(w => <li>{w}</li>)}
     </ul>
@@ -12,10 +33,31 @@ const { warnings } = Astro.props as { warnings: string[] };
 )}
 
 <style>
-  .warnings {
-    margin-top: 2.5rem;
-    padding-top: 1rem;
+  .dropped {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
     border-top: 1px solid var(--border);
+  }
+
+  .dropped h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--fg-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .dropped ul {
+    padding-left: 1.25rem;
+    font-size: 0.9rem;
+    color: var(--fg-subtle);
+  }
+
+  .dropped li {
+    margin-bottom: 0.35rem;
+  }
+
+  .warnings {
+    margin-top: 1.5rem;
   }
 
   .warnings summary {

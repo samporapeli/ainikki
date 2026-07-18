@@ -65,7 +65,7 @@ function fiDate(iso: string): string {
       .map((item: any) => <StoryCard item={item} />)}
   </section>
 
-  <Warnings warnings={briefing.warnings} />
+  <Warnings warnings={briefing.warnings} droppedStories={briefing.dropped_stories} />
 </Layout>
 
 <style>

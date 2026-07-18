@@ -69,7 +69,7 @@ class Source(BaseModel):
 
 class ScoredCandidate(BaseModel):
     """ClusteredCandidate + editorial-arvio: sijoitus ja perustelu.
-    Vain valitut candidaatit päätyvät tähän muotoon - hylätyt eivät etene."""
+    Vain valitut kandidaatit päätyvät tähän muotoon - hylätyt eivät etene."""
     items: list[RawItem]
     cluster_reason: str | None = None
     rank: int
@@ -82,6 +82,13 @@ class EnrichedCandidate(ScoredCandidate):
     pysyvät metadatatasolla, koska compose käyttää v1:ssä vain päälähdettä.
     """
     content: str | None = None  # None = haku/erottelu epäonnistui tälle itemille
+
+
+class DroppedStory(BaseModel):
+    """Juttu joka valittiin score-vaiheessa mutta pudotettiin enrichin jälkeen
+    (esim. paywall, tyhjä sivu, robots.txt). Näkyy lukijalle."""
+    title: str
+    url: str
 
 
 class NewsItem(BaseModel):
@@ -118,6 +125,7 @@ class Briefing(BaseModel):
     overview: str
     items: list[NewsItem]
     meta: GenerationMeta
+    dropped_stories: list[DroppedStory] = Field(default_factory=list)
     # Ei-kriittiset degradoinnit (esim. cluster-step epäonnistui ja fallbackasi
     # singletoneihin) kirjataan tänne - näkyy lopullisessa JSON:assa, ei jää
     # vain lokeihin piiloon. Tyhjä lista = kaikki stepit toimivat odotetusti.

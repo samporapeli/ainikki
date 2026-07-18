@@ -2,7 +2,7 @@
 Enrich-step: hakee täyden artikkelisisällön Score-stepin valitsemille
 itemeille. Ei LLM-kutsuja - puhdas HTTP + HTML-erottelu.
 
-Tehdään VASTA scoringin jälkeen, ei kaikille candidaateille (ks.
+Tehdään VASTA scoringin jälkeen, ei kaikille kandidaateille (ks.
 pipeline_design.md) - säästää verkkokutsuja ja kontekstia, koska
 haetaan täysi sisältö vain jutuille jotka oikeasti päätyvät koosteeseen.
 
@@ -20,7 +20,7 @@ from urllib.robotparser import RobotFileParser
 import httpx
 import trafilatura
 
-from agent.schema import ScoredCandidate, EnrichedCandidate
+from agent.schema import ScoredCandidate, EnrichedCandidate, DroppedStory
 
 logger = logging.getLogger(__name__)
 
@@ -86,12 +86,14 @@ def _is_allowed_by_robots(url: str, client: httpx.Client,
 
 class EnrichResult(NamedTuple):
     items: list[EnrichedCandidate]
+    dropped_stories: list[DroppedStory]
     warnings: list[str]
 
 
 def enrich_candidates(scored: list[ScoredCandidate], client: httpx.Client,
                        max_chars: int = DEFAULT_MAX_CHARS) -> EnrichResult:
     kept: list[EnrichedCandidate] = []
+    dropped_stories: list[DroppedStory] = []
     warnings: list[str] = []
     robots_cache: dict[str, bool] = {}
 
@@ -103,6 +105,7 @@ def enrich_candidates(scored: list[ScoredCandidate], client: httpx.Client,
             msg = f"enrich estetty robots.txt:llä '{primary.title}' ({primary.url}) - pudotettu koosteesta"
             logger.warning(msg)
             warnings.append(msg)
+            dropped_stories.append(DroppedStory(title=primary.title, url=url_str))
             continue
 
         content = None
@@ -119,6 +122,7 @@ def enrich_candidates(scored: list[ScoredCandidate], client: httpx.Client,
             msg = f"enrich epäonnistui '{primary.title}' ({primary.url}): {error_note} - pudotettu koosteesta"
             logger.warning(msg)
             warnings.append(msg)
+            dropped_stories.append(DroppedStory(title=primary.title, url=url_str))
             continue
 
         kept.append(EnrichedCandidate(
@@ -127,4 +131,4 @@ def enrich_candidates(scored: list[ScoredCandidate], client: httpx.Client,
             content=content,
         ))
 
-    return EnrichResult(items=kept, warnings=warnings)
+    return EnrichResult(items=kept, dropped_stories=dropped_stories, warnings=warnings)

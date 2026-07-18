@@ -73,6 +73,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     config_paths = ConfigPaths(config_dir, topic)
     date_str = since.date().isoformat()
     all_warnings: list[str] = []
+    dropped_stories: list = []
 
     # 1. Collect
     if raw_items_override is not None:
@@ -91,7 +92,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     # 2. Dedup
     candidates = dedup_candidates(raw_items)
     save_candidates(topic, date_str, candidates, data_dir=data_dir / "dedup")
-    logger.info("dedup: %d -> %d candidaattia", len(raw_items), len(candidates))
+    logger.info("dedup: %d -> %d kandidaattia", len(raw_items), len(candidates))
 
     models_config = load_models_config(config_paths.models)
     models_used: dict[str, str] = {}
@@ -117,6 +118,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     try:
         enrich_result = enrich_candidates(scored, client=ec)
         all_warnings.extend(enrich_result.warnings)
+        dropped_stories = enrich_result.dropped_stories
         logger.info("enrich: %d -> %d itemiä (sisältö haettu onnistuneesti)",
                     len(scored), len(enrich_result.items))
     finally:
@@ -145,6 +147,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
         overview_result=overview_result, compose_result=compose_result,
         models_used=models_used, pipeline_version=PIPELINE_VERSION,
         rubric_version=str(rubric.get("version", "unknown")),
+        dropped_stories=dropped_stories,
         extra_warnings=all_warnings,
     )
 
