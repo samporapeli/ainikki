@@ -1,11 +1,4 @@
-"""
-Testaa HN-adapterin parsintalogiikkaa mock-datalla, ei vaadi verkkoyhteyttä.
-Ajo: python -m tests.test_hn_adapter (projektin juuresta)
-"""
-
 import json
-import tempfile
-import shutil
 from pathlib import Path
 
 from agent.collect.hn import parse_hn_hits
@@ -45,27 +38,14 @@ def test_published_at_parsed():
     assert items[0].published_at.year == 2026
 
 
-def test_cache_roundtrip(tmp_path=None):
-    """Varmistaa että save_raw/load_raw-kierros säilyttää datan ehjänä."""
-    if tmp_path is None:
-        tmp_path = Path(tempfile.mkdtemp())
-    try:
-        fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
-        items = parse_hn_hits(fixture["hits"])
+def test_cache_roundtrip(tmp_path):
+    fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
+    items = parse_hn_hits(fixture["hits"])
 
-        save_raw("ai", "2026-07-14", "hn", items, data_dir=tmp_path)
-        loaded = load_raw("ai", "2026-07-14", "hn", data_dir=tmp_path)
+    save_raw("ai", "2026-07-14", "hn", items, data_dir=tmp_path)
+    loaded = load_raw("ai", "2026-07-14", "hn", data_dir=tmp_path)
 
-        assert len(loaded) == len(items)
-        assert loaded[0].title == items[0].title
-        assert str(loaded[0].url) == str(items[0].url)
-    finally:
-        shutil.rmtree(tmp_path, ignore_errors=True)
+    assert len(loaded) == len(items)
+    assert loaded[0].title == items[0].title
+    assert str(loaded[0].url) == str(items[0].url)
 
-
-if __name__ == "__main__":
-    test_parse_basic_fields()
-    test_null_url_fallback()
-    test_published_at_parsed()
-    test_cache_roundtrip()
-    print("\nKaikki testit läpi.")

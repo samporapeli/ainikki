@@ -1,7 +1,3 @@
-"""
-Ajo: python -m tests.test_overview (projektin juuresta)
-"""
-
 import json
 
 from agent.overview import build_overview_prompt, generate_overview
@@ -93,12 +89,3 @@ def test_code_fenced_json_is_parsed():
     assert result.overview == "Koodiblokki-yleiskatsaus."
     assert result.warning is None
 
-
-if __name__ == "__main__":
-    test_build_overview_prompt_uses_only_headline_and_summary()
-    test_generate_overview_happy_path()
-    test_generate_overview_fallback_on_malformed_response()
-    test_generate_overview_empty_items_skips_llm_call()
-    test_fallback_respects_rank_order_not_list_order()
-    test_code_fenced_json_is_parsed()
-    print("\nKaikki testit läpi.")

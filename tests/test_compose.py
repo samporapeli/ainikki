@@ -1,7 +1,3 @@
-"""
-Ajo: python -m tests.test_compose (projektin juuresta)
-"""
-
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -123,11 +119,3 @@ def test_code_fenced_json_is_parsed():
     assert len(result.items) == 1
     assert result.items[0].headline == "Koodiblokkiotsikko"
 
-
-if __name__ == "__main__":
-    test_system_prompt_includes_all_three_configs()
-    test_compose_items_happy_path()
-    test_partial_failure_drops_only_bad_item()
-    test_empty_headline_is_rejected()
-    test_code_fenced_json_is_parsed()
-    print("\nKaikki testit läpi.")

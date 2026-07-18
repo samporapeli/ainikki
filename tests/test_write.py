@@ -1,10 +1,4 @@
-"""
-Ajo: python -m tests.test_write (projektin juuresta)
-"""
-
 import json
-import tempfile
-import shutil
 from datetime import date
 from pathlib import Path
 
@@ -27,50 +21,29 @@ def _make_briefing() -> Briefing:
                      period_end=date(2026, 7, 16), overview="Yleiskatsaus.", items=[item], meta=meta)
 
 
-def test_write_briefing_creates_correctly_named_file(tmp_dir=None):
-    if tmp_dir is None:
-        tmp_dir = Path(tempfile.mkdtemp())
-    try:
-        briefing = _make_briefing()
-        path = write_briefing(briefing, output_dir=tmp_dir)
-        assert path.name == "ai_daily_2026-07-16.json"
-        assert path.exists()
-    finally:
-        shutil.rmtree(tmp_dir, ignore_errors=True)
+def test_write_briefing_creates_correctly_named_file(tmp_path):
+    briefing = _make_briefing()
+    path = write_briefing(briefing, output_dir=tmp_path)
+    assert path.name == "ai_daily_2026-07-16.json"
+    assert path.exists()
 
 
-def test_write_briefing_content_is_valid_json_matching_schema(tmp_dir=None):
-    if tmp_dir is None:
-        tmp_dir = Path(tempfile.mkdtemp())
-    try:
-        briefing = _make_briefing()
-        path = write_briefing(briefing, output_dir=tmp_dir)
+def test_write_briefing_content_is_valid_json_matching_schema(tmp_path):
+    briefing = _make_briefing()
+    path = write_briefing(briefing, output_dir=tmp_path)
 
-        raw = json.loads(path.read_text())
-        assert raw["topic"] == "ai"
-        assert raw["items"][0]["headline"] == "Headline"
-        assert raw["meta"]["persona"] == "ainikki-v1"
+    raw = json.loads(path.read_text())
+    assert raw["topic"] == "ai"
+    assert raw["items"][0]["headline"] == "Headline"
+    assert raw["meta"]["persona"] == "ainikki-v1"
 
-        reloaded = Briefing(**raw)
-        assert reloaded.topic == briefing.topic
-    finally:
-        shutil.rmtree(tmp_dir, ignore_errors=True)
+    reloaded = Briefing(**raw)
+    assert reloaded.topic == briefing.topic
 
 
-def test_write_briefing_roundtrip_preserves_item_count(tmp_dir=None):
-    if tmp_dir is None:
-        tmp_dir = Path(tempfile.mkdtemp())
-    try:
-        briefing = _make_briefing()
-        path = write_briefing(briefing, output_dir=tmp_dir)
-        reloaded = Briefing(**json.loads(path.read_text()))
-        assert len(reloaded.items) == len(briefing.items)
-    finally:
-        shutil.rmtree(tmp_dir, ignore_errors=True)
+def test_write_briefing_roundtrip_preserves_item_count(tmp_path):
+    briefing = _make_briefing()
+    path = write_briefing(briefing, output_dir=tmp_path)
+    reloaded = Briefing(**json.loads(path.read_text()))
+    assert len(reloaded.items) == len(briefing.items)
 
-
-if __name__ == "__main__":
-    test_write_briefing_creates_correctly_named_file()
-    test_write_briefing_content_is_valid_json_matching_schema()
-    test_write_briefing_roundtrip_preserves_item_count()
-    print("\nKaikki testit läpi.")

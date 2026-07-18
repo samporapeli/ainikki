@@ -1,10 +1,4 @@
-"""
-Ajo: python -m tests.test_dedup (projektin juuresta)
-"""
-
 import json
-import tempfile
-import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -70,27 +64,14 @@ def test_dedup_signal_ordering():
     assert anthropic_candidate.primary.raw_signal["points"] == 412
 
 
-def test_cache_roundtrip(tmp_dir=None):
-    if tmp_dir is None:
-        tmp_dir = Path(tempfile.mkdtemp())
-    try:
-        fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
-        hn_items = parse_hn_hits(fixture["hits"])
-        candidates = dedup_candidates(hn_items)
+def test_cache_roundtrip(tmp_path):
+    fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
+    hn_items = parse_hn_hits(fixture["hits"])
+    candidates = dedup_candidates(hn_items)
 
-        save_candidates("ai", "2026-07-14", candidates, data_dir=tmp_dir)
-        loaded = load_candidates("ai", "2026-07-14", data_dir=tmp_dir)
+    save_candidates("ai", "2026-07-14", candidates, data_dir=tmp_path)
+    loaded = load_candidates("ai", "2026-07-14", data_dir=tmp_path)
 
-        assert len(loaded) == len(candidates)
-        assert {c.normalized_url for c in loaded} == {c.normalized_url for c in candidates}
-    finally:
-        shutil.rmtree(tmp_dir, ignore_errors=True)
+    assert len(loaded) == len(candidates)
+    assert {c.normalized_url for c in loaded} == {c.normalized_url for c in candidates}
 
-
-if __name__ == "__main__":
-    test_normalize_url_strips_tracking_and_www()
-    test_normalize_url_keeps_different_paths_distinct()
-    test_dedup_merges_cross_source_duplicate()
-    test_dedup_signal_ordering()
-    test_cache_roundtrip()
-    print("\nKaikki testit läpi.")

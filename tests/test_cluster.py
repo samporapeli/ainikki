@@ -1,9 +1,3 @@
-"""
-Ajo: python -m tests.test_cluster (projektin juuresta)
-
-Testaa klusterointilogiikkaa mock-datalla, ei vaadi verkkoyhteyttä.
-"""
-
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -122,12 +116,3 @@ def test_code_fenced_json_is_parsed():
     assert result.warning is None
     assert len(result.clusters) == len(candidates)
 
-
-if __name__ == "__main__":
-    test_cross_url_clustering()
-    test_singletons_preserved()
-    test_fallback_on_malformed_json()
-    test_fallback_on_incomplete_coverage()
-    test_prompt_stays_lightweight()
-    test_code_fenced_json_is_parsed()
-    print("\nKaikki testit läpi.")

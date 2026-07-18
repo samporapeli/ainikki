@@ -1,7 +1,3 @@
-"""
-Ajo: python -m tests.test_enrich (projektin juuresta)
-"""
-
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -174,15 +170,3 @@ def test_robots_cache_per_domain():
     assert len(result.items) == 2
     assert robots_fetch_count["n"] == 1, f"robots.txt pitäisi haetaa vain kerran, haettiin {robots_fetch_count['n']} kertaa"
 
-
-if __name__ == "__main__":
-    test_extract_clean_article()
-    test_extract_paywall_returns_none()
-    test_max_chars_truncation()
-    test_enrich_candidates_mixed_outcomes()
-    test_enrich_preserves_scoring_fields()
-    test_robots_txt_allows_all()
-    test_robots_txt_disallows_all()
-    test_robots_txt_404_assumed_allowed()
-    test_robots_cache_per_domain()
-    print("\nKaikki testit läpi.")

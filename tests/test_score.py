@@ -1,9 +1,7 @@
-"""
-Ajo: python -m tests.test_score (projektin juuresta)
-"""
-
 import json
 from pathlib import Path
+
+import pytest
 
 from agent.score import build_score_prompt, load_rubric, score_clusters, ScoreValidationError
 from agent.dedup import dedup_candidates
@@ -55,11 +53,8 @@ def test_score_clusters_happy_path():
 
 def test_raises_on_malformed_json():
     clusters = _build_test_clusters()
-    try:
+    with pytest.raises(ScoreValidationError, match="JSON"):
         score_clusters(clusters, FIXTURE_RUBRIC, lambda s, u: "ei json:ia")
-        assert False, "olisi pitänyt heittää ScoreValidationError"
-    except ScoreValidationError as e:
-        assert "JSON" in str(e)
 
 
 def test_raises_on_count_outside_rubric_bounds():
@@ -71,11 +66,8 @@ def test_raises_on_count_outside_rubric_bounds():
             {"candidate_index": 0, "rank": 1, "selection_reason": "ainoa valinta"},
         ]})
 
-    try:
+    with pytest.raises(ScoreValidationError, match="rajojen"):
         score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
-        assert False, "olisi pitänyt heittää ScoreValidationError"
-    except ScoreValidationError as e:
-        assert "rajojen" in str(e)
 
 
 def test_raises_on_duplicate_candidate_index():
@@ -87,11 +79,8 @@ def test_raises_on_duplicate_candidate_index():
             {"candidate_index": 0, "rank": 2, "selection_reason": "b"},
         ]})
 
-    try:
+    with pytest.raises(ScoreValidationError, match="useammin"):
         score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
-        assert False, "olisi pitänyt heittää ScoreValidationError"
-    except ScoreValidationError as e:
-        assert "useammin" in str(e)
 
 
 def test_raises_on_invalid_rank_sequence():
@@ -104,11 +93,8 @@ def test_raises_on_invalid_rank_sequence():
             {"candidate_index": 1, "rank": 1, "selection_reason": "b"},
         ]})
 
-    try:
+    with pytest.raises(ScoreValidationError, match="rank"):
         score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
-        assert False, "olisi pitänyt heittää ScoreValidationError"
-    except ScoreValidationError as e:
-        assert "rank" in str(e)
 
 
 def test_prompt_builds_with_real_production_rubric():
@@ -157,15 +143,3 @@ def test_code_fenced_json_is_parsed():
     assert len(result) == 2
     assert result[0].rank == 1
 
-
-if __name__ == "__main__":
-    test_build_score_prompt_includes_rubric_content()
-    test_score_clusters_happy_path()
-    test_raises_on_malformed_json()
-    test_raises_on_count_outside_rubric_bounds()
-    test_raises_on_duplicate_candidate_index()
-    test_raises_on_invalid_rank_sequence()
-    test_prompt_builds_with_real_production_rubric()
-    test_rejects_irrelevant_candidates()
-    test_code_fenced_json_is_parsed()
-    print("\nKaikki testit läpi.")

@@ -8,9 +8,9 @@
 
 ## Koodityyli
 
-- Python 3.13, ei pytest:ä - pelkät `def test_*()` + `if __name__ == "__main__"` + `python -m tests.test_<name>`
+- Python 3.13, pytest - testit `def test_*()` + `pytest` tai `python -m pytest`
 - Kaikki promptit ja config suomeksi, koodikomentit suomeksi
-- Ei turhia dependencies: httpx, ruamel.yaml, click, openai - kaikki jo `requirements.txt`:ssä
+- Ei turhia dependencies: httpx, pydantic, pyyaml, trafilatura, pytest - kaikki jo `requirements.txt`:ssä
 - Ei emojisia tai turhia koristeita koodeissa
 
 ## Pipeline

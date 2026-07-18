@@ -1,24 +1,9 @@
-"""
-Ajo: python -m tests.test_pipeline (projektin juuresta)
-
-Tämä on integraatiotesti: koko run_pipeline() ajetaan päästä päähän
-OIKEILLA tuotantokonfiguraatioilla (config/models.yaml, config/personas/,
-config/guardrails/, config/rubrics/, config/golden_examples/) - vain
-verkkokutsut (LLM + artikkelisisällön haku) on korvattu mock-transportilla.
-
-Tämä on arvokkaampi kuin yksikkötestit siksi että se todistaa moduulien
-KYTKENNÄN toimivan (oikeat parametrit, oikeat tiedostopolut, oikeat
-tyyppimuunnokset vaiheiden välillä) - yksikkötestit todistavat vain että
-kukin moduuli toimii eristyksissä.
-"""
-
 import json
-import tempfile
-import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
+import pytest
 
 from agent.pipeline import run_pipeline
 from agent.score import ScoreValidationError
@@ -82,124 +67,95 @@ def _enrich_handler(request: httpx.Request) -> httpx.Response:
     return httpx.Response(200, text=CLEAN_HTML)
 
 
-def test_full_pipeline_happy_path(tmp_out=None, tmp_data=None):
-    if tmp_out is None:
-        tmp_out = Path(tempfile.mkdtemp())
-    if tmp_data is None:
-        tmp_data = Path(tempfile.mkdtemp())
-    try:
-        raw_items = _load_test_raw_items()
-        llm_client = httpx.Client(transport=httpx.MockTransport(_make_llm_handler()))
-        enrich_client = httpx.Client(transport=httpx.MockTransport(_enrich_handler))
+def test_full_pipeline_happy_path(tmp_path):
+    tmp_out = tmp_path / "out"
+    tmp_data = tmp_path / "data"
+    raw_items = _load_test_raw_items()
+    llm_client = httpx.Client(transport=httpx.MockTransport(_make_llm_handler()))
+    enrich_client = httpx.Client(transport=httpx.MockTransport(_enrich_handler))
 
-        since = datetime(2026, 7, 16, tzinfo=timezone.utc)
-        until = since + timedelta(days=1)
+    since = datetime(2026, 7, 16, tzinfo=timezone.utc)
+    until = since + timedelta(days=1)
 
-        path = run_pipeline(
-            topic="ai", period=Period.daily, since=since, until=until,
-            config_dir=Path("config"), data_dir=tmp_data, out_dir=tmp_out,
-            raw_items_override=raw_items, llm_client=llm_client, enrich_client=enrich_client,
-        )
+    path = run_pipeline(
+        topic="ai", period=Period.daily, since=since, until=until,
+        config_dir=Path("config"), data_dir=tmp_data, out_dir=tmp_out,
+        raw_items_override=raw_items, llm_client=llm_client, enrich_client=enrich_client,
+    )
 
-        assert path.exists()
-        briefing = Briefing(**json.loads(path.read_text()))
+    assert path.exists()
+    briefing = Briefing(**json.loads(path.read_text()))
 
-        assert briefing.topic == "ai"
-        assert briefing.period == Period.daily
-        assert len(briefing.items) == 4
-        assert briefing.overview != ""
-        assert briefing.meta.persona == "ainikki-v1"
-        assert briefing.meta.rubric_version == "v1"
-        assert briefing.meta.guardrails_version == "v1"
-        assert set(briefing.meta.models_used.keys()) == {"cluster", "score", "compose", "overview"}
-        assert briefing.meta.models_used["compose"] == "openrouter/anthropic/claude-sonnet-4-6"
-    finally:
-        shutil.rmtree(tmp_out, ignore_errors=True)
-        shutil.rmtree(tmp_data, ignore_errors=True)
+    assert briefing.topic == "ai"
+    assert briefing.period == Period.daily
+    assert len(briefing.items) == 4
+    assert briefing.overview != ""
+    assert briefing.meta.persona == "ainikki-v1"
+    assert briefing.meta.rubric_version == "v1"
+    assert briefing.meta.guardrails_version == "v1"
+    assert set(briefing.meta.models_used.keys()) == {"cluster", "score", "compose", "overview"}
+    assert briefing.meta.models_used["compose"] == "openrouter/anthropic/claude-sonnet-4-6"
 
 
-def test_pipeline_raises_on_critical_score_failure(tmp_out=None, tmp_data=None):
+def test_pipeline_raises_on_critical_score_failure(tmp_path):
     """Jos score-step tuottaa rikki menevän vastauksen, koko putki kaatuu -
     EI kirjoiteta tiedostoa mielivaltaisella valinnalla."""
-    if tmp_out is None:
-        tmp_out = Path(tempfile.mkdtemp())
-    if tmp_data is None:
-        tmp_data = Path(tempfile.mkdtemp())
-    try:
-        raw_items = _load_test_raw_items()
+    tmp_out = tmp_path / "out"
+    tmp_data = tmp_path / "data"
+    raw_items = _load_test_raw_items()
 
-        def broken_score_handler(request: httpx.Request) -> httpx.Response:
-            body = json.loads(request.content)
-            is_anthropic = request.url.host == "api.anthropic.com"
-            system_prompt = body.get("system", "") if is_anthropic else body["messages"][0]["content"]
+    def broken_score_handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        is_anthropic = request.url.host == "api.anthropic.com"
+        system_prompt = body.get("system", "") if is_anthropic else body["messages"][0]["content"]
 
-            if "valitsee päivän tärkeimmät" in system_prompt:
-                content = "tämä ei ole json:ia ollenkaan"
-            elif "uutisanalyytikko" in system_prompt:
-                user_content = body["messages"][0]["content"] if is_anthropic else body["messages"][1]["content"]
-                n = len([line for line in user_content.splitlines() if line.strip().startswith("[")])
-                content = json.dumps({"clusters": [
-                    {"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(n)
-                ]})
-            else:
-                content = "{}"
+        if "valitsee päivän tärkeimmät" in system_prompt:
+            content = "tämä ei ole json:ia ollenkaan"
+        elif "uutisanalyytikko" in system_prompt:
+            user_content = body["messages"][0]["content"] if is_anthropic else body["messages"][1]["content"]
+            n = len([line for line in user_content.splitlines() if line.strip().startswith("[")])
+            content = json.dumps({"clusters": [
+                {"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(n)
+            ]})
+        else:
+            content = "{}"
 
-            if is_anthropic:
-                return httpx.Response(200, json={"content": [{"type": "text", "text": content}]})
-            return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
+        if is_anthropic:
+            return httpx.Response(200, json={"content": [{"type": "text", "text": content}]})
+        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
 
-        llm_client = httpx.Client(transport=httpx.MockTransport(broken_score_handler))
-        since = datetime(2026, 7, 16, tzinfo=timezone.utc)
-        until = since + timedelta(days=1)
+    llm_client = httpx.Client(transport=httpx.MockTransport(broken_score_handler))
+    since = datetime(2026, 7, 16, tzinfo=timezone.utc)
+    until = since + timedelta(days=1)
 
-        try:
-            run_pipeline(
-                topic="ai", period=Period.daily, since=since, until=until,
-                config_dir=Path("config"), data_dir=tmp_data, out_dir=tmp_out,
-                raw_items_override=raw_items, llm_client=llm_client,
-            )
-            assert False, "olisi pitänyt heittää ScoreValidationError"
-        except ScoreValidationError:
-            assert not tmp_out.exists() or not any(tmp_out.iterdir()), \
-                "kriittisen virheen jälkeen EI saa olla kirjoitettua tiedostoa"
-    finally:
-        shutil.rmtree(tmp_out, ignore_errors=True)
-        shutil.rmtree(tmp_data, ignore_errors=True)
+    with pytest.raises(ScoreValidationError):
+        run_pipeline(
+            topic="ai", period=Period.daily, since=since, until=until,
+            config_dir=Path("config"), data_dir=tmp_data, out_dir=tmp_out,
+            raw_items_override=raw_items, llm_client=llm_client,
+        )
+    assert not tmp_out.exists() or not any(tmp_out.iterdir()), \
+        "kriittisen virheen jälkeen EI saa olla kirjoitettua tiedostoa"
 
 
-def test_pipeline_raises_on_empty_collect(tmp_out=None, tmp_data=None):
+def test_pipeline_raises_on_empty_collect(tmp_path):
     """Jos collect-vaihe ei tuota yhtään itemiä (esim. kaikki lähteet epäonnistuvat),
     putki etenee dedup/cluster/score:aan tyhjällä listalla ja päätyy lopulta
     EmptyBriefingError:iin Validate-vaiheessa - ei kirjoiteta tyhjää koostetta."""
-    if tmp_out is None:
-        tmp_out = Path(tempfile.mkdtemp())
-    if tmp_data is None:
-        tmp_data = Path(tempfile.mkdtemp())
-    try:
-        since = datetime(2026, 7, 16, tzinfo=timezone.utc)
-        until = since + timedelta(days=1)
+    tmp_out = tmp_path / "out"
+    tmp_data = tmp_path / "data"
+    since = datetime(2026, 7, 16, tzinfo=timezone.utc)
+    until = since + timedelta(days=1)
 
-        def handler(request: httpx.Request) -> httpx.Response:
-            return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps({"clusters": []})}}]})
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps({"clusters": []})}}]})
 
-        llm_client = httpx.Client(transport=httpx.MockTransport(handler))
+    llm_client = httpx.Client(transport=httpx.MockTransport(handler))
 
-        try:
-            run_pipeline(
-                topic="ai", period=Period.daily, since=since, until=until,
-                config_dir=Path("config"), data_dir=tmp_data, out_dir=tmp_out,
-                raw_items_override=[], llm_client=llm_client,
-            )
-            assert False, "olisi pitänyt heittää EmptyBriefingError"
-        except EmptyBriefingError:
-            pass
-    finally:
-        shutil.rmtree(tmp_out, ignore_errors=True)
-        shutil.rmtree(tmp_data, ignore_errors=True)
+    with pytest.raises(EmptyBriefingError):
+        run_pipeline(
+            topic="ai", period=Period.daily, since=since, until=until,
+            config_dir=Path("config"), data_dir=tmp_data, out_dir=tmp_out,
+            raw_items_override=[], llm_client=llm_client,
+        )
 
-
-if __name__ == "__main__":
-    test_full_pipeline_happy_path()
-    test_pipeline_raises_on_critical_score_failure()
-    test_pipeline_raises_on_empty_collect()
-    print("\nKaikki testit läpi.")

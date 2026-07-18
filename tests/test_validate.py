@@ -1,8 +1,6 @@
-"""
-Ajo: python -m tests.test_validate (projektin juuresta)
-"""
-
 from datetime import date
+
+import pytest
 
 from agent.validate import assemble_briefing, EmptyBriefingError
 from agent.compose import ComposeResult
@@ -64,19 +62,10 @@ def test_assemble_briefing_raises_on_empty_items():
     )
     overview_result = OverviewResult(overview="Ei julkaistavia juttuja tälle ajalle.", warning=None)
 
-    try:
+    with pytest.raises(EmptyBriefingError, match="ai"):
         assemble_briefing(
             topic="ai", period=Period.daily, period_start=date(2026, 7, 16), period_end=date(2026, 7, 16),
             overview_result=overview_result, compose_result=compose_result,
             models_used={}, pipeline_version="0.1.0", rubric_version="ai-v1",
         )
-        assert False, "olisi pitänyt heittää EmptyBriefingError"
-    except EmptyBriefingError as e:
-        assert "ai" in str(e)
 
-
-if __name__ == "__main__":
-    test_assemble_briefing_happy_path()
-    test_assemble_briefing_collects_warnings_from_all_steps()
-    test_assemble_briefing_raises_on_empty_items()
-    print("\nKaikki testit läpi.")

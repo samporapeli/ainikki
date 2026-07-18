@@ -1,7 +1,3 @@
-"""
-Ajo: python -m tests.test_json_utils (projektin juuresta)
-"""
-
 import json
 
 from agent.json_utils import strip_code_fences
@@ -49,13 +45,3 @@ def test_nested_json():
     parsed = json.loads(result)
     assert parsed == inner
 
-
-if __name__ == "__main__":
-    test_clean_json_passes_through()
-    test_json_with_language_annotation()
-    test_json_with_bare_fences()
-    test_json_with_whitespace_padding()
-    test_empty_string()
-    test_whitespace_only()
-    test_nested_json()
-    print("\nKaikki testit läpi.")

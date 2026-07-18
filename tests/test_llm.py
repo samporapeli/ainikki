@@ -1,15 +1,8 @@
-"""
-Ajo: python -m tests.test_llm (projektin juuresta)
-
-Ei oikeaa verkkoyhteyttä eikä API-avainta - httpx.MockTransport simuloi
-palvelimen vastauksen, jotta pyynnön rakentaminen ja vastauksen parsinta
-tulee testattua molemmille provider-muodoille (OpenAI-yhteensopiva ja Anthropic).
-"""
-
 import json
 from pathlib import Path
 
 import httpx
+import pytest
 
 from agent.llm import (
     resolve_step_config, make_llm_call,
@@ -41,11 +34,8 @@ def test_resolve_step_config_override_wins():
 def test_resolve_step_config_missing_model_raises():
     import yaml
     config = yaml.safe_load(FIXTURE_CONFIG.read_text())
-    try:
+    with pytest.raises(ValueError, match="malli|model"):
         resolve_step_config("broken_step", config)
-        assert False, "olisi pitänyt heittää ValueError"
-    except ValueError as e:
-        assert "malli" in str(e).lower() or "model" in str(e).lower()
 
 
 def test_resolve_step_config_local_requires_base_url():
@@ -145,14 +135,3 @@ def test_make_llm_call_end_to_end_with_cluster():
     assert result.warning is None
     assert len(result.clusters) == 4
 
-
-if __name__ == "__main__":
-    test_resolve_step_config_basic()
-    test_resolve_step_config_override_wins()
-    test_resolve_step_config_missing_model_raises()
-    test_resolve_step_config_local_requires_base_url()
-    test_openai_compatible_request_and_parse()
-    test_openai_compatible_no_json_format_when_disabled()
-    test_anthropic_request_and_parse()
-    test_make_llm_call_end_to_end_with_cluster()
-    print("\nKaikki testit läpi.")
