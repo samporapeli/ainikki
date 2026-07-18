@@ -41,8 +41,13 @@ import json, sys
 d = json.load(open('$JSON_FILE'))
 print(d.get('overview', 'Ei yhteenvetoa saatavilla.'))
 ")
+    DISPLAY_DATE=$("$VENV_PYTHON" -c "
+import json, sys
+d = json.load(open('$JSON_FILE'))
+print(d.get('display_date_fi', '$TODAY'))
+")
     LINK="${SITE_BASE_URL}/ai/${TODAY}/"
-    MSG="AI-uutiskooste — ${TODAY}
+    MSG="${DISPLAY_DATE}
 
 ${OVERVIEW}
 

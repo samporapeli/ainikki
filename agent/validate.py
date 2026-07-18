@@ -9,6 +9,7 @@ kirjoiteta tyhjää/harhaanjohtavaa koostetta.
 
 from datetime import date, datetime, timezone
 
+from agent.dateformat import fi_date
 from agent.schema import Briefing, DroppedStory, GenerationMeta, Period
 from agent.compose import ComposeResult
 from agent.overview import OverviewResult
@@ -46,9 +47,12 @@ def assemble_briefing(topic: str, period: Period, period_start: date, period_end
         golden_examples_version=compose_result.golden_examples_version,
     )
 
+    effective_dd = display_date or period_start
+
     return Briefing(
         topic=topic, period=period, period_start=period_start, period_end=period_end,
-        display_date=display_date, overview=overview_result.overview,
+        display_date=display_date, display_date_fi=fi_date(effective_dd.isoformat()),
+        overview=overview_result.overview,
         items=compose_result.items, meta=meta,
         dropped_stories=dropped_stories or [], warnings=all_warnings,
     )
