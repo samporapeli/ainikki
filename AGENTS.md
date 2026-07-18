@@ -6,12 +6,26 @@
 - Do not comment on trivial things (e.g. `set -euo pipefail` does not need a comment).
 - Comments are "why", not "what". If "what" is not self-evident from the code, the code is too hard.
 
+## Security
+
+- Do not hardcode or reference local development machine details in committed files: absolute paths, hostnames, usernames, or other environment-specific values. Docs should not assume a specific folder structure.
+- Never read, log, or expose secrets, API keys, tokens, or credentials.
+- Never commit secrets or credentials to the repository.
+- When handling credentials in code, always use environment variables or secure secret management.
+- When handling credentials for humans, remind about safe practices: do not paste secrets into chat, do not share tokens openly, rotate compromised credentials immediately.
+
 ## Code style
 
 - Python 3.13, pytest - tests `def test_*()` + `pytest` or `python -m pytest`
 - All prompts and config in Finnish, code comments in Finnish
 - No unnecessary dependencies: httpx, pydantic, pyyaml, trafilatura, pytest - all already in `requirements.txt`
 - No emojis or unnecessary decorations in code
+
+## Refactoring
+
+- Less is more. Do not leave code "just in case".
+- When adding a feature, actively consider if something else becomes obsolete. Remove it after verifying it can be done.
+- Complete refactors cleanly. Do not leave backwards compatibility code rotting. Confirm with the user whether to backfill old data or drop fallbacks.
 
 ## Pipeline
 
