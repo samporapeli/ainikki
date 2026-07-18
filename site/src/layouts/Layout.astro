@@ -2,9 +2,12 @@
 interface Props {
   title: string;
   description?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogUrl?: string;
 }
 
-const { title, description = 'AI-uutiskooste' } = Astro.props;
+const { title, description = 'AI-uutiskooste', ogTitle, ogDescription, ogUrl } = Astro.props;
 ---
 
 <!doctype html>
@@ -13,6 +16,11 @@ const { title, description = 'AI-uutiskooste' } = Astro.props;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    {ogTitle && <meta property="og:title" content={ogTitle} />}
+    {ogDescription && <meta property="og:description" content={ogDescription} />}
+    {ogUrl && <meta property="og:url" content={ogUrl} />}
+    {ogTitle && <meta property="og:type" content="article" />}
     <title>{title}</title>
     <script async src="https://plausible.sampo.website/js/pa-C6_88dp755AMB63LNeTcV.js"></script>
     <script>

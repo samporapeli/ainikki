@@ -53,9 +53,10 @@ function fiDate(iso: string): string {
   <section class="list">
     {briefings.map((b: any) => {
       const dd = b.display_date || b.period_start;
+      const pretty = b.display_date_fi || fiDate(dd);
       return (
         <a href={`${dd}/`} class="entry">
-          <span class="date">{fiDate(dd)}</span>
+          <span class="date">{pretty}</span>
           <p class="overview">{b.overview}</p>
         </a>
       );

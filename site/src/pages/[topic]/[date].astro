@@ -38,16 +38,21 @@ function fiDate(iso: string): string {
   const wd = WEEKDAYS[new Date(y, m - 1, d).getDay()];
   return `${wd} ${d}.${m}.${y}`;
 }
+
+const prettyDate = briefing.display_date_fi || fiDate(dateStr);
+const ogTitle = `Ainikki — ${topicUpper} — ${prettyDate}`;
+const ogUrl = `${Astro.site?.href || '/'}${briefing.topic}/${dateStr}/`;
 ---
 
-<Layout title={`${topicUpper} — ${fiDate(dateStr)}`}>
+<Layout title={`${topicUpper} — ${prettyDate}`} description={briefing.overview}
+        ogTitle={ogTitle} ogDescription={briefing.overview} ogUrl={ogUrl}>
   <nav class="back">
     <a href="../">← {topicUpper}</a>
   </nav>
 
   <header>
     <h1>{topicUpper}</h1>
-    <p class="date">{fiDate(dateStr)}</p>
+    <p class="date">{prettyDate}</p>
     <p class="generated">
       Generoitu {new Date(briefing.meta.generated_at).toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}
     </p>
