@@ -30,6 +30,14 @@ export function getStaticPaths() {
 
 const { topic, briefings } = Astro.props;
 const topicUpper = topic.toUpperCase();
+
+const WEEKDAYS = ['sunnuntai', 'maanantai', 'tiistai', 'keskiviikko', 'torstai', 'perjantai', 'lauantai'];
+
+function fiDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const wd = WEEKDAYS[new Date(y, m - 1, d).getDay()];
+  return `${wd} ${d}.${m}.${y}`;
+}
 ---
 
 <Layout title={`${topicUpper} — Ainikki`}>
@@ -45,7 +53,7 @@ const topicUpper = topic.toUpperCase();
     {briefings.map((b: any) => (
       <a href={`${b.period_start}/`} class="entry">
         <div class="entry-head">
-          <span class="date">{b.period_start}</span>
+          <span class="date">{fiDate(b.period_start)}</span>
         </div>
         <p class="overview">{b.overview}</p>
       </a>
