@@ -39,6 +39,7 @@ Collect → Dedup → Cluster → Score → Enrich → Compose → Overview → 
 ## Site
 
 Astro, static HTML, zero JS. Script `pipeline.sh` = data pipeline, not site build.
+- Page `/tietoja/` describes the pipeline and its steps. Keep it up to date when modifying collection or composition logic.
 
 ## Commits
 

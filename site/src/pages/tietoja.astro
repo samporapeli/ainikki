@@ -1,0 +1,392 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const steps = [
+  {
+    name: 'Keruu',
+    llm: false,
+    description: 'Hakee uutisia lähteestä (tällä hetkellä Hacker News). Suodattaa pois jutut, jotka ovat saaneet vähän pisteitä.',
+  },
+  {
+    name: 'Duplikaattien poisto',
+    llm: false,
+    description: 'Normalisoi URL-osoitteet ja yhdistää samat linkit toisiinsa.',
+  },
+  {
+    name: 'Ryhmittely',
+    llm: true,
+    description: 'LLM tunnistaa samasta asiasta kertovat jutut eri lähteistä ja ryhmittelee ne yhteen.',
+  },
+  {
+    name: 'Pisteytys',
+    llm: true,
+    description: 'LLM valitsee ja järjestää 3–10 uutista arviointikriteerien perusteella.',
+  },
+  {
+    name: 'Rikastaminen',
+    llm: false,
+    description: 'Hakee valittujen artikkeleiden koko tekstin ja poimii siitä olennaisen sisällön.',
+  },
+  {
+    name: 'Kirjoitus',
+    llm: true,
+    description: 'LLM kirjoittaa jokaisesta uutisesta otsikon ja suomenkielisen tiivistelmän.',
+  },
+  {
+    name: 'Yleiskuva',
+    llm: true,
+    description: 'LLM kirjoittaa lyhyen yhteenvedon päivän koosteesta.',
+  },
+  {
+    name: 'Validointi',
+    llm: false,
+    description: 'Kokoaa tulokset yhteen ja tarkistaa, että kooste on täydellinen ja julkaisukelpoinen.',
+  },
+  {
+    name: 'Tallennus',
+    llm: false,
+    description: 'Kirjoittaa JSON-tiedoston ja varmistaa sen eheyden lukemalla sen uudelleen.',
+  },
+];
+---
+
+<Layout title="Tietoja — Ainikki" description="Miten Ainikki toimii: uutisten keruu, valinta ja koosteen tuottaminen.">
+  <nav class="back">
+    <a href="../">← Ainikki</a>
+  </nav>
+
+  <header>
+    <h1>Miten Ainikki toimii</h1>
+  </header>
+
+  <section class="intro">
+    <p>
+      Ainikki kerää uutisia määritellyistä aiheista, valitsee niistä
+      tärkeimmät ja kirjoittaa jokaisesta suomenkielisen tiivistelmän.
+      Prosessi koostuu yhdeksästä vaiheesta, joista osa käyttää tekoälyä ja
+      osa on determinististä logiikkaa eli perinteistä koodia.
+    </p>
+  </section>
+
+  <section class="pipeline">
+    <h2>Prosessi</h2>
+    <div class="flow">
+      {steps.map((step, i) => (
+        <div class={`step ${step.llm ? 'llm' : 'code'}`}>
+          <div class="step-head">
+            <span class="step-num">{i + 1}</span>
+            <span class="step-name">{step.name}</span>
+            <span class={`badge ${step.llm ? 'badge-llm' : 'badge-code'}`}>
+              {step.llm ? 'LLM' : 'Koodi'}
+            </span>
+          </div>
+          <p class="step-desc">{step.description}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <hr />
+
+  <section class="details">
+    <h2>Mikä on LLM ja mikä koodia?</h2>
+    <p>
+      Neljä vaihetta (ryhmittely, pisteytys, kirjoitus, yleiskuva) käyttävät suuria
+      kielimalleja (LLM). Ne tekevät päätöksiä, jotka vaativat ymmärrystä
+      kielestä ja sisällöstä — esimerkiksi saman uutisen tunnistamista eri
+      lähteistä tai uutisen merkityksen arvioimista.
+    </p>
+    <p>
+      Muut vaiheet ovat ohjelmallista logiikkaa: tiedon haku,
+      URL-normalisointi, tekstin poiminta ja validointi. Nämä ovat
+      täsmällisiä eivätkä tee arviointia.
+    </p>
+  </section>
+
+  <section class="details">
+    <h2>Aiheet, lähteet ja julkaisu</h2>
+    <p>
+      Tällä hetkellä Ainikilla on yksi aihepiiri, tekoäly, ja yksi lähde,
+      <a href="https://news.ycombinator.com/" target="_blank" rel="noopener noreferrer">Hacker News</a>
+      (Algolian rajapinnan kautta). Rakenne tukee useampaa aihetta ja
+      lähdettä, joten molempia voi lisätä myöhemmin ilman, että arkkitehtuuria
+      tarvitsee muuttaa.
+    </p>
+    <p>
+      Uusi kooste julkaistaan aamuisin verkkosivulla ja lähetetään myös
+      aihekohtaiselle Telegram-kanavalle: <a href="https://t.me/ainikki_ai" target="_blank" rel="noopener noreferrer">Ainikki — päivän AI-uutiset</a>.
+    </p>
+  </section>
+
+  <section class="details">
+    <h2>Asetukset ja ääni</h2>
+    <p>
+      Koosteen tyyli ja sisältö määräytyvät asetustiedostojen perusteella,
+      ei koodista:
+    </p>
+    <ul>
+      <li><strong>Pisteytyskriteeristö</strong> — arviointikriteerit ja painoarvot</li>
+      <li>
+        <strong>Persoona</strong> — kohdeyleisö ja ääni. Ainikki kirjoittaa
+        kokeneelle kehittäjälle, joka seuraa alaa mutta ei ehdi lukea kaikkea
+        itse, eikä siksi selitä peruskäsitteitä. Sävy on suora eikä hehkuta
+        uutisia, eikä tekstissä käytetä klikkiotsikoita tai emojeja.
+      </li>
+      <li>
+        <strong>Sääntökehys</strong> — pätee aina, riippumatta persoonasta.
+        Tiivistelmät perustuvat vain annettuun lähdemateriaaliin, eivätkä ne
+        spekuloi seurauksilla, joita lähde ei mainitse. Jos lähteet ovat
+        keskenään ristiriidassa, ristiriita mainitaan sen sijaan, että
+        valittaisiin puoli. Kehys sisältää myös suomen kielen sääntöjä
+        (esim. yhdyssanat, pilkutus, anglismien välttäminen).
+      </li>
+      <li><strong>Kultaiset esimerkit</strong> — käsin kuratoitu, kiinteä esimerkkisetti hyvistä tiivistelmistä; ei kasva automaattisesti aiemmista julkaisuista, jotta tyyli ei ajaudu ajan myötä</li>
+    </ul>
+    <p>
+      Kaikki tiedostot ovat versioituja: kun ääntä muutetaan merkittävästi,
+      vanhaa tiedostoa ei muokata vaan tehdään uusi versio. Näin vanhat
+      julkaisut pysyvät jäljitettävissä siihen persoonaan, jolla ne on
+      kirjoitettu.
+    </p>
+  </section>
+
+  <section class="details">
+    <h2>Mallit ja kustannukset</h2>
+    <p>
+      Jokainen vaihe voi käyttää eri mallia. Halvat mallit riittävät
+      luokitteluun ja pisteytykseen, kun taas tiivistelmien kirjoittamiseen
+      valitaan laadukkaampi malli. Näin kustannukset ja laatu pysyvät
+      tasapainossa.
+    </p>
+    <p>
+      Tällä hetkellä kaikki mallit toimivat
+      <a href="https://openrouter.ai/" target="_blank" rel="noopener noreferrer">OpenRouterin</a> kautta, joka tarjoaa
+      lukuisia vaihtoehtoja. Mallin voi vaihtaa vaihekohtaisesti yhdellä config-rivillä.
+      Myös paikallinen, itse hallittu malli on vaihtoehto.
+    </p>
+    <p>
+      Malliriippumattomuus on tietoinen valinta: kun uusia, sopivampia
+      malleja julkaistaan tai vanhoja poistuu tarjonnasta, Ainikki voidaan
+      siirtää käyttämään niitä ilman, että koko toteutusta joudutaan
+      rakentamaan uudelleen.
+    </p>
+    <p>
+      Päivittäisen koosteen luonti maksaa tällä hetkellä noin 0,05–0,15 euroa.
+      Toisin kuin monet tekoälypalvelut, Ainikin tuotos on jaettua: sama kooste
+      näytetään kaikille käyttäjille. Mitä enemmän käyttäjiä, sitä pienempi
+      generointikustannus käyttäjää kohti.
+    </p>
+  </section>
+
+  <section class="details">
+    <h2>Rajoitukset</h2>
+    <p>
+      Ainikki käyttää suuria kielimalleja (eli tekoälyä) ja voi tehdä virheitä. Ihminen ei tarkista
+      sisältöä.
+    </p>
+    <p>
+      Jos artikkelin sisältöä ei saada ladattua (esim. robots.txt estää
+      haun, sivu on tyhjä tai vaatii JavaScriptin), uutinen jätetään
+      koosteesta pois kokonaan. Koska lähteitä on vain yksi, samasta
+      asiasta voi puuttua näkökulmia.
+    </p>
+    <p>
+      Pisteytys, aihevalinta ja tiivistäminen ovat luonnoltaan subjektiivisia
+      tehtäviä, joihin <a href="https://fi.wikipedia.org/wiki/Kognitiivinen_vinouma" target="_blank" rel="noopener noreferrer">vinoumat</a>
+      vaikuttavat — oli asialla sitten ihminen tai kone. Ainikin tapauksessa tekoäly
+      voi hiljaisesti suosia tiettyjä lähteitä tai näkökulmia.
+    </p>
+  </section>
+
+  <section class="details">
+    <h2>Tietosuoja</h2>
+    <p>
+      Sivustolla on käytössä itse ylläpidetty <a href="https://plausible.io/" target="_blank" rel="noopener noreferrer">Plausible Analytics</a>,
+      eikä muuta seurantaa ole. Käyttäjätunnuksia tai kirjautumista ei ole,
+      eikä tietoja yhdistetä yksittäisiin käyttäjiin.
+    </p>
+    <p>
+      Telegram on Ainikista erillinen palvelu, jolla on omat tietosuojakäytännöt. Ainikkia voi hyvin käyttää täysin ilman Telegramia.
+    </p>
+  </section>
+
+  <section class="details">
+    <h2>Avoin lähdekoodi</h2>
+    <p>
+      Ainikin koodi on avointa ja MIT-lisensoitu:
+      <a href="https://github.com/samporapeli/ainikki" target="_blank" rel="noopener noreferrer">github.com/samporapeli/ainikki</a>.
+    </p>
+  </section>
+
+  <section class="details">
+    <h2>Palaute</h2>
+    <p>
+      Sisältöä ei käsin hienosäädetä tai korjata julkaisun jälkeen: teksti
+      julkaistaan sellaisenaan, sellaisena kuin prosessi sen tuottaa. Jos
+      jokin toistuvasti mättää, se korjataan mieluummin prosessista kuin
+      yksittäisestä julkaisusta.
+    </p>
+    <p>
+      Palautetta ja virheilmoituksia voi lähettää
+      <a href="https://hachyderm.io/@sampo" target="_blank" rel="noopener noreferrer">Mastodonin</a> tai
+      <a href="https://www.linkedin.com/in/srapeli/" target="_blank" rel="noopener noreferrer">LinkedInin</a> kautta.
+    </p>
+  </section>
+
+  <section class="details" id="tekija">
+    <h2>Tekijä</h2>
+    <p>
+      Ainikin on tehnyt <a href="https://sampo.website/">Sampo Rapeli</a>, joka
+      on käyttänyt LLM:iä ja agenttista koodausta päivittäin niin töissä kuin
+      vapaalla jo pidemmän aikaa. Ainikki on kokeilu siitä, miten kielimalli
+      toimii itsenäisenä osana automaattista prosessia – ei reagoimassa
+      käyttäjän viestiin, vaan ajastettuna ja ilman kenenkään antamaa
+      kehotetta. Osa vaiheista käyttää mallia myös rakenteisen datan (esim.
+      pisteytyksen JSON-ulostulo) tuottamiseen, ei vain ihmiselle luettavan
+      tekstin kirjoittamiseen.
+    </p>
+    <p>
+      Taustalla on myös oma tarve: tekoälyala muuttuu nopeasti, ja
+      päivittäinen, lyhyt kooste on tapa pysyä kärryillä ilman, että pitää itse
+      seurata uutisia jatkuvasti. Vastaavia koosteita on muitakin (esimerkiksi
+      englanninkieliset <a href="https://hackernewsletter.com/" target="_blank" rel="noopener noreferrer">Hacker
+      Newsletter</a> ja <a href="https://tldr.tech/" target="_blank" rel="noopener noreferrer">TLDR newsletter</a>),
+      joten mullistavasta ideasta ei ole kyse. Toisin kuin monet muut
+      koostepalvelut, Ainikki on suomenkielinen ja käyttää ylpeästi tekoälyä
+      uutisten valinnassa ja tiivistämisessä.
+    </p>
+    <p>
+      Lisää tekijästä: <a href="https://sampo.website/">etusivu</a> ·
+      <a href="https://sampo.website/blog/fi/">blogi</a> ·
+      <a href="https://www.linkedin.com/in/srapeli/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    </p>
+  </section>
+
+  <p class="footer">
+    <a href="../">← Takaisin pääsivulle</a>
+  </p>
+</Layout>
+
+<style>
+  .back {
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+  }
+
+  header {
+    margin-bottom: 2rem;
+  }
+
+  .intro {
+    color: var(--fg-muted);
+    line-height: 1.7;
+    margin-bottom: 2.5rem;
+  }
+
+  .pipeline h2 {
+    margin-bottom: 1.25rem;
+  }
+
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .step {
+    border-left: 3px solid var(--border);
+    padding: 0.75rem 0 0.75rem 1.25rem;
+    position: relative;
+  }
+
+  .step:last-child {
+    border-left-color: transparent;
+  }
+
+  .step.llm {
+    border-left-color: var(--link);
+  }
+
+  .step-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: var(--border);
+    color: var(--fg-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .step.llm .step-num {
+    background: var(--link);
+    color: var(--bg);
+  }
+
+  .step-name {
+    font-weight: 600;
+  }
+
+  .badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+  }
+
+  .badge-llm {
+    background: var(--link);
+    color: var(--bg);
+  }
+
+  .badge-code {
+    background: var(--border);
+    color: var(--fg-muted);
+  }
+
+  .step-desc {
+    color: var(--fg-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    padding-left: 2rem;
+  }
+
+  .details {
+    margin-bottom: 2rem;
+    color: var(--fg-muted);
+    line-height: 1.7;
+  }
+
+  .details h2 {
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+  }
+
+  .details ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+    margin: 0.5rem 0;
+  }
+
+  .details li {
+    margin-bottom: 0.25rem;
+  }
+
+  .footer {
+    margin-top: 3rem;
+    font-size: 0.85rem;
+    color: var(--fg-subtle);
+  }
+</style>
