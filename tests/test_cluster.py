@@ -9,9 +9,10 @@ from agent.schema import RawItem, SourceType, Candidate
 
 
 def _build_test_candidates() -> list[Candidate]:
-    """5 kandidaattia: 4 alkuperäisestä HN-fixturesta + 1 TechCrunch-artikkeli
-    joka käsittelee SAMAA Anthropic-uutista eri URL:illa kuin HN-linkki.
-    Dedup ei yhdistä näitä (eri URL) - se on juuri Cluster-stepin tehtävä.
+    """5 candidates: 4 from the original HN fixture + 1 TechCrunch article
+    covering the SAME Anthropic story at a different URL than the HN link.
+    Dedup does not merge these (different URL) — that's exactly the
+    Cluster step's job.
     """
     fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
     hn_items = parse_hn_hits(fixture["hits"])
@@ -30,8 +31,8 @@ def _build_test_candidates() -> list[Candidate]:
 
 
 def _mock_llm_group_anthropic_stories(system_prompt: str, user_prompt: str) -> str:
-    """Simuloi mallin vastausta: löytää promptista Anthropic- ja TechCrunch-rivit
-    ja ryhmittelee ne, loput jäävät yhden hengen ryhmiksi."""
+    """Simulates model response: finds the Anthropic and TechCrunch lines
+    in the prompt and groups them, rest become singletons."""
     lines = user_prompt.splitlines()[1:]  # ohita "Ehdokkaat:"-otsikkorivi
     anthropic_idx = next(i for i, l in enumerate(lines) if "Fable 5 and Claude Mythos 5" in l)
     techcrunch_idx = next(i for i, l in enumerate(lines) if "mixed reactions" in l)
@@ -79,7 +80,7 @@ def test_fallback_on_malformed_json():
 
 
 def test_fallback_on_incomplete_coverage():
-    """Malli unohti yhden kandidaatin kokonaan vastauksesta - pitää havaita ja fallbackata."""
+    """Model forgot one candidate entirely in the response — must detect and fallback."""
     candidates = _build_test_candidates()
 
     def bad_response(system_prompt: str, user_prompt: str) -> str:
@@ -94,8 +95,8 @@ def test_fallback_on_incomplete_coverage():
 
 
 def test_prompt_stays_lightweight():
-    """Varmistaa ettei promptiin vahingossa vuoda täyttä artikkelisisältöä -
-    vain otsikko, lähdetyyppi ja signaali per candidate."""
+    """Verifies that full article content doesn't leak into the prompt —
+    only headline, source type, and signal per candidate."""
     candidates = _build_test_candidates()
     _, user_prompt = build_cluster_prompt(candidates)
     assert "story_text" not in user_prompt
@@ -103,7 +104,7 @@ def test_prompt_stays_lightweight():
 
 
 def test_code_fenced_json_is_parsed():
-    """Varmistaa että mallin koodiblokkiin käärityt JSON-vastaukset siivoutuvat."""
+    """Verifies that model responses wrapped in code fences are cleaned up."""
     candidates = _build_test_candidates()
 
     def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> str:

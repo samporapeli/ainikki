@@ -27,17 +27,17 @@ logger = logging.getLogger(__name__)
 
 class LlmCall(Protocol):
     def __call__(self, system_prompt: str, user_prompt: str) -> str:
-        """Palauttaa mallin raakavastauksen tekstinä (odotetaan JSON:ia)."""
+        """Returns the model's raw response as text (expects JSON)."""
         ...
 
 
 class ClusterResult(NamedTuple):
-    """Cluster-stepin tulos + näkyvä varoitus jos jouduttiin fallbackaamaan.
-    warning=None tarkoittaa että klusterointi onnistui normaalisti.
-    Kutsuva pipeline.py päättää lisätäänkö warning Briefing.warnings-listaan,
-    mutta ei kaada koko ajoa tämän vuoksi - ks. perustelu SKILL/keskustelu:
-    cluster on ei-kriittinen step, degradointi singletoneihin on turvallinen
-    lopputulos (ei väärää dataa, vain menetetty optimointi).
+    """Cluster step result + visible warning if fallback was triggered.
+    warning=None means clustering succeeded normally.
+    The calling pipeline.py decides whether to add the warning to
+    Briefing.warnings, but does not crash the run — cluster is a
+    non-critical step, degrading to singletons is safe (no wrong data,
+    just lost optimization).
     """
     clusters: list[ClusteredCandidate]
     warning: str | None
@@ -79,9 +79,9 @@ def build_cluster_prompt(candidates: list[Candidate]) -> tuple[str, str]:
 
 
 def _validate_full_coverage(response: ClusterResponse, n_candidates: int) -> bool:
-    """Varmistaa että jokainen input-indeksi esiintyy täsmälleen kerran.
-    Tämä on se turvaverkko joka estää mallin virheen (kadonnut/duplikoitu
-    indeksi, indeksi rajojen ulkopuolella) etenemästä eteenpäin putkessa.
+    """Ensures every input index appears exactly once.
+    This is the safety net that prevents model errors (missing/duplicated
+    index, index out of bounds) from propagating down the pipeline.
     """
     seen: list[int] = []
     for cluster in response.clusters:
@@ -101,11 +101,11 @@ def _validate_full_coverage(response: ClusterResponse, n_candidates: int) -> boo
 
 
 def _fallback_singletons(candidates: list[Candidate], reason: str) -> ClusterResult:
-    """Jos mallin vastaus ei validoidu, älä kaada putkea - degradoidu turvallisesti
-    tilaan jossa jokainen candidate on oma ryhmänsä (sama lopputulos kuin ilman
-    tätä stepiä). Klusteroinnin hyöty menetetään tällä ajolla, mutta mikään ei riko.
-    Degradointi EI ole hiljaista: lokitetaan WARNING-tasolla ja palautetaan
-    warning-viesti joka on tarkoitus tallentaa Briefing.warnings-listaan asti.
+    """If the model response doesn't validate, don't crash — degrade safely
+    to a state where each candidate is its own cluster (same outcome as
+    without this step). Clustering benefit is lost on this run, but
+    nothing breaks. Degradation is NOT silent: logged at WARNING level
+    and a warning message is returned for Briefing.warnings.
     """
     warning = f"cluster-step degradoitui singletoneihin: {reason}"
     logger.warning(warning)

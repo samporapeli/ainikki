@@ -13,8 +13,8 @@ REAL_RUBRIC = Path("config/rubrics/ai_scoring_rubric_v1.yaml")
 
 
 def _build_test_clusters() -> list[ClusteredCandidate]:
-    """4 klusteroitua kandidaattia (tässä: singleton-klustereita, cluster-stepin
-    tarkka toiminta ei ole tämän testin vastuulla - ks. tests/test_cluster.py)."""
+    """4 clustered candidates (here: singleton clusters — cluster step's
+    exact behavior is not this test's responsibility, see tests/test_cluster.py)."""
     fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
     hn_items = parse_hn_hits(fixture["hits"])
     candidates = dedup_candidates(hn_items)
@@ -58,7 +58,7 @@ def test_raises_on_malformed_json():
 
 
 def test_raises_on_count_outside_rubric_bounds():
-    """Testirubriikissa min=2, max=3 - yritetään valita 1 (liian vähän)."""
+    """Test rubric has min=2, max=3 — try selecting only 1 (too few)."""
     clusters = _build_test_clusters()
 
     def mock_llm(system_prompt: str, user_prompt: str) -> str:
@@ -109,9 +109,8 @@ def test_prompt_builds_with_real_production_rubric():
 
 
 def test_rejects_irrelevant_candidates():
-    """Varmistaa että score.py käsittelee oikein tilanteen jossa osa
-    kandidaateista hylätään relevanssin perusteella (mock-LLM valitsee
-    vain osan)."""
+    """Verifies score.py correctly handles the case where some candidates
+    are rejected by relevance (mock LLM selects only a subset)."""
     clusters = _build_test_clusters()
     n_clusters = len(clusters)
 
@@ -129,7 +128,7 @@ def test_rejects_irrelevant_candidates():
 
 
 def test_code_fenced_json_is_parsed():
-    """Varmistaa että mallin koodiblokkiin käärityt JSON-vastaukset siivoutuvat."""
+    """Verifies that model responses wrapped in code fences are cleaned up."""
     clusters = _build_test_clusters()
 
     def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> str:

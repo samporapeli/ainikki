@@ -24,8 +24,8 @@ from agent.cluster import LlmCall
 
 
 class ScoreValidationError(Exception):
-    """Mallin vastaus ei täyttänyt rakenteellisia tai rubriikin asettamia
-    vaatimuksia. Tarkoituksella EI fallbackata - ks. moduulin docstring."""
+    """Model response did not meet structural or rubric requirements.
+    Intentionally NO fallback — see module docstring."""
 
 
 class ScoreAssignment(BaseModel):

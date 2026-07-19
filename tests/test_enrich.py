@@ -103,7 +103,7 @@ def test_enrich_preserves_scoring_fields():
 
 
 def test_robots_txt_allows_all():
-    """Host jonka robots.txt sallii kaiken -> item käsitellään normaalisti."""
+    """Host whose robots.txt allows everything -> item is processed normally."""
     scored = [_make_scored("Sallittu artikkeli", "https://allowed.example.com/article", rank=1)]
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -120,7 +120,7 @@ def test_robots_txt_allows_all():
 
 
 def test_robots_txt_disallows_all():
-    """Host jonka robots.txt kieltää kaiken -> item pudotetaan, warning-viestissä maininta robots.txt:stä."""
+    """Host whose robots.txt disallows everything -> item is dropped, warning mentions robots.txt."""
     scored = [_make_scored("Kielletty artikkeli", "https://blocked.example.com/article", rank=1)]
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -140,7 +140,7 @@ def test_robots_txt_disallows_all():
 
 
 def test_robots_txt_404_assumed_allowed():
-    """Jos robots.txt ei ole saatavilla (404), oletetaan sallittu -> item käsitellään."""
+    """If robots.txt is unavailable (404), assume allowed -> item is processed."""
     scored = [_make_scored("Artikkeli ilman robots.txt", "https://no-robots.example.com/article", rank=1)]
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -156,7 +156,7 @@ def test_robots_txt_404_assumed_allowed():
 
 
 def test_robots_cache_per_domain():
-    """Varmistaa että robots.txt haetaan vain kerran per domain (cache toimii)."""
+    """Verifies robots.txt is fetched only once per domain (cache works)."""
     scored = [
         _make_scored("Artikkeli A", "https://cached.example.com/article-a", rank=1),
         _make_scored("Artikkeli B", "https://cached.example.com/article-b", rank=2),

@@ -20,11 +20,11 @@ def _load_test_raw_items():
 
 
 def _make_llm_handler(score_min=3, score_max=10):
-    """Yksi handler joka palvelee kaikkia neljää LLM-stepiä (cluster/score/
-    compose/overview), jotka voivat molemmat käyttää eri provideria
-    (OpenAI-yhteensopiva TAI Anthropic, ks. config/models.yaml: compose
-    käyttää anthropic/claude-sonnet-4-6:ta muiden käyttäessä OpenRoutria).
-    Step tunnistetaan system promptin sisällöstä.
+    """Single handler serving all four LLM steps (cluster/score/
+    compose/overview), which may use different providers
+    (OpenAI-compatible OR Anthropic, see config/models.yaml: compose
+    uses anthropic/claude-sonnet-4-6 while others use OpenRouter).
+    Step is identified from the system prompt content.
     """
     def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content)
@@ -98,8 +98,8 @@ def test_full_pipeline_happy_path(tmp_path):
 
 
 def test_pipeline_raises_on_critical_score_failure(tmp_path):
-    """Jos score-step tuottaa rikki menevän vastauksen, koko putki kaatuu -
-    EI kirjoiteta tiedostoa mielivaltaisella valinnalla."""
+    """If score step produces a broken response, the entire pipeline crashes —
+    NO file is written with an arbitrary selection."""
     tmp_out = tmp_path / "out"
     tmp_data = tmp_path / "data"
     raw_items = _load_test_raw_items()
@@ -139,9 +139,10 @@ def test_pipeline_raises_on_critical_score_failure(tmp_path):
 
 
 def test_pipeline_raises_on_empty_collect(tmp_path):
-    """Jos collect-vaihe ei tuota yhtään itemiä (esim. kaikki lähteet epäonnistuvat),
-    putki etenee dedup/cluster/score:aan tyhjällä listalla ja päätyy lopulta
-    EmptyBriefingError:iin Validate-vaiheessa - ei kirjoiteta tyhjää koostetta."""
+    """If collect step produces no items (e.g. all sources fail),
+    the pipeline proceeds through dedup/cluster/score with an empty list
+    and ultimately hits EmptyBriefingError in Validate — no empty digest
+    is written."""
     tmp_out = tmp_path / "out"
     tmp_data = tmp_path / "data"
     since = datetime(2026, 7, 16, tzinfo=timezone.utc)

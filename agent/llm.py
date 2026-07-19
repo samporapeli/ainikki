@@ -50,19 +50,19 @@ def load_models_config(path: Path = Path("config/models.yaml")) -> dict:
 def resolve_step_config(step: str, config: dict,
                          override_model: str | None = None,
                          override_provider: str | None = None) -> StepModelConfig:
-    """Yhdistää config-tiedoston ja mahdolliset ajokohtaiset overridet
-    (esim. CLI-flagit AB-vertailua varten). Override voittaa aina configin.
+    """Merges config file values with any runtime overrides
+    (e.g. CLI flags for A/B testing). Override always wins over config.
     """
     step_cfg = config.get("steps", {}).get(step, {})
     provider = override_provider or step_cfg.get("provider") or config.get("default_provider")
     model = override_model or step_cfg.get("model")
 
     if not provider:
-        raise ValueError(f"Ei provideria määritelty stepille '{step}'")
+        raise ValueError(f"No provider defined for step '{step}'")
     if not model:
-        raise ValueError(f"Ei mallia määritelty stepille '{step}' eikä overridea annettu")
+        raise ValueError(f"No model defined for step '{step}' and no override given")
     if provider == "local" and not step_cfg.get("base_url"):
-        raise ValueError(f"provider='local' vaatii base_url-kentän config/models.yaml:ssa stepille '{step}'")
+        raise ValueError(f"provider='local' requires base_url in config/models.yaml for step '{step}'")
 
     return StepModelConfig(provider=provider, model=model, base_url=step_cfg.get("base_url"),
                            max_tokens=step_cfg.get("max_tokens", 1024))
@@ -137,10 +137,11 @@ def _post_anthropic(model: str, system_prompt: str, user_prompt: str,
 def make_llm_call(step: str, config_path: Path = Path("config/models.yaml"),
                    override_model: str | None = None, override_provider: str | None = None,
                    client: httpx.Client | None = None):
-    """Palauttaa funktion joka toteuttaa LlmCall-rajapinnan (cluster.py, myöhemmin score/compose).
+    """Returns a function implementing the LlmCall interface (cluster.py,
+    later score/compose).
 
-    client-parametri on testattavuutta varten - injektoi httpx.MockTransport-pohjainen
-    client testeissä sen sijaan että tehtäisiin oikea verkkokutsu.
+    The client parameter is for testability — inject an httpx.MockTransport-based
+    client in tests instead of making real HTTP calls.
     """
     config = load_models_config(config_path)
     step_cfg = resolve_step_config(step, config, override_model, override_provider)
@@ -156,7 +157,7 @@ def make_llm_call(step: str, config_path: Path = Path("config/models.yaml"),
 
             base_url = step_cfg.base_url or PROVIDER_BASE_URLS.get(step_cfg.provider)
             if not base_url:
-                raise ValueError(f"Tuntematon provider '{step_cfg.provider}' eikä base_url annettu")
+                raise ValueError(f"Unknown provider '{step_cfg.provider}' and no base_url given")
             api_key_env = PROVIDER_API_KEY_ENV.get(step_cfg.provider, f"{step_cfg.provider.upper()}_API_KEY")
             api_key = os.environ.get(api_key_env)
             return _post_openai_compatible(base_url, api_key, step_cfg.model, system_prompt, user_prompt, c)

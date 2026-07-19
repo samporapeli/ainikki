@@ -22,7 +22,7 @@ def test_normalize_url_keeps_different_paths_distinct():
 
 
 def test_dedup_merges_cross_source_duplicate():
-    """Simuloi tilannetta jossa sama artikkeli tuli sekä HN:stä että RSS:stä."""
+    """Simulates a scenario where the same article came from both HN and RSS."""
     fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
     hn_items = parse_hn_hits(fixture["hits"])
 
@@ -54,7 +54,7 @@ def test_dedup_merges_cross_source_duplicate():
 
 
 def test_dedup_signal_ordering():
-    """Korkeamman yhdistetyn signaalin item pitäisi olla items[0] (primary)."""
+    """Item with higher combined signal should be items[0] (primary)."""
     fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
     hn_items = parse_hn_hits(fixture["hits"])
     candidates = dedup_candidates(hn_items)

@@ -27,9 +27,9 @@ def write_briefing(briefing: Briefing, output_dir: Path = Path("data/output")) -
     try:
         reloaded = Briefing(**json.loads(path.read_text()))
     except Exception as e:
-        raise WriteRoundtripError(f"Kirjoitettu tiedosto {path} ei validoitunut takaisin luettaessa: {e}") from e
+        raise WriteRoundtripError(f"Written file {path} failed validation on re-read: {e}") from e
 
     if reloaded.topic != briefing.topic or len(reloaded.items) != len(briefing.items):
-        raise WriteRoundtripError(f"Roundtrip-tarkistus epäonnistui tiedostolle {path}: data ei täsmää alkuperäiseen")
+        raise WriteRoundtripError(f"Roundtrip check failed for {path}: data does not match original")
 
     return path

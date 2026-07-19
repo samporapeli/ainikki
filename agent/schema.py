@@ -20,15 +20,15 @@ class SourceType(str, Enum):
 # --- Collect-vaihe --------------------------------------------------------
 
 class RawItem(BaseModel):
-    """Yhden lähteen tuottama yksittäinen raakalöytö, ennen dedupia/klusterointia.
-    Tallennetaan sellaisenaan data/raw/{topic}/{date}/{source}.json -tiedostoon.
+    """Single raw finding from one source, before dedup/clustering.
+    Saved as-is to data/raw/{topic}/{date}/{source}.json.
     """
     title: str
     url: HttpUrl
     source_type: SourceType
     published_at: datetime | None = None
     raw_signal: dict[str, int | float | str] = Field(default_factory=dict)
-    origin_id: str  # adapterikohtainen uniikki id (esim. HN objectID), debug/jäljitys
+    origin_id: str  # adapter-specific unique id (e.g. HN objectID), debug/tracing
     fetched_at: datetime
 
 
@@ -48,9 +48,9 @@ class Candidate(BaseModel):
 
 
 class ClusteredCandidate(BaseModel):
-    """Yhden tarinan RawItemit klusteroinnin jälkeen, mahdollisesti eri URL:eista.
-    items[0] = mallin ehdottama päälähde. Tämä on vielä provisorinen -
-    Score-step tekee lopullisen editorial-arvion, tämä vain ryhmittelee.
+    """RawItems for one story after clustering, possibly from different URLs.
+    items[0] = model-suggested primary source. This is still provisional —
+    Score step makes the final editorial judgment, this only groups.
     """
     items: list[RawItem]
     cluster_reason: str | None = None  # short model rationale for clustering, debug/transparency
@@ -77,16 +77,16 @@ class ScoredCandidate(BaseModel):
 
 
 class EnrichedCandidate(ScoredCandidate):
-    """ScoredCandidate + päälähteen puhdistettu artikkelisisältö.
-    Vain päälähde (items[0]) rikastetaan v1:ssä - toissijaiset lähteet
-    pysyvät metadatatasolla, koska compose käyttää v1:ssä vain päälähdettä.
+    """ScoredCandidate + cleaned article content from the primary source.
+    Only the primary source (items[0]) is enriched in v1 — secondary sources
+    stay at metadata level since compose uses only the primary in v1.
     """
-    content: str | None = None  # None = haku/erottelu epäonnistui tälle itemille
+    content: str | None = None  # None = fetch/extraction failed for this item
 
 
 class DroppedStory(BaseModel):
-    """Juttu joka valittiin score-vaiheessa mutta pudotettiin enrichin jälkeen
-    (esim. paywall, tyhjä sivu, robots.txt). Näkyy lukijalle."""
+    """Story that was selected in the score step but dropped after enrich
+    (e.g. paywall, blank page, robots.txt). Shown to the reader."""
     title: str
     url: str
 

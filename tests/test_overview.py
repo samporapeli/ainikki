@@ -64,7 +64,7 @@ def test_generate_overview_empty_items_skips_llm_call():
 
 
 def test_fallback_respects_rank_order_not_list_order():
-    """Varmistaa että fallback käyttää rank-kenttää, ei listan alkuperäistä järjestystä."""
+    """Verifies fallback uses the rank field, not the list's original order."""
     items = [
         _make_news_item("Kolmas", "...", rank=3),
         _make_news_item("Ensimmäinen", "...", rank=1),
@@ -78,7 +78,7 @@ def test_fallback_respects_rank_order_not_list_order():
 
 
 def test_code_fenced_json_is_parsed():
-    """Varmistaa että mallin koodiblokkiin käärityt JSON-vastaukset siivoutuvat."""
+    """Verifies that model responses wrapped in code fences are cleaned up."""
     items = [_make_news_item("Juttu A", "Kuvaus A.", rank=1)]
 
     def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> str:

@@ -50,8 +50,8 @@ class ConfigPaths:
 def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
                        overrides: dict[str, tuple[str | None, str | None]],
                        client: httpx.Client | None, models_used_out: dict[str, str]):
-    """Rakentaa LlmCall-funktion stepille JA kirjaa mitä mallia oikeasti käytettiin
-    models_used_out-dictiin (GenerationMeta-jäljitettävyyttä varten)."""
+    """Builds an LlmCall function for a step AND records which model was actually
+    used into models_used_out dict (for GenerationMeta traceability)."""
     provider_override, model_override = overrides.get(step, (None, None))
     cfg = resolve_step_config(step, models_config, model_override, provider_override)
     models_used_out[step] = f"{cfg.provider}/{cfg.model}"

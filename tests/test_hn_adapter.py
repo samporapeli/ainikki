@@ -22,7 +22,7 @@ def test_parse_basic_fields():
 
 
 def test_null_url_fallback():
-    """Ask HN -postauksella ei ole url-kenttää - pitää fallbackata HN:n omaan sivuun."""
+    """Ask HN post has no url field — must fall back to HN's own page."""
     fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
     items = parse_hn_hits(fixture["hits"])
 

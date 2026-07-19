@@ -47,7 +47,7 @@ def test_resolve_step_config_local_requires_base_url():
 
 
 def test_openai_compatible_request_and_parse():
-    """Simuloi OpenRouter/OpenAI-vastausta, varmistaa oikean pyynnön muodon ja parsinnan."""
+    """Simulates OpenRouter/OpenAI response, verifies correct request format and parsing."""
     captured = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -71,7 +71,7 @@ def test_openai_compatible_request_and_parse():
 
 
 def test_openai_compatible_no_json_format_when_disabled():
-    """expect_json=False poistaa response_format -parametrin pyynnöstä."""
+    """expect_json=False removes the response_format parameter from the request."""
     captured = {}
 
     def handler(request: httpx.Request) -> httpx.Response:

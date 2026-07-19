@@ -23,12 +23,12 @@ ALGOLIA_BASE = "https://hn.algolia.com/api/v1/search_by_date"
 def fetch_hn_raw(since: datetime, until: datetime, min_points: int = 20,
                   hits_per_page: int = 100, max_pages: int = 5,
                   client: httpx.Client | None = None) -> list[dict[str, Any]]:
-    """Hakee HN-storyt annetulta aikaväliltä Algolian API:sta.
-    Palauttaa raakat 'hit'-dictit sellaisenaan, parsinta tehdään erikseen.
+    """Fetches HN stories from a time range via the Algolia API.
+    Returns raw 'hit' dicts as-is; parsing is done separately.
 
-    HUOM: tämä funktio tekee oikean verkkokutsun - ei toimi tässä
-    sandboxissa (verkko rajattu), mutta toimii sellaisenaan ajettuna
-    ympäristössä jolla on normaali internet-pääsy.
+    NOTE: this function makes real HTTP calls — won't work in this
+    sandbox (network restricted), but works as-is when run in an
+    environment with normal internet access.
     """
     owns_client = client is None
     client = client or httpx.Client(timeout=15.0)
@@ -100,6 +100,6 @@ def parse_hn_hits(hits: list[dict[str, Any]]) -> list[RawItem]:
 
 
 def fetch_hn(since: datetime, until: datetime, min_points: int = 20) -> list[RawItem]:
-    """Kätevyysfunktio: hakee ja parsii yhdellä kutsulla."""
+    """Convenience function: fetch and parse in one call."""
     raw_hits = fetch_hn_raw(since, until, min_points=min_points)
     return parse_hn_hits(raw_hits)

@@ -72,7 +72,7 @@ class GuardrailsConfig(BaseModel):
         return cls(**yaml.safe_load(path.read_text()))
 
 
-# --- Promptin rakennus -------------------------------------------------
+# --- Prompt construction -------------------------------------------------
 
 def build_compose_system_prompt(persona: Persona, golden_examples: GoldenExamplesConfig,
                                  guardrails: GuardrailsConfig) -> str:
@@ -115,7 +115,7 @@ Sisältö:
 {item.content}"""
 
 
-# --- Suoritus -------------------------------------------------------------
+# --- Execution ----------------------------------------------------------
 
 class ComposeResponse(BaseModel):
     headline: str
@@ -158,7 +158,7 @@ def compose_items(enriched: list[EnrichedCandidate], persona_path: Path,
             parsed = json.loads(strip_code_fences(raw_response))
             response = ComposeResponse(**parsed)
             if not response.headline.strip() or not response.summary.strip():
-                raise ValueError("headline tai summary on tyhjä")
+                raise ValueError("headline or summary is empty")
         except (json.JSONDecodeError, ValidationError, ValueError) as e:
             msg = f"compose epäonnistui '{primary_title}': {e} - pudotettu koosteesta"
             logger.warning(msg)

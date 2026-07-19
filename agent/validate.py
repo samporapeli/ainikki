@@ -16,8 +16,8 @@ from agent.overview import OverviewResult
 
 
 class EmptyBriefingError(Exception):
-    """Ei yhtään validoitua itemiä jäljellä - kaikki kandidaatit karsiutuivat
-    matkan varrella (score/enrich/compose). Ei kirjoiteta tyhjää koostetta."""
+    """No validated items remaining — all candidates were filtered out
+    along the way (score/enrich/compose). Do not write an empty digest."""
 
 
 def assemble_briefing(topic: str, period: Period, period_start: date, period_end: date,

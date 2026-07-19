@@ -26,7 +26,7 @@ def save_raw(topic: str, date_str: str, source_name: str, items: list[RawItem],
 
 def load_raw(topic: str, date_str: str, source_name: str,
              data_dir: Path = Path("data/raw")) -> list[RawItem]:
-    """Lataa aiemmin cachatun raakadatan levyltä."""
+    """Loads previously cached raw data from disk."""
     path = data_dir / topic / date_str / f"{source_name}.json"
     payload = json.loads(path.read_text())
     return [RawItem(**item) for item in payload]

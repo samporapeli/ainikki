@@ -106,7 +106,7 @@ def test_empty_headline_is_rejected():
 
 
 def test_code_fenced_json_is_parsed():
-    """Varmistaa että mallin koodiblokkiin käärityt JSON-vastaukset siivoutuvat."""
+    """Verifies that model responses wrapped in code fences are cleaned up."""
     items = [_make_enriched("Artikkeli", "Sisältö...", rank=1)]
 
     def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> str:

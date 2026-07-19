@@ -56,8 +56,8 @@ def build_overview_prompt(items: list[NewsItem], topic: str) -> tuple[str, str]:
 
 
 def _fallback_overview(items: list[NewsItem], max_headlines: int = 3) -> str:
-    """Deterministinen, ei-LLM-pohjainen varakeino. Ei yhtä hyvä kuin mallin
-    kirjoittama synteesi, mutta AINA toimiva - schema vaatii overview-kentän."""
+    """Deterministic, non-LLM fallback. Not as good as a model-written
+    synthesis, but ALWAYS works — schema requires the overview field."""
     ordered = sorted(items, key=lambda i: i.rank)
     top_headlines = [i.headline for i in ordered[:max_headlines]]
     return "Tämän päivän aiheita: " + "; ".join(top_headlines) + "."
@@ -75,7 +75,7 @@ def generate_overview(items: list[NewsItem], llm_call: LlmCall,
         parsed = json.loads(strip_code_fences(raw_response))
         response = OverviewResponse(**parsed)
         if not response.overview.strip():
-            raise ValueError("overview on tyhjä")
+            raise ValueError("overview is empty")
         return OverviewResult(overview=response.overview.strip(), warning=None)
     except (json.JSONDecodeError, ValidationError, ValueError) as e:
         fallback = _fallback_overview(items)

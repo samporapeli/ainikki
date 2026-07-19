@@ -19,11 +19,11 @@ _FENCE_RE = re.compile(
 
 
 def strip_code_fences(text: str) -> str:
-    """Poistaa Markdown-koodiblokki-merkinnät LLM-vastauksesta.
+    """Strip Markdown code fence markers from an LLM response.
 
-    - Jos teksti alkaa ``` ja loppuu ```, poistaa merkinnät ja palauttaa sisällön.
-    - Muutoin palauttaa tekstin .strip()-muokkattuna.
-    - Tyhjä/whitespace-vastaus palautetaan sellaisenaan.
+    - If text starts with ``` and ends with ```, removes markers and returns content.
+    - Otherwise returns text with .strip() applied.
+    - Empty/whitespace response returned as-is.
     """
     text = text.strip()
     if not text:

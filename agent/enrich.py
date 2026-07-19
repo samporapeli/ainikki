@@ -33,8 +33,8 @@ DEFAULT_MAX_CHARS = 6000
 
 
 def fetch_html_raw(url: str, client: httpx.Client) -> str:
-    """Hakee sivun raa'an HTML:n. Oikea verkkokutsu - ei toimi tässä
-    sandboxissa, mutta toimii sellaisenaan normaalissa ympäristössä."""
+    """Fetches raw HTML from a page. Real HTTP call — won't work in this
+    sandbox, but works as-is in a normal environment."""
     resp = client.get(url, headers={"User-Agent": USER_AGENT})
     resp.raise_for_status()
     return resp.text
@@ -42,9 +42,9 @@ def fetch_html_raw(url: str, client: httpx.Client) -> str:
 
 def extract_article_text(html: str, url: str | None = None,
                           max_chars: int = DEFAULT_MAX_CHARS) -> str | None:
-    """Puhdas funktio: HTML -> puhdistettu artikkelisisältö tai None jos
-    käyttökelpoista sisältöä ei löytynyt (esim. paywall/consent-seinä/tyhjä sivu).
-    Testattavissa ilman verkkoyhteyttä, ks. tests/test_enrich.py.
+    """Pure function: HTML -> cleaned article text or None if no usable
+    content was found (e.g. paywall/consent wall/blank page).
+    Testable without network, see tests/test_enrich.py.
     """
     text = trafilatura.extract(
         html, url=url, include_comments=False, include_tables=False,
