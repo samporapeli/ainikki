@@ -41,7 +41,7 @@ function fiDate(iso: string): string {
 
 const prettyDate = briefing.display_date_fi || fiDate(dateStr);
 const ogTitle = `Ainikki — ${topicUpper} — ${prettyDate}`;
-const ogUrl = `${Astro.site?.href || '/'}${briefing.topic}/${dateStr}/`;
+const ogUrl = `${import.meta.env.BASE_URL}/${briefing.topic}/${dateStr}/`;
 ---
 
 <Layout title={`${topicUpper} — ${prettyDate}`} description={briefing.overview}

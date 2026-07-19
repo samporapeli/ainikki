@@ -31,7 +31,7 @@ if (fs.existsSync(dataDir)) {
     </p>
     <p class="disclaimer">
       Ainikki on tekoälypohjainen ja voi tehdä virheitä.
-      <a href="/tietoja/">Lue lisää siitä, miten Ainikki toimii.</a>
+      <a href={`${import.meta.env.BASE_URL}/tietoja/`}>Lue lisää siitä, miten Ainikki toimii.</a>
     </p>
   </section>
 
@@ -42,7 +42,7 @@ if (fs.existsSync(dataDir)) {
       <h2>Aiheet</h2>
       <nav class="topics">
         {topics.map(t => (
-          <a href={`${t}/`} class="topic-link">
+          <a href={`${import.meta.env.BASE_URL}/${t}/`} class="topic-link">
             {t.toUpperCase()}
           </a>
         ))}
