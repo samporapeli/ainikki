@@ -85,7 +85,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
         except Exception as e:
             logger.warning("collect: HN-adapteri epäonnistui (%s) - jatketaan tyhjällä listalla", e)
             raw_items = []
-            all_warnings.append(f"collect: HN-adapteri epäonnistui: {e}")
+            all_warnings.append(f"Keruu: HN-adapteri epäonnistui: {e}")
     save_raw(topic, date_str, "hn", raw_items, data_dir=data_dir / "raw")
     logger.info("collect: %d raakaitemiä", len(raw_items))
 

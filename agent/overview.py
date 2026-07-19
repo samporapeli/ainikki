@@ -79,6 +79,6 @@ def generate_overview(items: list[NewsItem], llm_call: LlmCall,
         return OverviewResult(overview=response.overview.strip(), warning=None)
     except (json.JSONDecodeError, ValidationError, ValueError) as e:
         fallback = _fallback_overview(items)
-        warning = f"overview-step epäonnistui ({e}) - käytetty deterministinen fallback"
+        warning = f"Yleiskuva epäonnistui ({e}) - käytetty deterministinen fallback"
         logger.warning(warning)
         return OverviewResult(overview=fallback, warning=warning)

@@ -107,7 +107,7 @@ def _fallback_singletons(candidates: list[Candidate], reason: str) -> ClusterRes
     nothing breaks. Degradation is NOT silent: logged at WARNING level
     and a warning message is returned for Briefing.warnings.
     """
-    warning = f"cluster-step degradoitui singletoneihin: {reason}"
+    warning = f"Ryhmittely degradoitui singletoneihin: {reason}"
     logger.warning(warning)
     clusters = [ClusteredCandidate(items=c.items, cluster_reason="fallback: klusterointi epäonnistui")
                 for c in candidates]

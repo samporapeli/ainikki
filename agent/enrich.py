@@ -102,7 +102,7 @@ def enrich_candidates(scored: list[ScoredCandidate], client: httpx.Client,
         url_str = str(primary.url)
 
         if not _is_allowed_by_robots(url_str, client, robots_cache):
-            msg = f"enrich estetty robots.txt:llä '{primary.title}' ({primary.url}) - pudotettu koosteesta"
+            msg = f"Rikastaminen estetty robots.txt:llä '{primary.title}' ({primary.url}) - pudotettu koosteesta"
             logger.warning(msg)
             warnings.append(msg)
             dropped_stories.append(DroppedStory(title=primary.title, url=url_str))
@@ -119,7 +119,7 @@ def enrich_candidates(scored: list[ScoredCandidate], client: httpx.Client,
             error_note = "sisältöä ei pystytty erottamaan (paywall/tyhjä sivu?)" if content is None else None
 
         if content is None:
-            msg = f"enrich epäonnistui '{primary.title}' ({primary.url}): {error_note} - pudotettu koosteesta"
+            msg = f"Rikastaminen epäonnistui '{primary.title}' ({primary.url}): {error_note} - pudotettu koosteesta"
             logger.warning(msg)
             warnings.append(msg)
             dropped_stories.append(DroppedStory(title=primary.title, url=url_str))

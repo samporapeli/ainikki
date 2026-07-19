@@ -160,7 +160,7 @@ def compose_items(enriched: list[EnrichedCandidate], persona_path: Path,
             if not response.headline.strip() or not response.summary.strip():
                 raise ValueError("headline or summary is empty")
         except (json.JSONDecodeError, ValidationError, ValueError) as e:
-            msg = f"compose epäonnistui '{primary_title}': {e} - pudotettu koosteesta"
+            msg = f"Kirjoitus epäonnistui '{primary_title}': {e} - pudotettu koosteesta"
             logger.warning(msg)
             warnings.append(msg)
             continue
