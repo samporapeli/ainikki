@@ -36,7 +36,7 @@ def test_system_prompt_includes_all_three_configs():
     assert "Käytä VAIN annetussa lähdemateriaalissa mainittuja faktoja." in prompt  # guardrails-sääntö
     assert "Anthropic julkaisi Claude Opus 4.8" in prompt  # golden example
     assert '{"headline"' in prompt  # JSON-muotovaatimus
-    # v2: suomen kielen säännöt
+    # v2: Finnish language rules
     assert "yhdyssanat" in prompt
     assert "desimaalipilkku" in prompt or "desimaalierottimena" in prompt
     assert "Oxford" in prompt

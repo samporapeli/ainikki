@@ -53,13 +53,13 @@ class ClusteredCandidate(BaseModel):
     Score-step tekee lopullisen editorial-arvion, tämä vain ryhmittelee.
     """
     items: list[RawItem]
-    cluster_reason: str | None = None  # mallin lyhyt perustelu ryhmittelylle, debug/läpinäkyvyys
+    cluster_reason: str | None = None  # short model rationale for clustering, debug/transparency
 
 
-# --- Klusteroinnin jälkeinen / lopullinen muoto ---------------------------
+# --- Post-clustering / final form ------------------------------------------
 
 class Source(BaseModel):
-    """Yksi linkki/lähde joka liittyy juttuun. [0] listassa = päälähde."""
+    """A single link/source related to the story. [0] in list = primary source."""
     url: HttpUrl
     title: str
     source_type: SourceType
@@ -127,9 +127,9 @@ class Briefing(BaseModel):
     items: list[NewsItem]
     meta: GenerationMeta
     dropped_stories: list[DroppedStory] = Field(default_factory=list)
-    # Ei-kriittiset degradoinnit (esim. cluster-step epäonnistui ja fallbackasi
-    # singletoneihin) kirjataan tänne - näkyy lopullisessa JSON:assa, ei jää
-    # vain lokeihin piiloon. Tyhjä lista = kaikki stepit toimivat odotetusti.
+    # Non-critical degradations (e.g. cluster step failed and fell back to
+    # singletons) are recorded here — visible in the final JSON, not hidden
+    # in logs only. Empty list = all steps worked as expected.
     warnings: list[str] = Field(default_factory=list)
 
     @property

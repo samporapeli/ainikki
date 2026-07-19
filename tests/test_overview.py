@@ -19,7 +19,7 @@ def test_build_overview_prompt_uses_only_headline_and_summary():
 
     assert "Tutkimus yllättää" in user_prompt
     assert "Uusi malli julkaistu" in user_prompt
-    # rank-järjestys: pienin rank ensin
+    # rank order: lowest rank first
     assert user_prompt.index("Tutkimus yllättää") < user_prompt.index("Uusi malli julkaistu")
 
 

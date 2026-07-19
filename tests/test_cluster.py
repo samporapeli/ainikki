@@ -83,7 +83,7 @@ def test_fallback_on_incomplete_coverage():
     candidates = _build_test_candidates()
 
     def bad_response(system_prompt: str, user_prompt: str) -> str:
-        # vain 3 ekaa kandidaattia mainittu 5:stä - puutteellinen kattavuus
+        # only first 3 candidates mentioned out of 5 - incomplete coverage
         clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(3)]
         return json.dumps({"clusters": clusters})
 

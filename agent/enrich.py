@@ -26,9 +26,9 @@ logger = logging.getLogger(__name__)
 
 USER_AGENT = "ai-briefing-agent/0.1 (+https://github.com/samporapeli/ainikki; henkilokohtainen projekti)"
 
-# Kontekstin hallinta: rajataan artikkelin pituus ennen Compose-stepille
-# antamista. Karkea leikkaus - parannettavissa myöhemmin (esim. leikkaa
-# viimeisen kappaleen rajalta täyden merkkirajan sijaan).
+# Context management: truncate article length before passing to Compose step.
+# Rough cut — can be improved later (e.g. cut at paragraph boundary instead
+# of at exact character limit).
 DEFAULT_MAX_CHARS = 6000
 
 
@@ -77,7 +77,7 @@ def _is_allowed_by_robots(url: str, client: httpx.Client,
         rp.parse(resp.text.splitlines())
         allowed = rp.can_fetch(USER_AGENT, url)
     except Exception:
-        # Jos robots.txt ei ole saatavilla tai-parse epäonnistuu, oletetaan sallittu
+        # If robots.txt is unavailable or parse fails, assume allowed
         allowed = True
 
     cache[origin] = allowed

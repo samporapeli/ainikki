@@ -36,7 +36,7 @@ def test_score_clusters_happy_path():
     clusters = _build_test_clusters()
 
     def mock_llm(system_prompt: str, user_prompt: str) -> str:
-        # valitaan kandidaatit 0 ja 3, rank-järjestys käännettynä testataksemme sortin
+        # select candidates 0 and 3, rank order reversed to test sorting
         return json.dumps({"selected": [
             {"candidate_index": 3, "rank": 2, "selection_reason": "kiinnostava tutkimustulos"},
             {"candidate_index": 0, "rank": 1, "selection_reason": "laaja vaikutus, uusi mallijulkaisu"},
@@ -87,7 +87,7 @@ def test_raises_on_invalid_rank_sequence():
     clusters = _build_test_clusters()
 
     def mock_llm(system_prompt: str, user_prompt: str) -> str:
-        # rankit 1 ja 1 (duplikaatti) kahden valinnan sijaan 1 ja 2
+        # ranks 1 and 1 (duplicate) instead of two selections with ranks 1 and 2
         return json.dumps({"selected": [
             {"candidate_index": 0, "rank": 1, "selection_reason": "a"},
             {"candidate_index": 1, "rank": 1, "selection_reason": "b"},
@@ -116,7 +116,7 @@ def test_rejects_irrelevant_candidates():
     n_clusters = len(clusters)
 
     def mock_llm(system_prompt: str, user_prompt: str) -> str:
-        # valitaan vain 2 ekaa, loput "hylätään" (ei valita)
+        # select only the first 2, rest are "dropped" (not selected)
         return json.dumps({"selected": [
             {"candidate_index": 0, "rank": 2, "selection_reason": "AI-aiheinen"},
             {"candidate_index": 1, "rank": 1, "selection_reason": "AI-aiheinen"},

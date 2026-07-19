@@ -122,7 +122,7 @@ def test_make_llm_call_end_to_end_with_cluster():
     candidates = dedup_candidates(hn_items)  # 4 kandidaattia
 
     def handler(request: httpx.Request) -> httpx.Response:
-        # ei klusteroida mitään yhteen tässä testissä - kaikki singleton-ryhmiksi
+        # don't cluster anything together in this test - all become singletons
         clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(4)]
         content = json.dumps({"clusters": clusters})
         return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})

@@ -26,7 +26,7 @@ def test_dedup_merges_cross_source_duplicate():
     fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
     hn_items = parse_hn_hits(fixture["hits"])
 
-    # sama artikkeli (Anthropic-uutinen) tulee myös "RSS-lähteestä", eri URL-muodossa
+    # same article (Anthropic news) also comes from "RSS source", different URL format
     rss_duplicate = RawItem(
         title="Anthropic launches Fable 5 and Mythos 5",
         url="https://www.anthropic.com/news/fable-mythos/?utm_source=rss",
@@ -60,7 +60,7 @@ def test_dedup_signal_ordering():
     candidates = dedup_candidates(hn_items)
 
     anthropic_candidate = next(c for c in candidates if "anthropic.com" in c.normalized_url)
-    # ainoa item tässä ryhmässä ilman duplikaattia - varmistetaan että primary toimii silti
+    # only item in this group without duplicates - verify primary still works
     assert anthropic_candidate.primary.raw_signal["points"] == 412
 
 

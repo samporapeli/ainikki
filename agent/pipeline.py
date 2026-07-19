@@ -105,7 +105,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
         all_warnings.append(cluster_result.warning)
     logger.info("cluster: %d -> %d ryhmää", len(candidates), len(cluster_result.clusters))
 
-    # 4. Score (KRIITTINEN - ei fallbackia, ScoreValidationError kaataa koko ajon)
+    # 4. Score (CRITICAL - no fallback, ScoreValidationError crashes the entire run)
     llm_score = _resolve_llm_call("score", models_config, config_paths, model_overrides,
                                    llm_client, models_used)
     rubric = load_rubric(config_paths.rubric)
@@ -139,7 +139,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
                                       llm_client, models_used)
     overview_result = generate_overview(compose_result.items, llm_overview, topic)
 
-    # 8. Validate (KRIITTINEN - EmptyBriefingError jos ei mitään jäljellä)
+    # 8. Validate (CRITICAL - EmptyBriefingError if nothing remains)
     briefing = assemble_briefing(
         topic=topic, period=period, period_start=since.date(),
         period_end=(until - timedelta(seconds=1)).date(),

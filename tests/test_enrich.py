@@ -30,7 +30,7 @@ def test_extract_clean_article():
     assert text is not None
     assert "Mythos 5" in text
     assert "export controls" in text
-    # navigaatio/footer/kommentit eivät saa vuotaa mukaan
+    # navigation/footer/comments must not leak through
     assert "Copyright 2026 Anthropic" not in text
     assert "user123" not in text
 
