@@ -17,9 +17,13 @@
 ## Code style
 
 - Python 3.13, pytest - tests `def test_*()` + `pytest` or `python -m pytest`
-- All prompts and config in Finnish, code comments in Finnish
 - No unnecessary dependencies: httpx, pydantic, pyyaml, trafilatura, pytest - all already in `requirements.txt`
 - No emojis or unnecessary decorations in code
+
+## Language
+
+- **Finnish**: site pages, LLM prompts, config files (rubrics, personas, guardrails, golden examples), and any text the LLM writes (summaries, headlines, overviews)
+- **English**: code, code comments, README, ROADMAP, AGENTS.md, commit messages, test descriptions
 
 ## Refactoring
 

@@ -1,137 +1,138 @@
-# Ainikki — AI-uutiskoosteagentti
+# Ainikki — AI news digest agent
 
-Kerää uutisia Hacker Newsista, poistaa duplikaatit, ryhmittelee, arvioi, rikastaa ja
-kirjoittaa suomenkielisen koosteen.
-Astro-sivusto renderöi tulokset staattiseksi HTML:ksi.
+Collects news from Hacker News, deduplicates, clusters, scores, enriches,
+and writes a Finnish-language daily digest. The Astro site renders the
+output as static HTML.
 
-## Asennus
+## Setup
 
     python3 -m venv venv
     source venv/bin/activate
     pip install -r requirements.txt
 
-## Aja testit
+## Run tests
 
-    python3 -m tests.test_pipeline   # integraatiotesti, kattaa koko putken
+    python3 -m pytest
 
-Jokaiselle moduulille on oma testitiedostonsa (`tests/test_*.py`), ajettavissa
-samalla tavalla yksitellen.
+Each module has its own test file under `tests/test_*.py`.
 
-## Aja oikeasti (kun testit ovat vihreällä)
+## Run the pipeline
 
     export OPENROUTER_API_KEY=...
     ./pipeline.sh --topic ai --since 2026-07-16 --until 2026-07-16 --verbose
 
-`--verbose` näyttää INFO-tason lokit jokaisesta vaiheesta (montako itemiä
-kuhunkin vaiheeseen meni/tuli ulos) - suositellaan ensimmäisillä ajoilla.
+`--verbose` shows INFO-level logs for each step (item counts in/out) —
+recommended for first runs.
 
-AB-vertailu eri mallien välillä ilman config-tiedoston muokkaamista:
+A/B compare models without editing config:
 
     ./pipeline.sh --topic ai --since 2026-07-16 --until 2026-07-16 \
       --model-override score=openai:gpt-4o \
       --model-override compose=anthropic:claude-opus-4-8
 
-## Renderöi ja deployaa sivusto
+## Build and deploy the site
 
     cd site && npm install && npm run build
 
-Generoitu HTML päätyy `site/dist/`. Deployaus:
+Generated HTML lands in `site/dist/`. Deploy:
 
     DEPLOY_TARGET=user@host:/var/www/ainikki ./site/deploy.sh
 
-## Automaattinen päivittäinen ajo
+## Daily automation
 
-Cron-sääntö (päivittäin klo 06:30):
+Cron entry (daily at 06:30):
 
-```
-30 6 * * * OPENROUTER_API_KEY='sk-...' DEPLOY_TARGET='user@host:/var/www/ainikki' TELEGRAM_BOT_TOKEN='...' TELEGRAM_CHAT_ID='...' /path/to/ainikki/daily.sh >> /path/to/ainikki-cron.log 2>&1
-```
+    30 6 * * * OPENROUTER_API_KEY='sk-...' DEPLOY_TARGET='user@host:/var/www/ainikki' TELEGRAM_BOT_TOKEN='...' TELEGRAM_CHAT_ID='...' /path/to/ainikki/daily.sh >> /path/to/ainikki-cron.log 2>&1
 
-Aseta avaimet ja kohde suoraan croniin, ei profiilitiedostoihin.
-Telegram-viesti on vapaaehtoinen: jos `TELEGRAM_BOT_TOKEN` ja `TELEGRAM_CHAT_ID`
-puuttuvat, Telegram-vaihe ohitetaan hiljaa.
+Set keys and target directly in the cron entry, not in profile files.
+Telegram is optional: if `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are
+missing, the Telegram step is silently skipped.
 
-## Vaiheet
+## Pipeline steps
 
-| # | Vaihe | LLM? | Sisään | Ulos | Konfiguraatio |
-|---|---|---|---|---|---|
-| 1 | **Collect** | Ei | source-URL:t, aikaikkuna | `list[RawItem]` per lähde | `sources/{topic}.yaml` |
-| 2 | **Dedup** | Ei | kaikki RawItemit | `list[Candidate]` (exact-URL dedup) | — |
-| 3 | **Cluster** | Kyllä | deduped candidates | `list[Candidate]` ryhmiteltynä | — |
-| 4 | **Score** | Kyllä | klusteroidut kandidaatit | ranking + `selection_reason` | `rubrics/{topic}_v*.yaml` |
-| 5 | **Enrich** | Ei | top N valittua | täysi artikkelisisältö per item | — |
-| 6 | **Compose** | Kyllä (per item) | 1 itemin sisältö + persona + guardrails | headline + summary suomeksi | `personas/*`, `guardrails/*`, `golden_examples/*` |
-| 7 | **Overview** | Kyllä | kaikki composed itemit | 1-2 lauseen päivän yleiskatsaus | — |
-| 8 | **Validate** | Ei | kaikki composed + overview | `Briefing`-objekti, Pydantic-validoitu | `schema.py` |
-| 9 | **Write** | Ei | validoitu Briefing | JSON levylle | — |
+| # | Step | LLM? | In | Out | Config |
+|---|------|------|----|-----|--------|
+| 1 | **Collect** | No | source URLs, time window | `list[RawItem]` per source | `sources/{topic}.yaml` |
+| 2 | **Dedup** | No | all RawItems | `list[Candidate]` (exact-URL dedup) | — |
+| 3 | **Cluster** | Yes | deduped candidates | `list[Candidate]` grouped | — |
+| 4 | **Score** | Yes | clustered candidates | ranking + `selection_reason` | `rubrics/{topic}_v*.yaml` |
+| 5 | **Enrich** | No | top N selected | full article content per item | — |
+| 6 | **Compose** | Yes (per item) | 1 item content + persona + guardrails | headline + summary in Finnish | `personas/*`, `guardrails/*`, `golden_examples/*` |
+| 7 | **Overview** | Yes | all composed items | 1–2 sentence daily overview | — |
+| 8 | **Validate** | No | all composed + overview | `Briefing` object, Pydantic-validated | `schema.py` |
+| 9 | **Write** | No | validated Briefing | JSON to disk | — |
 
-## Failure-policy stepeittäin
+## Failure policies
 
-- **Collect**: yhden lähdeadapterin epäonnistuminen skippaa sen lähde, jatka muilla.
-- **Dedup**: ei pitäisi koskaan epäonnistua ellei syöte ole rikki.
-- **Cluster / Enrich**: ei-kriittisiä. Cluster degradoituu singleton-ryhmiin,
-  Enrich pudottaa yksittäisen itemin. Molemmat lokittavat WARNING-tasolla.
-- **Score / Validate**: kriittisiä. Jos structured output on rikki, putki kaatuu
-  näkyvästi sen sijaan että julkaistaan mielivaltainen valinta.
-- **Compose**: yhden itemin epäonnistuminen -> pudota se pois, älä kaataa koko ajoa.
-- **Write**: kirjoituksen jälkeen tiedosto luetaan takaisin ja validoidaan uudelleen.
+- **Collect**: one adapter failure skips that source, continues with others.
+- **Dedup**: should never fail unless input is broken.
+- **Cluster / Enrich**: non-critical. Cluster degrades to singletons,
+  Enrich drops individual items. Both log at WARNING level.
+- **Score / Validate**: critical. If structured output is broken, the
+  pipeline crashes rather than publishing an arbitrary selection.
+- **Compose**: one item fails → drop it, don't crash the whole run.
+- **Write**: after writing, the file is read back and re-validated as
+  a roundtrip safety net.
 
-## Mallit ja niiden roolit
+## Models and their roles
 
-Jokainen pipeline-askeli käyttää omaansa mallia. JSON-tuloksessa `models_used`
--kenttä kertoo minkä mallin kukin askeli käytti. Sivustolla nämä näkyvät
-pieninä riveinä otsikon alla.
+Each pipeline step uses its own model. The `models_used` field in the
+JSON output shows which model ran each step. These appear as small lines
+under the headline on the site.
 
-| Askeli     | Rooli                                      |
-| ---------- | ------------------------------------------ |
-| `cluster`  | Ryhmittele uutiset aihepiireittäin         |
-| `score`    | Arvioi uutisten laatu ja uutisarvo         |
-| `compose`  | Kirjoita otsikot ja yhteenveto (toimittaja)|
-| `overview`  | Kirjoita päivän yleiskatsaus               |
+| Step | Role |
+|------|------|
+| `cluster` | Group stories by topic |
+| `score` | Evaluate newsworthiness |
+| `compose` | Write headlines and summaries (journalist) |
+| `overview` | Write the daily overview |
 
-## Suunnitteluperiaatteet
+## Design principles
 
 ### Pipeline
 
-- **Enrich vasta scoringin jälkeen** - säästää verkkokutsuja ja kontekstia, koska
-  haetaan täysi sisältö vain jutuille jotka oikeasti päätyvät koosteeseen.
-- **Yksi LLM-kutsu per item Compose-stepissä** - pieni konteksti, rinnakkaistettavissa
-  myöhemmin, ja yhden itemin epäonnistuminen on eristetty muista.
-- **Pydantic-validointi** Write-jälkeen on turvaverkko joka estää rikkinäisen JSON:in
-  päätymisen levylle ja sitä kautta Astro-buildiin asti.
-- **Config vs. runtime-override** - `config/models.yaml` määrittää oletukset, CLI-flagit
-  (`--model-override`) voittavat ne AB-vertailua varten.
+- **Enrich only after scoring** — saves HTTP calls and context by
+  fetching full content only for items that make the cut.
+- **One LLM call per item in Compose** — small context, failure
+  isolation, parallelizable later.
+- **Pydantic validation after Write** — roundtrip safety net that
+  prevents broken JSON from reaching the Astro build.
+- **Config vs. runtime override** — `config/models.yaml` sets
+  defaults, CLI flags (`--model-override`) override for A/B testing.
 
-### Frontti
+### Frontend
 
-Sivusto on pieni päivälehti, ei SaaS-dashboard tai moderni feedsivu.
-Suunnittelun keskyskysymys: "Auttaako tämä lukijaa keskittymään päivän
-juttuihin?" Jos ei, poista.
+The site is a small daily paper, not a SaaS dashboard or modern feed
+page. The guiding question: "Does this help the reader focus on today's
+stories?" If not, remove it.
 
-- **Typografia ensin** - välistys, hierarkia ja rivipituus kantavat visuaalista painoa, ei kortit, varjot tai koristeet
-- **Mukava lukukokemus** - runsas tyhjä tila, mukava riviväli, luettavuus ensin
-- **Näkymätön käyttöliittymä** - käyttäjä huomaa tekstin, ei elementtejä
-- **Järjestelmäfontit** - ei ulkoisia fontteja, kirjasin on suunnittelu
-- **Ei liikettä** - ei animaatioita, hover-tilat hillittyjä
-- **Zero JS** - staattinen HTML, upotettu CSS, ei ulkoisia resurssseja
+- **Typography first** — spacing, hierarchy, and line length carry
+  visual weight, not cards, shadows, or decorations.
+- **Pleasant reading experience** — generous whitespace, comfortable
+  line height, readability first.
+- **Invisible UI** — the reader notices the text, not the elements.
+- **System fonts** — no external fonts, the typeface is the design.
+- **No motion** — no animations, hover states are restrained.
+- **Zero JS** — static HTML, inline CSS, no external resources.
 
-## Käyttöoikeudet
+## Credentials
 
-Aseta ympäristömuuttuja sen providerin mukaan jota config/models.yaml käyttää:
+Set the environment variable for whichever provider `config/models.yaml`
+uses:
 - OpenRouter: `OPENROUTER_API_KEY`
 - OpenAI: `OPENAI_API_KEY`
 - Anthropic: `ANTHROPIC_API_KEY`
-- Paikallinen (esim. Ollama): ei avainta, mutta `base_url` pitää olla oikein
+- Local (e.g. Ollama): no key needed, but `base_url` must be correct
 
-## Tunnetut rajoitukset
+## Known limitations
 
-- Vain yksi collect-lähde (HN). RSS-adapteri puuttuu.
-- Cluster-step on otsikkopohjainen, ei täysin luotettava.
-- Enrich käyttää trafilaturaa, ei toimi JS-renderöidyillä sivuilla.
-- Compose käyttää vain päälähdettä, monilähde-synteesi v2:een.
-- Ei asyncia - Compose ajaa itemit peräkkäin.
+- Only one collect source (HN). No RSS adapter yet.
+- Cluster step is title-based, not fully reliable.
+- Enrich uses trafilatura, doesn't work on JS-rendered pages.
+- Compose uses only the primary source, multi-source synthesis is v2.
+- No async — Compose runs items sequentially.
 
-## Seuraavat askeleet
+## Next steps
 
-1. RSS-adapteri lisää toisen lähteen
-2. Weekly/monthly-ajon oikea testaus
+1. RSS adapter for a second source
+2. Weekly/monthly run testing
