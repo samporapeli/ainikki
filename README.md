@@ -132,7 +132,6 @@ uses:
 - Compose uses only the primary source, multi-source synthesis is v2.
 - No async — Compose runs items sequentially.
 
-## Next steps
+## Roadmap
 
-1. RSS adapter for a second source
-2. Weekly/monthly run testing
+See [ROADMAP.md](ROADMAP.md) for planned work.
