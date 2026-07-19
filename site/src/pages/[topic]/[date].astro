@@ -54,7 +54,7 @@ const ogUrl = `${Astro.site?.href || '/'}${briefing.topic}/${dateStr}/`;
     <h1>{topicUpper}</h1>
     <p class="date">{prettyDate}</p>
     <p class="generated">
-      Generoitu {new Date(briefing.meta.generated_at).toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}
+      Koostettu klo {new Date(briefing.meta.generated_at).toLocaleTimeString('fi-FI', { hour: 'numeric', minute: '2-digit' })}
     </p>
     <ModelBadge modelsUsed={briefing.meta.models_used} />
   </header>

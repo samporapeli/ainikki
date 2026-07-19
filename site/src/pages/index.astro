@@ -21,27 +21,32 @@ if (fs.existsSync(dataDir)) {
 <Layout title="Ainikki">
   <header>
     <h1>Ainikki</h1>
-    <p class="tagline">Tekoäly-uutisten automaattinen suomenkielinen kooste</p>
+    <p class="tagline">Uutiskoosteet tekoälyavustuksella</p>
   </header>
 
   <section class="about">
     <p>
-      Ainikki kerää päivittäin uutisia Hacker Newsista, valitsee ne uutisarvon
-      mukaan ja kirjoittaa jokaisesta lyhyen suomenkielisen tiivistelmän.
-      Tulokset julkaistaan staattisena verkkosivustona.
+      Ainikki seuraa uutisia ja kokoaa tärkeimmät suomenkieliseen
+      päiväkoosteeseen. Tällä hetkellä Ainikki keskittyy tekoälyuutisiin.
+    </p>
+    <p class="disclaimer">
+      Ainikki on tekoälypohjainen ja voi tehdä virheitä.
     </p>
   </section>
 
   {topics.length === 0 ? (
     <p class="empty">Ei koosteita vielä.</p>
   ) : (
-    <nav class="topics">
-      {topics.map(t => (
-        <a href={`${t}/`} class="topic-link">
-          {t.toUpperCase()}
-        </a>
-      ))}
-    </nav>
+    <section class="topic-list">
+      <h2>Aiheet</h2>
+      <nav class="topics">
+        {topics.map(t => (
+          <a href={`${t}/`} class="topic-link">
+            {t.toUpperCase()}
+          </a>
+        ))}
+      </nav>
+    </section>
   )}
 
   <p class="footer">
@@ -64,6 +69,21 @@ if (fs.existsSync(dataDir)) {
     margin-bottom: 2.5rem;
     color: var(--fg-muted);
     line-height: 1.7;
+  }
+
+  .disclaimer {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--fg-subtle);
+  }
+
+  .topic-list h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--fg-muted);
+    margin-bottom: 0.75rem;
   }
 
   .empty {
