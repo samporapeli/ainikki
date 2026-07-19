@@ -23,7 +23,8 @@
 
 ## Refactoring
 
-- Less is more. Do not leave code "just in case".
+- **YAGNI** (You Aren't Gonna Need It). Do not leave code or documentation "just in case". Build what is needed now, not what might be needed later.
+- **DRY** (Don't Repeat Yourself) applies to code and documentation alike. However, do not force DRY if it introduces unnecessary indirection or complexity - pragmatic duplication is acceptable.
 - When adding a feature, actively consider if something else becomes obsolete. Remove it after verifying it can be done.
 - Complete refactors cleanly. Do not leave backwards compatibility code rotting. Confirm with the user whether to backfill old data or drop fallbacks.
 
