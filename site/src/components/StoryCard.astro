@@ -15,6 +15,7 @@ interface NewsItem {
 const { item } = Astro.props as { item: NewsItem };
 
 const primarySource = item.sources[0];
+const sourceHost = primarySource ? new URL(primarySource.url).hostname : null;
 ---
 
 <article class="story">
@@ -22,7 +23,7 @@ const primarySource = item.sources[0];
   <p class="summary">{item.summary}</p>
   {primarySource && (
     <p class="source">
-      <a href={primarySource.url} target="_blank" rel="noopener">Lähde ↗</a>
+      <a href={primarySource.url} target="_blank" rel="noopener">Lue ({sourceHost}) ↗</a>
     </p>
   )}
 </article>
