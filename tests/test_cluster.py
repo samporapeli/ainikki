@@ -9,7 +9,7 @@ from agent.schema import RawItem, SourceType, Candidate
 
 
 def _build_test_candidates() -> list[Candidate]:
-    """5 candidates: 4 from the original HN fixture + 1 TechCrunch article
+    """9 candidates: 8 from the original HN fixture + 1 TechCrunch article
     covering the SAME Anthropic story at a different URL than the HN link.
     Dedup does not merge these (different URL) — that's exactly the
     Cluster step's job.
@@ -49,13 +49,13 @@ def _mock_llm_group_anthropic_stories(system_prompt: str, user_prompt: str) -> s
 
 def test_cross_url_clustering():
     candidates = _build_test_candidates()
-    assert len(candidates) == 5, f"expected 5 candidates before clustering, got {len(candidates)}"
+    assert len(candidates) == 9, f"expected 9 candidates before clustering, got {len(candidates)}"
 
     result = cluster_candidates(candidates, _mock_llm_group_anthropic_stories)
     clustered = result.clusters
 
     assert result.warning is None, "successful clustering should not produce a warning"
-    assert len(clustered) == 4, f"expected 4 groups after clustering, got {len(clustered)}"
+    assert len(clustered) == 8, f"expected 8 groups after clustering, got {len(clustered)}"
 
     merged = next(c for c in clustered if len(c.items) == 2)
     assert merged.items[0].source_type == SourceType.hn, "primary source should be HN (company news), not TechCrunch"
@@ -84,8 +84,8 @@ def test_fallback_on_incomplete_coverage():
     candidates = _build_test_candidates()
 
     def bad_response(system_prompt: str, user_prompt: str) -> str:
-        # only first 3 candidates mentioned out of 5 - incomplete coverage
-        clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(3)]
+        # only first 5 candidates mentioned out of 9 - incomplete coverage
+        clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(5)]
         return json.dumps({"clusters": clusters})
 
     result = cluster_candidates(candidates, bad_response)

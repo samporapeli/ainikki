@@ -89,11 +89,11 @@ def test_make_llm_call_end_to_end_with_cluster():
     """
     fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
     hn_items = parse_hn_hits(fixture["hits"])
-    candidates = dedup_candidates(hn_items)  # 4 candidates
+    candidates = dedup_candidates(hn_items)  # 8 candidates
 
     def handler(request: httpx.Request) -> httpx.Response:
         # don't cluster anything together in this test - all become singletons
-        clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(4)]
+        clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(8)]
         content = json.dumps({"clusters": clusters})
         return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
 
@@ -103,5 +103,5 @@ def test_make_llm_call_end_to_end_with_cluster():
     result = cluster_candidates(candidates, llm_call)
 
     assert result.warning is None
-    assert len(result.clusters) == 4
+    assert len(result.clusters) == 8
 

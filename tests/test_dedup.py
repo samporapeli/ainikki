@@ -40,8 +40,8 @@ def test_dedup_merges_cross_source_duplicate():
     all_items = hn_items + [rss_duplicate]
     candidates = dedup_candidates(all_items)
 
-    # 4 unique HN stories, one of which (Anthropic) merges with the RSS duplicate
-    assert len(candidates) == 4, f"expected 4 candidates, got {len(candidates)}"
+    # 8 unique HN stories, one of which (Anthropic) merges with the RSS duplicate
+    assert len(candidates) == 8, f"expected 8 candidates, got {len(candidates)}"
 
     anthropic_candidate = next(
         c for c in candidates if "anthropic.com" in c.normalized_url

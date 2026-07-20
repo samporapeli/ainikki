@@ -10,7 +10,7 @@ def test_parse_basic_fields():
     fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
     items = parse_hn_hits(fixture["hits"])
 
-    assert len(items) == 4, f"expected 4 items, got {len(items)}"
+    assert len(items) == 8, f"expected 8 items, got {len(items)}"
 
     first = items[0]
     assert first.title == "Anthropic announces Claude Fable 5 and Claude Mythos 5"
