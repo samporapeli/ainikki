@@ -1,19 +1,19 @@
 """
-JSON-apufunktiot: siivoaa LLM-vastauksia ennen json.loads-kutsua.
+JSON utilities: clean LLM responses before json.loads().
 
-Moni malli (erityisesti GPT-4o-mini OpenRouterin kautta) kääri JSON-vastauksensa
-Markdown-koodiblokkeihin (```json\n{...}\n```) vaikka promptissa pyydettiin
-puhdasta JSON:ia. Tämä moduuli siivoaa tällaiset merkinnät pois.
+Many models (especially GPT-4o-mini via OpenRouter) wrap their JSON responses
+in Markdown code fences (```json\n{...}\n```) even when the prompt asked for
+plain JSON. This module strips such markers.
 
-Käytä strip_code_fences() aina ennen json.loads(raw_response) -kutsua.
+Always use strip_code_fences() before calling json.loads(raw_response).
 """
 
 import re
 
 _FENCE_RE = re.compile(
-    r"^\s*```(?:json|JSON)?\s*\n"  # avaus ``` (mahdollisesti kielimerkinnällä)
-    r"(.*?)"                       # sisältö (non-greedy)
-    r"\n\s*```\s*$",              # sulkava ```
+    r"^\s*```(?:json|JSON)?\s*\n"  # opening ``` (optionally with language tag)
+    r"(.*?)"                       # content (non-greedy)
+    r"\n\s*```\s*$",              # closing ```
     re.DOTALL,
 )
 

@@ -1,15 +1,15 @@
 """
-Overview-step: kirjoittaa 2-3 lauseen yleiskatsauksen koko koosteelle,
-käyttäen VAIN jo Compose-stepin tuottamia headline+summary-tekstejä -
-ei koskaan raakalähteitä tai artikkelisisältöä. Tämä pitää kontekstin
-pienenä ja faktavirheriskin minimaalisena, koska tekstit on jo kertaalleen
-guardrailsien läpi vietyjä.
+Overview-step: writes a 2-3 sentence overview for the entire digest,
+using ONLY the headline+summary texts already produced by the Compose
+step — never raw sources or article content. This keeps the context
+small and fact-error risk minimal, since the texts have already passed
+through guardrails once.
 
-Erikoistapaus muihin ei-kriittisiin stepeihin verrattuna: Briefing.overview
-on PAKOLLINEN kenttä schemassa, joten pelkkä "pudota pois" ei ole vaihtoehto
-jos LLM epäonnistuu. Sen sijaan käytetään determinististä fallbackia (koostettu
-suoraan jo validoiduista otsikoista ilman LLM:ää) - aina toimiva, mutta
-näkyvästi lokitettu ja merkitty warningiksi.
+Special case compared to other non-critical steps: Briefing.overview is
+a REQUIRED field in the schema, so simply "dropping it" is not an option
+when the LLM fails. Instead, a deterministic fallback is used (composed
+directly from already-validated headlines, without LLM) — always works,
+but visibly logged and marked as a warning.
 """
 
 import json
@@ -79,6 +79,6 @@ def generate_overview(items: list[NewsItem], llm_call: LlmCall,
         return OverviewResult(overview=response.overview.strip(), warning=None)
     except (json.JSONDecodeError, ValidationError, ValueError) as e:
         fallback = _fallback_overview(items)
-        warning = f"Yleiskuva epäonnistui ({e}) - käytetty deterministinen fallback"
+        warning = f"Overview generation failed ({e}) - deterministic fallback used"
         logger.warning(warning)
         return OverviewResult(overview=fallback, warning=warning)

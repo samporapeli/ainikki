@@ -10,7 +10,7 @@ def test_parse_basic_fields():
     fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
     items = parse_hn_hits(fixture["hits"])
 
-    assert len(items) == 4, f"odotettiin 4 itemiä, saatiin {len(items)}"
+    assert len(items) == 4, f"expected 4 items, got {len(items)}"
 
     first = items[0]
     assert first.title == "Anthropic announces Claude Fable 5 and Claude Mythos 5"
@@ -28,7 +28,7 @@ def test_null_url_fallback():
 
     ask_hn_item = next(i for i in items if i.origin_id == "hn_333333")
     assert str(ask_hn_item.url) == "https://news.ycombinator.com/item?id=333333", \
-        f"fallback-URL väärin: {ask_hn_item.url}"
+        f"fallback URL wrong: {ask_hn_item.url}"
 
 
 def test_published_at_parsed():

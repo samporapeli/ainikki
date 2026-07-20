@@ -33,7 +33,7 @@ def _build_test_candidates() -> list[Candidate]:
 def _mock_llm_group_anthropic_stories(system_prompt: str, user_prompt: str) -> str:
     """Simulates model response: finds the Anthropic and TechCrunch lines
     in the prompt and groups them, rest become singletons."""
-    lines = user_prompt.splitlines()[1:]  # ohita "Ehdokkaat:"-otsikkorivi
+    lines = user_prompt.splitlines()[1:]  # skip "Candidates:" header line
     anthropic_idx = next(i for i, l in enumerate(lines) if "Fable 5 and Claude Mythos 5" in l)
     techcrunch_idx = next(i for i, l in enumerate(lines) if "mixed reactions" in l)
     all_indices = set(range(len(lines)))
@@ -49,16 +49,16 @@ def _mock_llm_group_anthropic_stories(system_prompt: str, user_prompt: str) -> s
 
 def test_cross_url_clustering():
     candidates = _build_test_candidates()
-    assert len(candidates) == 5, f"odotettiin 5 kandidaattia ennen klusterointia, saatiin {len(candidates)}"
+    assert len(candidates) == 5, f"expected 5 candidates before clustering, got {len(candidates)}"
 
     result = cluster_candidates(candidates, _mock_llm_group_anthropic_stories)
     clustered = result.clusters
 
-    assert result.warning is None, "onnistuneen klusteroinnin ei pitäisi tuottaa warningia"
-    assert len(clustered) == 4, f"odotettiin 4 ryhmää klusteroinnin jälkeen, saatiin {len(clustered)}"
+    assert result.warning is None, "successful clustering should not produce a warning"
+    assert len(clustered) == 4, f"expected 4 groups after clustering, got {len(clustered)}"
 
     merged = next(c for c in clustered if len(c.items) == 2)
-    assert merged.items[0].source_type == SourceType.hn, "päälähteen pitäisi olla HN (yhtiön uutinen), ei TechCrunch"
+    assert merged.items[0].source_type == SourceType.hn, "primary source should be HN (company news), not TechCrunch"
     assert merged.items[1].source_type == SourceType.other
     assert merged.cluster_reason is not None
 
@@ -73,10 +73,10 @@ def test_singletons_preserved():
 def test_fallback_on_malformed_json():
     candidates = _build_test_candidates()
     result = cluster_candidates(candidates, lambda s, u: "tämä ei ole JSON:ia ollenkaan")
-    assert len(result.clusters) == len(candidates), "fallbackissa pitäisi olla yhtä monta ryhmää kuin kandidaattia"
+    assert len(result.clusters) == len(candidates), "fallback should have the same number of groups as candidates"
     assert all(c.cluster_reason and "fallback" in c.cluster_reason for c in result.clusters)
-    assert result.warning is not None, "fallback EI saa olla hiljainen - warning pitää palautua"
-    assert "degradoitui" in result.warning
+    assert result.warning is not None, "fallback must NOT be silent - warning must be returned"
+    assert "degraded" in result.warning
 
 
 def test_fallback_on_incomplete_coverage():
@@ -100,7 +100,7 @@ def test_prompt_stays_lightweight():
     candidates = _build_test_candidates()
     _, user_prompt = build_cluster_prompt(candidates)
     assert "story_text" not in user_prompt
-    assert len(user_prompt) < 2000, f"prompti yllättävän pitkä ({len(user_prompt)} merkkiä) - konteksti kasvamassa?"
+    assert len(user_prompt) < 2000, f"prompt unexpectedly long ({len(user_prompt)} chars) - context growing?"
 
 
 def test_code_fenced_json_is_parsed():

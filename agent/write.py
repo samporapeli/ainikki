@@ -1,9 +1,9 @@
 """
-Write-step: kirjoittaa validoidun Briefingin JSON-tiedostoksi data/output/-kansioon.
-Kirjoituksen jälkeen tiedosto luetaan heti takaisin ja validoidaan uudelleen -
-tämä on halpa mutta hyödyllinen turvaverkko: jos serialisointi (esim. HttpUrl/
-datetime-tyyppien JSON-muunnos) menisi jotenkin pieleen, se huomataan heti
-eikä jää odottamaan että Astro-build kaatuu myöhemmin.
+Write-step: writes the validated Briefing as a JSON file to data/output/.
+After writing, the file is immediately re-read and re-validated — a cheap
+but useful safety net: if serialization (e.g. HttpUrl/datetime type
+conversion) fails somehow, it is caught right away instead of causing a
+late Astro build failure.
 """
 
 import json
@@ -13,7 +13,7 @@ from agent.schema import Briefing
 
 
 class WriteRoundtripError(Exception):
-    """Levylle kirjoitettu tiedosto ei validoitunut takaisin luettaessa."""
+    """File written to disk failed validation on re-read."""
 
 
 def write_briefing(briefing: Briefing, output_dir: Path = Path("data/output")) -> Path:

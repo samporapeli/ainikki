@@ -1,25 +1,25 @@
 # models.yaml
-# Step-nimi -> mikä malli sitä ajaa. CLI-flagit (esim. --model-score=gpt-4o-mini)
-# ohittavat tämän ajokohtaisesti, esim. AB-vertailua varten.
+# Step name -> which model runs it. CLI flags (e.g. --model-score=gpt-4o-mini)
+# override this on a per-run basis, e.g. for A/B comparisons.
 
-default_provider: openrouter  # tai "openai", "anthropic", "local" (mikä tahansa OpenAI-yhteensopiva endpoint)
+default_provider: openrouter  # or "openai", "anthropic", "local" (any OpenAI-compatible endpoint)
 
 steps:
   cluster:
     provider: openrouter
-    model: "openai/gpt-4o-mini"     # halpa, tehtävä on lähinnä luokittelua
+    model: "openai/gpt-4o-mini"     # cheap, the task is mostly classification
   score:
     provider: openrouter
-    model: "openai/gpt-4o-mini"     # halpa, structured output riittää
+    model: "openai/gpt-4o-mini"     # cheap, structured output is sufficient
   compose:
     provider: openrouter
-    model: "anthropic/claude-sonnet-4-6"  # laadukkaampi, suomenkielinen sujuva teksti
+    model: "anthropic/claude-sonnet-4-6"  # higher quality, fluent Finnish text
     max_tokens: 2048
   overview:
     provider: openrouter
     model: "anthropic/claude-haiku-4-5"
     max_tokens: 2048
 
-# Paikallista mallia varten (esim. Ollama) sama rakenne toimii koska
-# adapteri puhuu OpenAI-yhteensopivaa /v1/chat/completions-rajapintaa:
+# For local models (e.g. Ollama) the same structure works because the
+# adapter speaks the OpenAI-compatible /v1/chat/completions interface:
 # steps.score: {provider: local, model: "llama3.1:8b", base_url: "http://localhost:11434/v1"}

@@ -1,17 +1,17 @@
 """
-Compose-step: kirjoittaa suomenkielisen headline+summary jokaiselle
-Enrich-stepin läpäisseelle itemille. Ainoa step joka käyttää persoonaa -
-Score/Cluster eivät saa sisältää persoona-vaikutusta (ks. keskustelussa
-sovittu erottelu: editorial-arvio vs. ääni ovat eri kysymyksiä).
+Compose-step: writes a Finnish headline+summary for each item that passed
+the Enrich step. The only step that uses the persona — Score/Cluster must
+not include persona influence (see the agreed separation: editorial
+assessment vs. voice are separate concerns).
 
-Ei-kriittinen step per item (ks. README "Failure-policy stepeittäin"):
-yhden itemin epäonnistunut/rikki menevä vastaus pudottaa VAIN sen itemin,
-ei kaada koko ajoa - toisin kuin Score, jossa koko valinta on yhden
-LLM-kutsun varassa.
+Non-critical step per item (see README "Failure-policy per step"):
+a single item's failed/broken response drops ONLY that item, it does not
+crash the entire run — unlike Score, where the whole selection depends on
+a single LLM call.
 
-Yksi LLM-kutsu per item (ei kaikille kerralla) - pieni konteksti,
-rinnakkaistettavissa myöhemmin (esim. asyncio.gather), ja yhden itemin
-epäonnistuminen on eristetty muista.
+One LLM call per item (not all at once) — small context, parallelizable
+later (e.g. asyncio.gather), and a single item's failure is isolated
+from others.
 """
 
 import json
@@ -29,7 +29,7 @@ from agent.cluster import LlmCall
 logger = logging.getLogger(__name__)
 
 
-# --- Konfiguraatioiden lataus ----------------------------------------------
+# --- Configuration loading ----------------------------------------------
 
 class Persona(BaseModel):
     name: str

@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Buildataan sivusto ja deployataan rsync:llä.
-# Käyttö: DEPLOY_TARGET=user@host:/var/www/ainikki ./deploy.sh
+# Build the site and deploy with rsync.
+# Usage: DEPLOY_TARGET=user@host:/var/www/ainikki ./deploy.sh
 
 DEPLOY_TARGET="${DEPLOY_TARGET:-}"
 
 if [ -z "$DEPLOY_TARGET" ]; then
-  echo "Käyttö: DEPLOY_TARGET=user@host:/var/www/ainikki $0"
+  echo "Usage: DEPLOY_TARGET=user@host:/var/www/ainikki $0"
   exit 1
 fi
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-echo "Asennetaan riippuvuudet..."
+echo "Installing dependencies..."
 npm install
 
-echo "Buildataan..."
+echo "Building..."
 npm run build
 
-echo "Deployataan $DEPLOY_TARGET..."
+echo "Deploying to $DEPLOY_TARGET..."
 rsync -avz --delete dist/ "$DEPLOY_TARGET"
 
-echo "Valmis."
+echo "Done."

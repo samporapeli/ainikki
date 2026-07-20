@@ -1,16 +1,16 @@
 """
-Enrich-step: hakee täyden artikkelisisällön Score-stepin valitsemille
-itemeille. Ei LLM-kutsuja - puhdas HTTP + HTML-erottelu.
+Enrich-step: fetches full article content for items selected by the Score
+step. No LLM calls — pure HTTP + HTML extraction.
 
-Tehdään VASTA scoringin jälkeen, ei kaikille kandidaateille (ks.
-pipeline_design.md) - säästää verkkokutsuja ja kontekstia, koska
-haetaan täysi sisältö vain jutuille jotka oikeasti päätyvät koosteeseen.
+Done ONLY after scoring, not for all candidates (see pipeline_design.md)
+— saves HTTP calls and context, since full content is only fetched for
+stories that actually make it into the digest.
 
-Ei-kriittinen step (ks. README "Failure-policy stepeittäin"): jos yhden
-itemin haku/erottelu epäonnistuu (esim. paywall, sivu alhaalla, JS-renderöity
-sisältö jota trafilatura ei tunnista), se item pudotetaan koosteesta.
-Degradointi EI ole hiljaista - jokainen pudotus lokitetaan ja palautuu
-warning-listana, sama periaate kuin cluster-stepissä.
+Non-critical step (see README "Failure-policy per step"): if one item's
+fetch/extraction fails (e.g. paywall, down page, JS-rendered content that
+trafilatura cannot recognize), that item is dropped from the digest.
+Degradation is NOT silent — each drop is logged and returned as a warning,
+same principle as in the cluster step.
 """
 
 import logging
@@ -51,16 +51,16 @@ def extract_article_text(html: str, url: str | None = None,
         favor_precision=True,
     )
     if not text or len(text.strip()) < 100:
-        return None  # liian vähän/ei mitään sisältöä - todennäköisesti epäonnistunut erottelu
+        return None  # too little/no content — likely failed extraction
     return text[:max_chars]
 
 
 def _is_allowed_by_robots(url: str, client: httpx.Client,
                            cache: dict[str, bool]) -> bool:
-    """Tarkistaa robots.txt:n salliako haun annetulle URL:ille.
-    Cachee robots.txt-tuloksen per domain yhden enrich_candidates()-kutsun sisällä.
+    """Checks robots.txt to see if fetching the given URL is allowed.
+    Caches the robots.txt result per domain within one enrich_candidates() call.
 
-    Jos robots.txt:n haku epäonnistuu (404, timeout, virhe), oletetaan sallittu.
+    If robots.txt fetching fails (404, timeout, error), assumes allowed.
     """
     from urllib.parse import urlparse
     parsed = urlparse(url)
@@ -116,7 +116,7 @@ def enrich_candidates(scored: list[ScoredCandidate], client: httpx.Client,
             content = None
             error_note = str(e)
         else:
-            error_note = "sisältöä ei pystytty erottamaan (paywall/tyhjä sivu?)" if content is None else None
+            error_note = "content could not be extracted (paywall/blank page?)" if content is None else None
 
         if content is None:
             msg = f"Rikastaminen epäonnistui '{primary.title}' ({primary.url}): {error_note} - pudotettu koosteesta"

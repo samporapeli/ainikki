@@ -16,7 +16,7 @@ CLEAN_HTML = Path("tests/fixtures/article_clean.html").read_text()
 
 def _load_test_raw_items():
     fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
-    return parse_hn_hits(fixture["hits"])  # 4 itemiä
+    return parse_hn_hits(fixture["hits"])  # 4 items
 
 
 def _make_llm_handler(score_min=3, score_max=10):
@@ -54,7 +54,7 @@ def _make_llm_handler(score_min=3, score_max=10):
         elif "suodatettu aiheen" in system_prompt:
             content = json.dumps({"overview": "Päivän aiheet liittyivät tekoälyyn ja sen kehitykseen."})
         else:
-            raise AssertionError(f"tunnistamaton system prompt: {system_prompt[:100]}")
+            raise AssertionError(f"unrecognized system prompt: {system_prompt[:100]}")
 
         if is_anthropic:
             return httpx.Response(200, json={"content": [{"type": "text", "text": content}]})
@@ -135,7 +135,7 @@ def test_pipeline_raises_on_critical_score_failure(tmp_path):
             raw_items_override=raw_items, llm_client=llm_client,
         )
     assert not tmp_out.exists() or not any(tmp_out.iterdir()), \
-        "kriittisen virheen jälkeen EI saa olla kirjoitettua tiedostoa"
+        "after critical failure there must be no written file"
 
 
 def test_pipeline_raises_on_empty_collect(tmp_path):

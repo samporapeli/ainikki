@@ -1,7 +1,7 @@
 """
-Yhteinen rajapinta collect-adaptereille. Jokainen lähde (hn.py, rss.py, ...)
-toteuttaa saman muotoisen fetch()-funktion, jotta uuden lähteen lisääminen
-ei vaadi ydinlogiikan koskemista - vain uusi tiedosto tähän kansioon.
+Shared interface for collect adapters. Each source (hn.py, rss.py, ...)
+implements the same fetch() function signature, so adding a new source
+only requires a new file in this directory — no core logic changes needed.
 """
 
 import json
@@ -13,8 +13,8 @@ from agent.schema import RawItem
 
 def save_raw(topic: str, date_str: str, source_name: str, items: list[RawItem],
              data_dir: Path = Path("data/raw")) -> Path:
-    """Tallentaa collect-vaiheen tuloksen levylle cacheksi.
-    Näin epäonnistunut myöhempi step ei pakota fetchaamaan uudestaan.
+    """Saves collect step results to disk as a cache.
+    This way a later step failure won't force a re-fetch.
     """
     out_dir = data_dir / topic / date_str
     out_dir.mkdir(parents=True, exist_ok=True)

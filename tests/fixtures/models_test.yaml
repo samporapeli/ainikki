@@ -13,4 +13,4 @@ steps:
     base_url: "http://localhost:11434/v1"
   broken_step:
     provider: openrouter
-    # model puuttuu tahallaan - testaa virheenkäsittelyä
+    # model is intentionally missing - tests error handling

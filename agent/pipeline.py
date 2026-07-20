@@ -1,14 +1,14 @@
 """
-Orkestroi koko putken: Collect -> Dedup -> Cluster -> Score -> Enrich ->
+Orchestrates the full pipeline: Collect -> Dedup -> Cluster -> Score -> Enrich ->
 Compose -> Overview -> Validate -> Write.
 
-CLI-esimerkki:
+CLI example:
     ./agent run --topic ai --since 2026-07-16 --until 2026-07-16
 
-run_pipeline() ottaa vastaan raw_items_override/llm_client/enrich_client
--parametrit testattavuutta varten (ks. tests/test_pipeline.py) - näillä
-koko putki on ajettavissa mock-datalla ilman verkkoyhteyttä. Oikeassa
-ajossa nämä jätetään None:ksi ja koodi tekee oikeat verkkokutsut.
+run_pipeline() accepts raw_items_override/llm_client/enrich_client
+parameters for testability (see tests/test_pipeline.py) — with these,
+the entire pipeline can be run with mock data without network access.
+In production these are left as None and the code makes real HTTP calls.
 """
 
 import argparse
@@ -78,21 +78,21 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     # 1. Collect
     if raw_items_override is not None:
         raw_items = raw_items_override
-        logger.info("collect: käytetään raw_items_override (%d itemiä) - testiajo", len(raw_items))
+        logger.info("collect: using raw_items_override (%d items) - test run", len(raw_items))
     else:
         try:
             raw_items = fetch_hn(since, until, min_points=min_points)
         except Exception as e:
-            logger.warning("collect: HN-adapteri epäonnistui (%s) - jatketaan tyhjällä listalla", e)
+            logger.warning("collect: HN adapter failed (%s) - continuing with empty list", e)
             raw_items = []
             all_warnings.append(f"Keruu: HN-adapteri epäonnistui: {e}")
     save_raw(topic, date_str, "hn", raw_items, data_dir=data_dir / "raw")
-    logger.info("collect: %d raakaitemiä", len(raw_items))
+    logger.info("collect: %d raw items", len(raw_items))
 
     # 2. Dedup
     candidates = dedup_candidates(raw_items)
     save_candidates(topic, date_str, candidates, data_dir=data_dir / "dedup")
-    logger.info("dedup: %d -> %d kandidaattia", len(raw_items), len(candidates))
+    logger.info("dedup: %d -> %d candidates", len(raw_items), len(candidates))
 
     models_config = load_models_config(config_paths.models)
     models_used: dict[str, str] = {}
@@ -103,14 +103,14 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     cluster_result = cluster_candidates(candidates, llm_cluster)
     if cluster_result.warning:
         all_warnings.append(cluster_result.warning)
-    logger.info("cluster: %d -> %d ryhmää", len(candidates), len(cluster_result.clusters))
+    logger.info("cluster: %d -> %d clusters", len(candidates), len(cluster_result.clusters))
 
     # 4. Score (CRITICAL - no fallback, ScoreValidationError crashes the entire run)
     llm_score = _resolve_llm_call("score", models_config, config_paths, model_overrides,
                                    llm_client, models_used)
     rubric = load_rubric(config_paths.rubric)
     scored = score_clusters(cluster_result.clusters, config_paths.rubric, llm_score)
-    logger.info("score: %d valittua (rubric %s)", len(scored), rubric.get("version"))
+    logger.info("score: %d selected (rubric %s)", len(scored), rubric.get("version"))
 
     # 5. Enrich
     owns_enrich_client = enrich_client is None
@@ -119,7 +119,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
         enrich_result = enrich_candidates(scored, client=ec)
         all_warnings.extend(enrich_result.warnings)
         dropped_stories = enrich_result.dropped_stories
-        logger.info("enrich: %d -> %d itemiä (sisältö haettu onnistuneesti)",
+        logger.info("enrich: %d -> %d items (content fetched successfully)",
                     len(scored), len(enrich_result.items))
     finally:
         if owns_enrich_client:
@@ -132,7 +132,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
                                     config_paths.guardrails, llm_compose,
                                     golden_examples_dir=config_paths.golden_examples_dir)
     all_warnings.extend(compose_result.warnings)
-    logger.info("compose: %d itemiä kirjoitettu", len(compose_result.items))
+    logger.info("compose: %d items written", len(compose_result.items))
 
     # 7. Overview
     llm_overview = _resolve_llm_call("overview", models_config, config_paths, model_overrides,
@@ -153,12 +153,12 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
 
     # 9. Write
     path = write_briefing(briefing, output_dir=out_dir)
-    logger.info("write: kirjoitettu %s (%d warningia)", path, len(briefing.warnings))
+    logger.info("write: written %s (%d warnings)", path, len(briefing.warnings))
     return path
 
 
 def _parse_model_overrides(raw_overrides: list[str]) -> dict[str, tuple[str | None, str | None]]:
-    """Parsii --model-override step=provider:model -muotoiset CLI-argumentit."""
+    """Parses --model-override step=provider:model CLI arguments."""
     result: dict[str, tuple[str | None, str | None]] = {}
     for raw in raw_overrides:
         try:
@@ -166,26 +166,26 @@ def _parse_model_overrides(raw_overrides: list[str]) -> dict[str, tuple[str | No
             provider, model = rest.split(":", 1)
         except ValueError:
             raise SystemExit(
-                f"Virheellinen --model-override '{raw}' - odotettu muoto: step=provider:model"
+                f"Invalid --model-override '{raw}' - expected format: step=provider:model"
             )
         result[step.strip()] = (provider.strip(), model.strip())
     return result
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="AI-uutiskoosteagentti")
+    parser = argparse.ArgumentParser(description="AI news digest agent")
     parser.add_argument("--topic", required=True)
     parser.add_argument("--period", choices=[p.value for p in Period], default="daily")
-    parser.add_argument("--since", required=True, help="ISO-päivämäärä, esim. 2026-07-16")
-    parser.add_argument("--until", required=True, help="ISO-päivämäärä (mukaan lukien)")
+    parser.add_argument("--since", required=True, help="ISO date, e.g. 2026-07-16")
+    parser.add_argument("--until", required=True, help="ISO date (inclusive)")
     parser.add_argument("--config-dir", default="config", type=Path)
     parser.add_argument("--data-dir", default="data", type=Path)
     parser.add_argument("--out-dir", default=None, type=Path)
     parser.add_argument("--min-points", type=int, default=20)
     parser.add_argument("--model-override", action="append", default=[],
-                         help="step=provider:model, esim. score=openai:gpt-4o-mini. Voi antaa useita.")
+                         help="step=provider:model, e.g. score=openai:gpt-4o-mini. Can be specified multiple times.")
     parser.add_argument("--display-date", default=None,
-                         help="Päivä joka näkyy käyttäjälle (oletus: sama kuin --since)")
+                         help="Date shown to the user (default: same as --since)")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
 
@@ -208,16 +208,16 @@ def main(argv: list[str] | None = None) -> None:
             model_overrides=model_overrides,
         )
     except ScoreValidationError as e:
-        print(f"VIRHE (score-step, kriittinen): {e}", file=sys.stderr)
+        print(f"ERROR (score-step, critical): {e}", file=sys.stderr)
         sys.exit(1)
     except EmptyBriefingError as e:
-        print(f"VIRHE (ei julkaistavaa dataa): {e}", file=sys.stderr)
+        print(f"ERROR (no publishable data): {e}", file=sys.stderr)
         sys.exit(1)
     except WriteRoundtripError as e:
-        print(f"VIRHE (kirjoitus epäonnistui): {e}", file=sys.stderr)
+        print(f"ERROR (write failed): {e}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Kirjoitettu: {path}")
+    print(f"Written: {path}")
 
 
 if __name__ == "__main__":

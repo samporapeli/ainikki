@@ -58,7 +58,7 @@ def test_generate_overview_empty_items_skips_llm_call():
 
     result = generate_overview([], mock_llm, "testi-aihe")
 
-    assert call_count["n"] == 0, "tyhjällä item-listalla ei pitäisi kutsua LLM:ää ollenkaan"
+    assert call_count["n"] == 0, "with empty item list, LLM should not be called at all"
     assert "Ei julkaistavia" in result.overview
     assert result.warning is None
 

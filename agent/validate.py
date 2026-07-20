@@ -1,10 +1,9 @@
 """
-Validate-step: kokoaa kaikkien edellisten vaiheiden tuottaman datan
-yhdeksi Briefing-objektiksi. Pydantic validoi rakenteen automaattisesti
-konstruktorissa - tämä moduuli lisää sen päälle vain yhden ylimääräisen
-tarkistuksen: jos yksikään item ei selvinnyt asti (kaikki karsiutuivat
-score/enrich/compose-vaiheissa), koko ajo epäonnistuu näkyvästi eikä
-kirjoiteta tyhjää/harhaanjohtavaa koostetta.
+Validate-step: assembles data produced by all previous steps into a single
+Briefing object. Pydantic validates the structure automatically in the
+constructor — this module adds one additional check on top: if no items
+survived (all were filtered out in score/enrich/compose), the entire run
+fails visibly and no empty/misleading digest is written.
 """
 
 from datetime import date, datetime, timezone
@@ -28,8 +27,8 @@ def assemble_briefing(topic: str, period: Period, period_start: date, period_end
                        extra_warnings: list[str] | None = None) -> Briefing:
     if not compose_result.items:
         raise EmptyBriefingError(
-            f"Ei yhtään validoitua itemiä jäljellä topicille '{topic}' "
-            f"({period_start} - {period_end}) - koostetta ei kirjoiteta."
+            f"No validated items remaining for topic '{topic}' "
+            f"({period_start} - {period_end}) — digest will not be written."
         )
 
     all_warnings = list(extra_warnings or [])

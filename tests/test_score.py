@@ -27,9 +27,9 @@ def test_build_score_prompt_includes_rubric_content():
     system_prompt, user_prompt = build_score_prompt(clusters, rubric)
 
     assert "uutuusarvo" in system_prompt
-    assert "markkinointisisältö" in system_prompt  # exclude-listalta
-    assert "2-3" in system_prompt  # min-max testirubriikista
-    assert "story_text" not in user_prompt  # ei täyttä sisältöä promptissa
+    assert "markkinointisisältö" in system_prompt  # from exclude list
+    assert "2-3" in system_prompt  # min-max from test rubric
+    assert "story_text" not in user_prompt  # no full content in prompt
 
 
 def test_score_clusters_happy_path():
@@ -66,7 +66,7 @@ def test_raises_on_count_outside_rubric_bounds():
             {"candidate_index": 0, "rank": 1, "selection_reason": "ainoa valinta"},
         ]})
 
-    with pytest.raises(ScoreValidationError, match="rajojen"):
+    with pytest.raises(ScoreValidationError, match="outside rubric bounds"):
         score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
 
 
@@ -79,7 +79,7 @@ def test_raises_on_duplicate_candidate_index():
             {"candidate_index": 0, "rank": 2, "selection_reason": "b"},
         ]})
 
-    with pytest.raises(ScoreValidationError, match="useammin"):
+    with pytest.raises(ScoreValidationError, match="more than once"):
         score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
 
 
@@ -98,8 +98,8 @@ def test_raises_on_invalid_rank_sequence():
 
 
 def test_prompt_builds_with_real_production_rubric():
-    """Integraatiotesti oikealla config/rubrics/ai_scoring_rubric_v1.yaml -tiedostolla,
-    jotta testifixture ei pääse ajautumaan pois synkasta oikean configin kanssa."""
+    """Integration test with the real config/rubrics/ai_scoring_rubric_v1.yaml file,
+    to ensure the test fixture does not drift out of sync with the real config."""
     clusters = _build_test_clusters()
     rubric = load_rubric(REAL_RUBRIC)
     system_prompt, user_prompt = build_score_prompt(clusters, rubric)
@@ -122,7 +122,7 @@ def test_rejects_irrelevant_candidates():
         ]})
 
     result = score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
-    assert len(result) == 2, f"odotettiin 2 valittua, saatiin {len(result)}"
+    assert len(result) == 2, f"expected 2 selected, got {len(result)}"
     assert result[0].rank == 1
     assert result[1].rank == 2
 

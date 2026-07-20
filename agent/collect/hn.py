@@ -1,13 +1,13 @@
 """
-Hacker News -adapteri, käyttää Algolian julkista hakurajapintaa
-(https://hn.algolia.com/api) - ei vaadi autentikointia.
+Hacker News adapter using Algolia's public search API
+(https://hn.algolia.com/api) — no authentication required.
 
-Tarkoituksella kaksi erillistä funktiota:
-- fetch_hn_raw(): tekee verkkokutsun, palauttaa raakan JSON:in
-- parse_hn_hits(): puhdas funktio, muuntaa JSON-hitit RawItemeiksi
+Intentionally two separate functions:
+- fetch_hn_raw(): makes the HTTP call, returns raw JSON
+- parse_hn_hits(): pure function, converts JSON hits into RawItems
 
-Tämä jako mahdollistaa parse-logiikan testaamisen ilman verkkoyhteyttä
-(ks. tests/test_hn_adapter.py, käyttää mock-vastausta).
+This separation allows testing the parsing logic without network access
+(see tests/test_hn_adapter.py, uses a mock response).
 """
 
 from datetime import datetime, timezone
@@ -59,9 +59,9 @@ def fetch_hn_raw(since: datetime, until: datetime, min_points: int = 20,
 
 
 def parse_hn_hits(hits: list[dict[str, Any]]) -> list[RawItem]:
-    """Puhdas funktio: HN Algolia -hitit -> RawItem-lista.
-    Käsittelee myös tekstipostaukset (Ask HN yms.) joilla ei ole url-kenttää -
-    näille käytetään HN:n oman keskustelusivun URL:ia fallbackina.
+    """Pure function: HN Algolia hits -> RawItem list.
+    Also handles text posts (Ask HN etc.) that have no url field —
+    falls back to HN's own discussion page URL for those.
     """
     items: list[RawItem] = []
     now = datetime.now(timezone.utc)
@@ -69,12 +69,12 @@ def parse_hn_hits(hits: list[dict[str, Any]]) -> list[RawItem]:
     for hit in hits:
         object_id = hit.get("objectID")
         if not object_id:
-            continue  # ei voida muodostaa fallback-URL:ia ilman id:tä
+            continue  # cannot build fallback URL without id
 
         url = hit.get("url") or f"https://news.ycombinator.com/item?id={object_id}"
         title = hit.get("title")
         if not title:
-            continue  # ei käyttökelpoista otsikkoa, ohitetaan
+            continue  # no usable title, skip
 
         published_at = None
         if hit.get("created_at"):

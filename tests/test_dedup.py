@@ -11,7 +11,7 @@ def test_normalize_url_strips_tracking_and_www():
     a = "https://WWW.Example.com/article/some-post/?utm_source=hn&ref=news&id=1"
     b = "https://example.com/article/some-post?id=1"
     assert normalize_url(a) == normalize_url(b), \
-        f"odotettiin samaa normalisoitua URL:ia:\n{normalize_url(a)}\n{normalize_url(b)}"
+        f"expected same normalized URL:\n{normalize_url(a)}\n{normalize_url(b)}"
 
 
 
@@ -40,14 +40,14 @@ def test_dedup_merges_cross_source_duplicate():
     all_items = hn_items + [rss_duplicate]
     candidates = dedup_candidates(all_items)
 
-    # 4 uniikkia HN-storya, joista yksi (Anthropic) yhdistyy RSS-duplikaatin kanssa
-    assert len(candidates) == 4, f"odotettiin 4 kandidaattia, saatiin {len(candidates)}"
+    # 4 unique HN stories, one of which (Anthropic) merges with the RSS duplicate
+    assert len(candidates) == 4, f"expected 4 candidates, got {len(candidates)}"
 
     anthropic_candidate = next(
         c for c in candidates if "anthropic.com" in c.normalized_url
     )
     assert len(anthropic_candidate.items) == 2, \
-        f"odotettiin 2 yhdistettyä itemiä, saatiin {len(anthropic_candidate.items)}"
+        f"expected 2 merged items, got {len(anthropic_candidate.items)}"
 
     source_types = {i.source_type for i in anthropic_candidate.items}
     assert source_types == {SourceType.hn, SourceType.rss}

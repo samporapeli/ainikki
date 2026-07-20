@@ -1,12 +1,12 @@
 # golden_examples_v1.yaml
-# Käsin kirjoitettu/kuratoitu esimerkkisetti Ainikin äänelle.
-# EI päivity automaattisesti julkaisujen myötä. Kun haluat muuttaa
-# tyyliä tietoisesti, kirjoita golden_examples_v2.yaml ja päivitä
-# viittaus persoonatiedostossa - tämä on editorial-päätös, ei
-# automaattinen prosessi.
+# Hand-written/curated example set for Ainikki's voice.
+# Does NOT update automatically with publications. When you want to
+# change the style deliberately, write golden_examples_v2.yaml and update
+# the reference in the persona file - this is an editorial decision, not
+# an automatic process.
 #
-# Kata eri tyyppisiä juttuja jotta malli näkee vaihtelua, ei vain
-# yhtä kaavaa toistettuna.
+# Cover different types of stories so the model sees variety, not just
+# one pattern repeated.
 
 version: v1
 

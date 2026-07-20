@@ -1,20 +1,20 @@
 # guardrails.yaml
-# Nämä säännöt pätevät AINA kompositio-stepissä, riippumatta siitä
-# mikä persoona on käytössä. Eivät ole tyylikysymyksiä vaan
-# laatu/luotettavuusvaatimuksia. Jos joskus teet toisen persoonan
-# (esim. eri virralle), guardrailsit periytyvät automaattisesti.
+# These rules ALWAYS apply in the composition step, regardless of which
+# persona is in use. They are not style preferences but quality/
+# reliability requirements. If you ever create a different persona
+# (e.g. for a different feed), guardrails are inherited automatically.
 
 version: v1
 
 rules:
-  # Fakta/luotettavuus
+  # Fact/reliability
   - "Käytä VAIN annetussa lähdemateriaalissa mainittuja faktoja."
   - "Älä spekuloi seurauksia joita lähde ei mainitse."
   - "Jos lähteet ovat ristiriidassa keskenään, mainitse ristiriita älä valitse puolta."
   - "Jos et ole varma jostain yksityiskohdasta, jätä se pois - älä arvaa."
   - "Älä esitä mielipidettä faktana."
 
-  # Suomen kieli
+  # Finnish language
   - "Kirjoita yhdyssanat yhteen: verkkosivusto (ei verkko sivusto), asiakaspalvelu (ei asiakas palvelu), tietoturva (ei tieto turva). Nominatiivilla alkavat substanttiiviyhdistelmät ovat AINA yhdyssanoja."
   - "Käytä pilkkua desimaalierottimena: 3,14 (ei 3.14). Prosenttimerkkiin välilyönti edelle: 15 %."
   - "Kirjoita viikonpäivät, kuukaudet ja kansallisuudet pienellä alkukirjaimella: maanantai, tammikuu, suomalainen."

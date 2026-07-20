@@ -1,16 +1,16 @@
 """
-Cluster-step: ryhmittelee samaa tarinaa käsittelevät kandidaatit yhteen,
-vaikka niillä olisi eri URL (esim. TechCrunch ja alkuperäinen yhtiön blogi
-molemmat samasta julkaisusta). Tämä on ero dedup-stepiin, joka yhdisti
-vain kirjaimellisesti saman URL:n.
+Cluster-step: groups candidates that cover the same story together,
+even if they have different URLs (e.g. TechCrunch and the original
+company blog both covering the same release). This differs from the
+dedup step, which only merged literally identical URLs.
 
-LLM-kutsu on injektoitu parametrina (Protocol LlmCall), jotta:
-1) tätä voi testata ilman oikeaa mallia/verkkoyhteyttä (ks. tests/test_cluster.py)
-2) malliriippumattomuus säilyy - agent/llm.py (myöhemmin) vain toteuttaa
-   tämän saman rajapinnan lukien config/models.yaml:sta mitä mallia käyttää
+The LLM call is injected as a parameter (Protocol LlmCall) so that:
+1) it can be tested without a real model/network (see tests/test_cluster.py)
+2) model independence is maintained — agent/llm.py (later) just implements
+   this same interface, reading config/models.yaml for which model to use.
 
-Konteksti pidetään pienenä tarkoituksella: promptiin menee VAIN otsikko,
-lähdetyyppi ja signaali per candidate - ei täyttä artikkelisisältöä.
+Context is kept intentionally small: the prompt only receives the title,
+source type, and signal per candidate — not full article content.
 """
 
 import json
@@ -45,7 +45,7 @@ class ClusterResult(NamedTuple):
 
 class ClusterAssignment(BaseModel):
     candidate_indices: list[int]
-    primary_index: int  # indeksi candidate_indices-listan SISÄLLÄ, ei globaali
+    primary_index: int  # index within candidate_indices list, not global
     reason: str | None = None
 
 
@@ -95,7 +95,7 @@ def _validate_full_coverage(response: ClusterResponse, n_candidates: int) -> boo
         return False
     if set(seen) != set(range(n_candidates)):
         return False
-    if len(seen) != len(set(seen)):  # duplikaatti-indeksi jossain ryhmässä
+    if len(seen) != len(set(seen)):  # duplicate index in some cluster
         return False
     return True
 
@@ -107,9 +107,9 @@ def _fallback_singletons(candidates: list[Candidate], reason: str) -> ClusterRes
     nothing breaks. Degradation is NOT silent: logged at WARNING level
     and a warning message is returned for Briefing.warnings.
     """
-    warning = f"Ryhmittely degradoitui singletoneihin: {reason}"
+    warning = f"Clustering degraded to singletons: {reason}"
     logger.warning(warning)
-    clusters = [ClusteredCandidate(items=c.items, cluster_reason="fallback: klusterointi epäonnistui")
+    clusters = [ClusteredCandidate(items=c.items, cluster_reason="fallback: clustering failed")
                 for c in candidates]
     return ClusterResult(clusters=clusters, warning=warning)
 
@@ -125,10 +125,10 @@ def cluster_candidates(candidates: list[Candidate], llm_call: LlmCall) -> Cluste
         parsed = json.loads(strip_code_fences(raw_response))
         response = ClusterResponse(**parsed)
     except (json.JSONDecodeError, ValidationError) as e:
-        return _fallback_singletons(candidates, f"mallin vastaus ei ole validia JSON:ia ({e})")
+        return _fallback_singletons(candidates, f"model response is not valid JSON ({e})")
 
     if not _validate_full_coverage(response, len(candidates)):
-        return _fallback_singletons(candidates, "mallin vastaus ei kattanut kaikkia kandidaatteja täsmälleen kerran")
+        return _fallback_singletons(candidates, "model response did not cover all candidates exactly once")
 
     result = []
     for cluster in response.clusters:

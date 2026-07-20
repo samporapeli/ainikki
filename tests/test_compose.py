@@ -33,9 +33,9 @@ def test_system_prompt_includes_all_three_configs():
 
     assert "ainikki" in prompt
     assert "clickbait" in prompt  # persona.avoid
-    assert "Käytä VAIN annetussa lähdemateriaalissa mainittuja faktoja." in prompt  # guardrails-sääntö
+    assert "Käytä VAIN annetussa lähdemateriaalissa mainittuja faktoja." in prompt  # guardrails rule
     assert "Anthropic julkaisi Claude Opus 4.8" in prompt  # golden example
-    assert '{"headline"' in prompt  # JSON-muotovaatimus
+    assert '{"headline"' in prompt  # JSON format requirement
     # v2: Finnish language rules
     assert "yhdyssanat" in prompt
     assert "desimaalipilkku" in prompt or "desimaalierottimena" in prompt
@@ -86,7 +86,7 @@ def test_partial_failure_drops_only_bad_item():
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             golden_examples_dir=GOLDEN_EXAMPLES_DIR)
 
-    assert len(result.items) == 1, "vain onnistunut item pitäisi jäädä"
+    assert len(result.items) == 1, "only the successful item should remain"
     assert result.items[0].headline == "Toimiva otsikko"
     assert len(result.warnings) == 1
     assert "Rikkinäinen vastaus" in result.warnings[0]

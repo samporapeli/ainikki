@@ -1,15 +1,15 @@
 """
-Score-step: valitsee ja järjestää klusteroidut kandidaatit rubriikin (ks.
-config/rubrics/*.yaml) perusteella. Tämä on KRIITTINEN step (ks. README.md
-"Failure-policy stepeittäin") - toisin kuin cluster-step, tässä EI degradoida
-hiljaisesti jos mallin vastaus on rikki. Ei ole periaatteellista tapaa arvata
-"mitkä jutut ovat tärkeitä" jos structured output epäonnistuu - siksi
-score_clusters() heittää ScoreValidationError-poikkeuksen sen sijaan että
-tuottaisi mielivaltaisen/väärän valinnan.
+Score-step: selects and ranks clustered candidates based on the rubric
+(see config/rubrics/*.yaml). This is a CRITICAL step (see README.md
+"Failure-policy per step") — unlike the cluster step, there is NO silent
+degradation when the model response is broken. There is no principled way
+to guess "which stories are important" if structured output fails — so
+score_clusters() raises a ScoreValidationError instead of producing an
+arbitrary/wrong selection.
 
-Konteksti pidetään pienenä kuten cluster-stepissäkin: promptiin menee vain
-otsikko, lähdetyyppi, yhdistetty signaali ja lähteiden lukumäärä per
-klusteroitu candidate - ei täyttä artikkelisisältöä.
+Context is kept small as in the cluster step: the prompt only receives
+the title, source type, combined signal, and source count per clustered
+candidate — not full article content.
 """
 
 import json
@@ -89,19 +89,19 @@ def _validate_response(response: ScoreResponse, n_candidates: int, min_items: in
     n_selected = len(response.selected)
     if not (min_items <= n_selected <= max_items):
         raise ScoreValidationError(
-            f"valittujen määrä ({n_selected}) rubriikin rajojen [{min_items}, {max_items}] ulkopuolella"
+            f"number of selected items ({n_selected}) outside rubric bounds [{min_items}, {max_items}]"
         )
 
     indices = [s.candidate_index for s in response.selected]
     if len(indices) != len(set(indices)):
-        raise ScoreValidationError("sama candidate_index valittu useammin kuin kerran")
+        raise ScoreValidationError("same candidate_index selected more than once")
     if any(i < 0 or i >= n_candidates for i in indices):
-        raise ScoreValidationError(f"candidate_index putoaa rajojen [0, {n_candidates - 1}] ulkopuolelle")
+        raise ScoreValidationError(f"candidate_index out of bounds [0, {n_candidates - 1}]")
 
     ranks = sorted(s.rank for s in response.selected)
     if ranks != list(range(1, n_selected + 1)):
         raise ScoreValidationError(
-            f"rank-arvojen pitää olla 1..{n_selected} ilman aukkoja/duplikaatteja, saatiin {ranks}"
+            f"rank values must be 1..{n_selected} without gaps/duplicates, got {ranks}"
         )
 
 
@@ -121,7 +121,7 @@ def score_clusters(clusters: list[ClusteredCandidate], rubric_path: Path,
         parsed = json.loads(strip_code_fences(raw_response))
         response = ScoreResponse(**parsed)
     except (json.JSONDecodeError, ValidationError) as e:
-        raise ScoreValidationError(f"mallin vastaus ei ole validia JSON:ia: {e}") from e
+        raise ScoreValidationError(f"model response is not valid JSON: {e}") from e
 
     _validate_response(response, len(clusters), min_items, max_items)
 

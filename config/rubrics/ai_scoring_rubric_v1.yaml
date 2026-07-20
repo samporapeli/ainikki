@@ -1,16 +1,16 @@
 # scoring_rubric.yaml
-# Käytetään scoring-stepissä (ennen kompositiota, ennen persoonaa).
-# Tarkoitus: tehdä "mikä on iso juttu" -arviosta toistettava ja
-# säädettävä, vaikka se on lopulta silti jonkun (sinun, tässä
-# tapauksessa kirjoitetun rubriikin kautta) mielipide siitä mikä
-# on tärkeää. Ei väitetä objektiivisuutta - väitetään johdonmukaisuutta.
+# Used in the scoring step (before composition, before persona).
+# Purpose: make the "what is a big deal" assessment repeatable and
+# tunable, even though it is ultimately still someone's (yours, in this
+# case via the written rubric) opinion of what matters. No claim of
+# objectivity - consistency is what is claimed.
 
 version: v1
 topic: ai
 
-# Kriteerit joita malli soveltaa pisteyttäessään ehdokkaita.
-# Kirjoita nämä niin konkreettisiksi kuin mahdollista - mitä
-# tarkempi kriteeri, sitä helpompi debugata miksi jokin valittiin/hylättiin.
+# Criteria the model applies when scoring candidates.
+# Write these as concretely as possible - the more specific
+# the criterion, the easier it is to debug why something was selected/rejected.
 criteria:
   - name: "aihepiirin ydinolennaisuus"
     description: >

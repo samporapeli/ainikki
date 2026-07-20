@@ -1,11 +1,11 @@
 """
-Dedup-step: yhdistää RawItemit joilla on sama (normalisoitu) URL.
-Ei LLM-kutsuja - puhdas, deterministinen, nopeasti testattava koodi.
+Dedup-step: merges RawItems that share the same (normalized) URL.
+No LLM calls — pure, deterministic, easily testable code.
 
-HUOM rajanveto: tämä EI ratkaise "sama tarina eri URL:eista" -ongelmaa
-(esim. TechCrunch ja The Verge molemmat uutisoivat samasta asiasta eri
-linkillä) - se on Cluster-stepin (LLM-pohjainen) vastuulla. Tämä step
-yhdistää vain kirjaimellisesti saman resurssin eri esiintymät.
+Note: this does NOT solve the "same story, different URLs" problem
+(e.g. TechCrunch and The Verge both reporting the same event with
+different links) — that is the Cluster step's (LLM-based) job. This
+step only merges literally identical resource occurrences.
 """
 
 import json
@@ -21,12 +21,12 @@ TRACKING_PARAMS = {
 
 
 def normalize_url(url: str) -> str:
-    """Normalisoi URL:n vertailukelpoiseksi avaimeksi:
-    - scheme aina https (vertailua varten, ei muuta alkuperäistä dataa)
-    - host pieniksi kirjaimiksi, www.-etuliite pois
-    - trailing slash pois (paitsi juuripolku)
-    - tracking-parametrit pois query-stringistä, loput aakkosjärjestykseen
-    - fragment (#...) pois kokonaan
+    """Normalizes a URL into a comparable key:
+    - scheme always https (for comparison, does not alter original data)
+    - host lowercased, www. prefix removed
+    - trailing slash removed (except root path)
+    - tracking parameters removed from query string, rest sorted alphabetically
+    - fragment (#...) removed entirely
     """
     parts = urlsplit(url)
 
@@ -47,9 +47,9 @@ def normalize_url(url: str) -> str:
 
 
 def dedup_candidates(raw_items: list[RawItem]) -> list[Candidate]:
-    """Ryhmittelee RawItemit normalisoidun URL:n mukaan.
-    Ryhmän sisällä järjestys: korkein yhdistetty numeerinen signaali
-    (esim. points + num_comments) ensin - provisorinen, ei lopullinen valinta.
+    """Groups RawItems by normalized URL.
+    Within a group, sorted by highest combined numeric signal
+    (e.g. points + num_comments) first — provisional, not final selection.
     """
     groups: dict[str, list[RawItem]] = {}
     for item in raw_items:

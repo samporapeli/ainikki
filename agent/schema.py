@@ -1,7 +1,8 @@
 """
-Pydantic-mallit koko putkelle. Ks. keskustelussa sovitut periaatteet:
-- RawItem: collect-vaiheen tuotos, yksi per lähteen yksittäinen löytö
-- Source/NewsItem/Briefing: lopullisen JSON:in muoto (klusteroinnin jälkeen)
+Pydantic models for the entire pipeline. See the principles agreed on
+in the design discussion:
+- RawItem: collect step output, one per source discovery
+- Source/NewsItem/Briefing: final JSON shape (after clustering)
 """
 
 from datetime import datetime, date
@@ -17,7 +18,7 @@ class SourceType(str, Enum):
     other = "other"
 
 
-# --- Collect-vaihe --------------------------------------------------------
+# --- Collect step --------------------------------------------------------
 
 class RawItem(BaseModel):
     """Single raw finding from one source, before dedup/clustering.
@@ -32,12 +33,13 @@ class RawItem(BaseModel):
     fetched_at: datetime
 
 
-# --- Dedup-vaihe -----------------------------------------------------------
+# --- Dedup step -----------------------------------------------------------
 
 class Candidate(BaseModel):
-    """Yksi uniikki URL (normalisoitu) ja kaikki RawItemit jotka siihen viittasivat.
-    Ei vielä editorial-valintaa 'parhaasta' - se tehdään Cluster/Score-vaiheissa.
-    items[0] on provisorinen (korkein yhdistetty signaali), ei lopullinen päälähde.
+    """One unique URL (normalized) and all RawItems that referenced it.
+    No editorial 'best' selection yet — that happens in the Cluster/Score
+    steps. items[0] is provisional (highest combined signal), not the
+    final primary source.
     """
     normalized_url: str
     items: list[RawItem]
@@ -68,8 +70,8 @@ class Source(BaseModel):
 
 
 class ScoredCandidate(BaseModel):
-    """ClusteredCandidate + editorial-arvio: sijoitus ja perustelu.
-    Vain valitut kandidaatit päätyvät tähän muotoon - hylätyt eivät etene."""
+    """ClusteredCandidate + editorial assessment: rank and rationale.
+    Only selected candidates reach this form — rejected ones do not proceed."""
     items: list[RawItem]
     cluster_reason: str | None = None
     rank: int
@@ -121,8 +123,8 @@ class Briefing(BaseModel):
     period: Period
     period_start: date
     period_end: date
-    display_date: date | None = None  # päivä joka näkyy käyttäjälle; None = period_start
-    display_date_fi: str | None = None  # suomalainen muoto (esim. "tiistai 18.7.2026")
+    display_date: date | None = None  # date shown to the user; None = period_start
+    display_date_fi: str | None = None  # Finnish format (e.g. "tiistai 18.7.2026")
     overview: str
     items: list[NewsItem]
     meta: GenerationMeta

@@ -92,7 +92,7 @@ def test_openai_compatible_no_json_format_when_disabled():
 
 
 def test_anthropic_request_and_parse():
-    """Simuloi Anthropicin /v1/messages-vastausta, joka on eri muotoinen kuin OpenAI:n."""
+    """Simulates Anthropic's /v1/messages response, which has a different format from OpenAI."""
     captured = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -114,12 +114,12 @@ def test_anthropic_request_and_parse():
 
 
 def test_make_llm_call_end_to_end_with_cluster():
-    """Kokonaisketju: config -> make_llm_call -> cluster_candidates,
-    mock-transportilla joka palauttaa oikean HN-fixturen datalla validin klusterivastauksen.
+    """End-to-end chain: config -> make_llm_call -> cluster_candidates,
+    with mock transport returning a valid cluster response using real HN fixture data.
     """
     fixture = json.loads(Path("tests/fixtures/hn_response_sample.json").read_text())
     hn_items = parse_hn_hits(fixture["hits"])
-    candidates = dedup_candidates(hn_items)  # 4 kandidaattia
+    candidates = dedup_candidates(hn_items)  # 4 candidates
 
     def handler(request: httpx.Request) -> httpx.Response:
         # don't cluster anything together in this test - all become singletons

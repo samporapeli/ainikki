@@ -1,12 +1,12 @@
 """
-Malliriippumaton LLM-kutsukerros. Lukee config/models.yaml:sta mitä mallia
-mikäkin step käyttää, ja palauttaa funktion joka toteuttaa cluster.py:n
-(ja myöhemmin score.py/compose.py:n) odottaman LlmCall-rajapinnan:
+Model-agnostic LLM call layer. Reads config/models.yaml to determine which
+model each step uses, and returns a function implementing the LlmCall
+interface expected by cluster.py (and later score.py/compose.py):
     (system_prompt: str, user_prompt: str) -> str
 
-Verkkokutsu ja pyynnön rakentaminen ovat erillään testattavuuden vuoksi -
-sama periaate kuin hn.py:ssä. Testit (tests/test_llm.py) käyttävät
-httpx.MockTransport-mekanismia, ei oikeaa verkkoyhteyttä eikä API-avainta.
+HTTP call and request construction are separate for testability — same
+principle as in hn.py. Tests (tests/test_llm.py) use httpx.MockTransport,
+no real network or API keys needed.
 """
 
 import json
@@ -39,7 +39,7 @@ PROVIDER_API_KEY_ENV = {
 class StepModelConfig:
     provider: str
     model: str
-    base_url: str | None = None  # pakollinen jos provider == "local"
+    base_url: str | None = None  # required if provider == "local"
     max_tokens: int = 1024
 
 
@@ -72,12 +72,12 @@ def _post_openai_compatible(base_url: str, api_key: str | None, model: str,
                              system_prompt: str, user_prompt: str,
                              client: httpx.Client,
                              expect_json: bool = True) -> str:
-    """Toimii OpenAI:lle, OpenRoutrille ja mille tahansa OpenAI-yhteensopivalle
-    /chat/completions-rajapinnalle (esim. Ollama paikallisesti).
+    """Works with OpenAI, OpenRouter, and any OpenAI-compatible
+    /chat/completions endpoint (e.g. Ollama locally).
 
     Retries on 429 with exponential backoff (_MAX_RETRIES attempts).
-    Jos expect_json=True, lisää response_format: {"type": "json_object"}
-    pyyntöön pakottaen mallin palauttamaan puhdasta JSON:ia.
+    If expect_json=True, adds response_format: {"type": "json_object"}
+    to the request, forcing the model to return valid JSON.
     """
     payload = {
         "model": model,

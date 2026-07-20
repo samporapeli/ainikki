@@ -20,7 +20,7 @@ def test_json_with_bare_fences():
     raw = '```\n{"key": "value"}\n```'
     result = strip_code_fences(raw)
     assert result == '{"key": "value"}'
-    json.loads(result)  # ei saa heittää poikkeusta
+    json.loads(result)  # must not raise an exception
 
 
 def test_json_with_whitespace_padding():
