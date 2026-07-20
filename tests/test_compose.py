@@ -119,3 +119,60 @@ def test_code_fenced_json_is_parsed():
     assert len(result.items) == 1
     assert result.items[0].headline == "Koodiblokkiotsikko"
 
+
+def test_compose_retries_on_empty_response():
+    items = [_make_enriched("Juttu", "Sisältö...", rank=1)]
+    call_count = 0
+
+    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return ""
+        return json.dumps({"headline": "Toistettu otsikko", "summary": "Toistettu yhteenveto."})
+
+    result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
+                            golden_examples_dir=GOLDEN_EXAMPLES_DIR)
+
+    assert len(result.items) == 1
+    assert result.items[0].headline == "Toistettu otsikko"
+    assert call_count == 2
+
+
+def test_compose_gives_up_after_retry():
+    items = [_make_enriched("Juttu", "Sisältö...", rank=1)]
+    call_count = 0
+
+    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+        nonlocal call_count
+        call_count += 1
+        return ""
+
+    result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
+                            golden_examples_dir=GOLDEN_EXAMPLES_DIR)
+
+    assert len(result.items) == 0
+    assert len(result.warnings) == 1
+    assert call_count == 2
+
+
+def test_compose_retries_on_empty_code_fence():
+    """LLM returns code fences with empty content — raw response is non-empty
+    but strip_code_fences extracts empty string. Retry should fire."""
+    items = [_make_enriched("Juttu", "Sisältö...", rank=1)]
+    call_count = 0
+
+    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return "```json\n\n```"
+        return json.dumps({"headline": "Toistettu otsikko", "summary": "Toistettu yhteenveto."})
+
+    result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
+                            golden_examples_dir=GOLDEN_EXAMPLES_DIR)
+
+    assert len(result.items) == 1
+    assert result.items[0].headline == "Toistettu otsikko"
+    assert call_count == 2
+

@@ -154,8 +154,14 @@ def compose_items(enriched: list[EnrichedCandidate], persona_path: Path,
         user_prompt = build_compose_user_prompt(item)
         raw_response = llm_call(system_prompt, user_prompt)
 
+        cleaned = strip_code_fences(raw_response).strip()
+        if not cleaned:
+            logger.warning("compose: empty response for '%s', retrying once", primary_title)
+            raw_response = llm_call(system_prompt, user_prompt)
+            cleaned = strip_code_fences(raw_response).strip()
+
         try:
-            parsed = json.loads(strip_code_fences(raw_response))
+            parsed = json.loads(cleaned)
             response = ComposeResponse(**parsed)
             if not response.headline.strip() or not response.summary.strip():
                 raise ValueError("headline or summary is empty")
