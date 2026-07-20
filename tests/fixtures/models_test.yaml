@@ -5,12 +5,8 @@ steps:
     provider: openrouter
     model: "openai/gpt-4o-mini"
   compose:
-    provider: anthropic
-    model: "claude-sonnet-4-6"
-  local_step:
-    provider: local
-    model: "llama3.1:8b"
-    base_url: "http://localhost:11434/v1"
+    provider: openrouter
+    model: "anthropic/claude-sonnet-4-6"
   broken_step:
     provider: openrouter
     # model is intentionally missing - tests error handling

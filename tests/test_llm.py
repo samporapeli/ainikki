@@ -6,7 +6,7 @@ import pytest
 
 from agent.llm import (
     resolve_step_config, make_llm_call,
-    _post_openai_compatible, _post_anthropic,
+    _post_openai_compatible,
 )
 from agent.cluster import cluster_candidates
 from agent.dedup import dedup_candidates
@@ -36,14 +36,6 @@ def test_resolve_step_config_missing_model_raises():
     config = yaml.safe_load(FIXTURE_CONFIG.read_text())
     with pytest.raises(ValueError, match="malli|model"):
         resolve_step_config("broken_step", config)
-
-
-def test_resolve_step_config_local_requires_base_url():
-    import yaml
-    config = yaml.safe_load(FIXTURE_CONFIG.read_text())
-    cfg = resolve_step_config("local_step", config)
-    assert cfg.provider == "local"
-    assert cfg.base_url == "http://localhost:11434/v1"
 
 
 def test_openai_compatible_request_and_parse():
@@ -89,28 +81,6 @@ def test_openai_compatible_no_json_format_when_disabled():
 
     assert result == "vapaa teksti"
     assert "response_format" not in captured["body"]
-
-
-def test_anthropic_request_and_parse():
-    """Simulates Anthropic's /v1/messages response, which has a different format from OpenAI."""
-    captured = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured["url"] = str(request.url)
-        captured["body"] = json.loads(request.content)
-        captured["headers"] = dict(request.headers)
-        return httpx.Response(200, json={
-            "content": [{"type": "text", "text": "moi maailma anthropicilta"}]
-        })
-
-    client = httpx.Client(transport=httpx.MockTransport(handler))
-    result = _post_anthropic("claude-sonnet-4-6", "system-ohje", "käyttäjän kysymys",
-                              "fake-anthropic-key", client)
-
-    assert result == "moi maailma anthropicilta"
-    assert captured["url"] == "https://api.anthropic.com/v1/messages"
-    assert captured["body"]["system"] == "system-ohje"
-    assert captured["headers"]["x-api-key"] == "fake-anthropic-key"
 
 
 def test_make_llm_call_end_to_end_with_cluster():

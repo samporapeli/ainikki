@@ -27,8 +27,8 @@ recommended for first runs.
 A/B compare models without editing config:
 
     ./pipeline.sh --topic ai --since 2026-07-16 --until 2026-07-16 \
-      --model-override score=openai:gpt-4o \
-      --model-override compose=anthropic:claude-opus-4-8
+      --model-override score=openrouter:gpt-4o \
+      --model-override compose=openrouter:claude-opus-4-8
 
 ## Build and deploy the site
 
@@ -117,12 +117,7 @@ stories?" If not, remove it.
 
 ## Credentials
 
-Set the environment variable for whichever provider `config/models.yaml`
-uses:
-- OpenRouter: `OPENROUTER_API_KEY`
-- OpenAI: `OPENAI_API_KEY`
-- Anthropic: `ANTHROPIC_API_KEY`
-- Local (e.g. Ollama): no key needed, but `base_url` must be correct
+Set `OPENROUTER_API_KEY` in the environment or in the cron entry.
 
 ## Known limitations
 

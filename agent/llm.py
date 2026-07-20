@@ -4,6 +4,10 @@ model each step uses, and returns a function implementing the LlmCall
 interface expected by cluster.py (and later score.py/compose.py):
     (system_prompt: str, user_prompt: str) -> str
 
+Currently only OpenRouter is supported. The adapter speaks the OpenAI-compatible
+/v1/chat/completions interface, so adding other OpenAI-compatible providers
+later requires only a config change.
+
 HTTP call and request construction are separate for testability — same
 principle as in hn.py. Tests (tests/test_llm.py) use httpx.MockTransport,
 no real network or API keys needed.
@@ -24,22 +28,14 @@ logger = logging.getLogger(__name__)
 _MAX_RETRIES = 5
 _RETRY_BASE_DELAY = 10.0
 
-PROVIDER_BASE_URLS = {
-    "openai": "https://api.openai.com/v1",
-    "openrouter": "https://openrouter.ai/api/v1",
-}
-PROVIDER_API_KEY_ENV = {
-    "openai": "OPENAI_API_KEY",
-    "openrouter": "OPENROUTER_API_KEY",
-    "anthropic": "ANTHROPIC_API_KEY",
-}
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_API_KEY_ENV = "OPENROUTER_API_KEY"
 
 
 @dataclass
 class StepModelConfig:
     provider: str
     model: str
-    base_url: str | None = None  # required if provider == "local"
     max_tokens: int = 1024
 
 
@@ -61,10 +57,8 @@ def resolve_step_config(step: str, config: dict,
         raise ValueError(f"No provider defined for step '{step}'")
     if not model:
         raise ValueError(f"No model defined for step '{step}' and no override given")
-    if provider == "local" and not step_cfg.get("base_url"):
-        raise ValueError(f"provider='local' requires base_url in config/models.yaml for step '{step}'")
 
-    return StepModelConfig(provider=provider, model=model, base_url=step_cfg.get("base_url"),
+    return StepModelConfig(provider=provider, model=model,
                            max_tokens=step_cfg.get("max_tokens", 1024))
 
 
@@ -72,8 +66,7 @@ def _post_openai_compatible(base_url: str, api_key: str | None, model: str,
                              system_prompt: str, user_prompt: str,
                              client: httpx.Client,
                              expect_json: bool = True) -> str:
-    """Works with OpenAI, OpenRouter, and any OpenAI-compatible
-    /chat/completions endpoint (e.g. Ollama locally).
+    """Sends a chat completion request to an OpenAI-compatible endpoint.
 
     Retries on 429 with exponential backoff (_MAX_RETRIES attempts).
     If expect_json=True, adds response_format: {"type": "json_object"}
@@ -113,27 +106,6 @@ def _post_openai_compatible(base_url: str, api_key: str | None, model: str,
     raise RuntimeError("Retries exhausted")  # unreachable, but satisfies mypy
 
 
-def _post_anthropic(model: str, system_prompt: str, user_prompt: str,
-                     api_key: str | None, client: httpx.Client,
-                     max_tokens: int = 1024) -> str:
-    headers = {
-        "x-api-key": api_key or "",
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": model,
-        "max_tokens": max_tokens,
-        "system": system_prompt,
-        "messages": [{"role": "user", "content": user_prompt}],
-    }
-    resp = client.post("https://api.anthropic.com/v1/messages", json=payload, headers=headers)
-    resp.raise_for_status()
-    data = resp.json()
-    text_blocks = [b["text"] for b in data.get("content", []) if b.get("type") == "text"]
-    return "\n".join(text_blocks)
-
-
 def make_llm_call(step: str, config_path: Path = Path("config/models.yaml"),
                    override_model: str | None = None, override_provider: str | None = None,
                    client: httpx.Client | None = None):
@@ -150,17 +122,9 @@ def make_llm_call(step: str, config_path: Path = Path("config/models.yaml"),
         owns_client = client is None
         c = client or httpx.Client(timeout=60.0)
         try:
-            if step_cfg.provider == "anthropic":
-                api_key = os.environ.get(PROVIDER_API_KEY_ENV["anthropic"])
-                return _post_anthropic(step_cfg.model, system_prompt, user_prompt, api_key, c,
-                                       max_tokens=step_cfg.max_tokens)
-
-            base_url = step_cfg.base_url or PROVIDER_BASE_URLS.get(step_cfg.provider)
-            if not base_url:
-                raise ValueError(f"Unknown provider '{step_cfg.provider}' and no base_url given")
-            api_key_env = PROVIDER_API_KEY_ENV.get(step_cfg.provider, f"{step_cfg.provider.upper()}_API_KEY")
-            api_key = os.environ.get(api_key_env)
-            return _post_openai_compatible(base_url, api_key, step_cfg.model, system_prompt, user_prompt, c)
+            api_key = os.environ.get(OPENROUTER_API_KEY_ENV)
+            return _post_openai_compatible(OPENROUTER_BASE_URL, api_key, step_cfg.model,
+                                           system_prompt, user_prompt, c)
         finally:
             if owns_client:
                 c.close()

@@ -2,7 +2,7 @@
 # Step name -> which model runs it. CLI flags (e.g. --model-score=gpt-4o-mini)
 # override this on a per-run basis, e.g. for A/B comparisons.
 
-default_provider: openrouter  # or "openai", "anthropic", "local" (any OpenAI-compatible endpoint)
+default_provider: openrouter
 
 steps:
   cluster:
@@ -19,7 +19,3 @@ steps:
     provider: openrouter
     model: "anthropic/claude-haiku-4-5"
     max_tokens: 2048
-
-# For local models (e.g. Ollama) the same structure works because the
-# adapter speaks the OpenAI-compatible /v1/chat/completions interface:
-# steps.score: {provider: local, model: "llama3.1:8b", base_url: "http://localhost:11434/v1"}
