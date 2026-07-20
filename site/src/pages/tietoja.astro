@@ -15,27 +15,27 @@ const steps = [
   {
     name: 'Ryhmittely',
     llm: true,
-    description: 'LLM tunnistaa samasta asiasta kertovat jutut eri lähteistä ja ryhmittelee ne yhteen.',
+    description: 'Kielimalli tunnistaa samasta asiasta kertovat jutut eri lähteistä ja ryhmittelee ne yhteen.',
   },
   {
     name: 'Pisteytys',
     llm: true,
-    description: 'LLM valitsee ja järjestää 3–10 uutista arviointikriteerien perusteella.',
+    description: 'Kielimalli valitsee ja järjestää 3–10 uutista arviointikriteerien perusteella. Uutiset, joita on käsitelty viikon sisällä julkaistuissa koosteissa, jätetään pois.',
   },
   {
     name: 'Rikastaminen',
     llm: false,
-    description: 'Hakee valittujen artikkeleiden koko tekstin ja poimii siitä olennaisen sisällön.',
+    description: 'Lataa pisteytyksessä valittujen artikkeleiden sivut ja erottaa niistä varsinaisen artikkelitekstin sivun rakenteesta (valikot, mainokset, evästeilmoitukset).',
   },
   {
     name: 'Kirjoitus',
     llm: true,
-    description: 'LLM kirjoittaa jokaisesta uutisesta otsikon ja suomenkielisen tiivistelmän.',
+    description: 'Kielimalli kirjoittaa jokaisesta uutisesta otsikon ja suomenkielisen tiivistelmän. Jos rikastaminen tai kirjoitus pudottaa liikaa juttuja, koostetta täydennetään pisteytyksen seuraavaksi parhailla ehdokkailla.',
   },
   {
     name: 'Yleiskuva',
     llm: true,
-    description: 'LLM kirjoittaa lyhyen yhteenvedon päivän koosteesta.',
+    description: 'Kielimalli kirjoittaa lyhyen yhteenvedon päivän koosteesta.',
   },
   {
     name: 'Validointi',
@@ -63,8 +63,8 @@ const steps = [
     <p>
       Ainikki kerää uutisia määritellyistä aiheista, valitsee niistä
       tärkeimmät ja kirjoittaa jokaisesta suomenkielisen tiivistelmän.
-      Prosessi koostuu yhdeksästä vaiheesta, joista osa käyttää tekoälyä ja
-      osa on determinististä logiikkaa eli perinteistä koodia.
+      Prosessi koostuu yhdeksästä vaiheesta, joista osa käyttää kielimalleja
+      (tekoälyä) ja osa on determinististä logiikkaa eli perinteistä koodia.
     </p>
   </section>
 
@@ -77,7 +77,7 @@ const steps = [
             <span class="step-num">{i + 1}</span>
             <span class="step-name">{step.name}</span>
             <span class={`badge ${step.llm ? 'badge-llm' : 'badge-code'}`}>
-              {step.llm ? 'LLM' : 'Koodi'}
+              {step.llm ? 'Kielimalli' : 'Koodi'}
             </span>
           </div>
           <p class="step-desc">{step.description}</p>
@@ -89,9 +89,9 @@ const steps = [
   <hr />
 
   <section class="details">
-    <h2>Mikä on LLM ja mikä koodia?</h2>
+    <h2>Mikä on kielimalli ja mikä koodia?</h2>
     <p>
-      Neljä vaihetta (ryhmittely, pisteytys, kirjoitus, yleiskuva) käyttävät suuria
+      Neljä vaihetta (ryhmittely, pisteytys, kirjoitus, yleiskuva) käyttää suuria
       kielimalleja (LLM). Ne tekevät päätöksiä, jotka vaativat ymmärrystä
       kielestä ja sisällöstä — esimerkiksi saman uutisen tunnistamista eri
       lähteistä tai uutisen merkityksen arvioimista.
@@ -106,8 +106,8 @@ const steps = [
   <section class="details">
     <h2>Aiheet, lähteet ja julkaisu</h2>
     <p>
-      Tällä hetkellä Ainikilla on yksi aihepiiri, tekoäly, ja yksi lähde,
-      <a href="https://news.ycombinator.com/" target="_blank" rel="noopener noreferrer">Hacker News</a>
+      Tällä hetkellä Ainikilla on yksi aihepiiri, tekoäly, ja yksi lähde,{' '}
+      <a href="https://news.ycombinator.com/" target="_blank" rel="noopener noreferrer">Hacker News</a>{' '}
       (Algolian rajapinnan kautta). Rakenne tukee useampaa aihetta ja
       lähdettä, joten molempia voi lisätä myöhemmin ilman, että arkkitehtuuria
       tarvitsee muuttaa.
@@ -159,10 +159,9 @@ const steps = [
       tasapainossa.
     </p>
     <p>
-      Tällä hetkellä kaikki mallit toimivat
+      Tällä hetkellä kaikki mallit toimivat{' '}
       <a href="https://openrouter.ai/" target="_blank" rel="noopener noreferrer">OpenRouterin</a> kautta, joka tarjoaa
       lukuisia vaihtoehtoja. Mallin voi vaihtaa vaihekohtaisesti yhdellä config-rivillä.
-      Myös paikallinen, itse hallittu malli on vaihtoehto.
     </p>
     <p>
       Malliriippumattomuus on tietoinen valinta: kun uusia, sopivampia
@@ -192,8 +191,8 @@ const steps = [
     </p>
     <p>
       Pisteytys, aihevalinta ja tiivistäminen ovat luonnoltaan subjektiivisia
-      tehtäviä, joihin <a href="https://fi.wikipedia.org/wiki/Kognitiivinen_vinouma" target="_blank" rel="noopener noreferrer">vinoumat</a>
-      vaikuttavat — oli asialla sitten ihminen tai kone. Ainikin tapauksessa tekoäly
+      tehtäviä, joihin <a href="https://fi.wikipedia.org/wiki/Kognitiivinen_vinouma" target="_blank" rel="noopener noreferrer">vinoumat</a>{' '}
+      vaikuttavat — oli asialla sitten ihminen tai kone. Ainikin tapauksessa kielimalli
       voi hiljaisesti suosia tiettyjä lähteitä tai näkökulmia.
     </p>
   </section>
@@ -213,7 +212,7 @@ const steps = [
   <section class="details">
     <h2>Avoin lähdekoodi</h2>
     <p>
-      Ainikin koodi on avointa ja MIT-lisensoitu:
+      Ainikin koodi on avointa ja MIT-lisensoitu:{' '}
       <a href="https://github.com/samporapeli/ainikki" target="_blank" rel="noopener noreferrer">github.com/samporapeli/ainikki</a>.
     </p>
   </section>
@@ -227,8 +226,8 @@ const steps = [
       yksittäisestä julkaisusta.
     </p>
     <p>
-      Palautetta ja virheilmoituksia voi lähettää
-      <a href="https://hachyderm.io/@sampo" target="_blank" rel="noopener noreferrer">Mastodonin</a> tai
+      Palautetta ja virheilmoituksia voi lähettää{' '}
+      <a href="https://hachyderm.io/@sampo" target="_blank" rel="noopener noreferrer">Mastodonin</a> tai{' '}
       <a href="https://www.linkedin.com/in/srapeli/" target="_blank" rel="noopener noreferrer">LinkedInin</a> kautta.
     </p>
   </section>
@@ -237,7 +236,7 @@ const steps = [
     <h2>Tekijä</h2>
     <p>
       Ainikin on tehnyt <a href="https://sampo.website/">Sampo Rapeli</a>, joka
-      on käyttänyt LLM:iä ja agenttista koodausta päivittäin niin töissä kuin
+      on käyttänyt kielimalleja ja agenttista koodausta päivittäin niin töissä kuin
       vapaalla jo pidemmän aikaa. Ainikki on kokeilu siitä, miten kielimalli
       toimii itsenäisenä osana automaattista prosessia – ei reagoimassa
       käyttäjän viestiin, vaan ajastettuna ja ilman kenenkään antamaa
@@ -252,12 +251,12 @@ const steps = [
       englanninkieliset <a href="https://hackernewsletter.com/" target="_blank" rel="noopener noreferrer">Hacker
       Newsletter</a> ja <a href="https://tldr.tech/" target="_blank" rel="noopener noreferrer">TLDR newsletter</a>),
       joten mullistavasta ideasta ei ole kyse. Toisin kuin monet muut
-      koostepalvelut, Ainikki on suomenkielinen ja käyttää ylpeästi tekoälyä
+      koostepalvelut, Ainikki on suomenkielinen ja käyttää ylpeästi kielimalleja
       uutisten valinnassa ja tiivistämisessä.
     </p>
     <p>
-      Lisää tekijästä: <a href="https://sampo.website/">etusivu</a> ·
-      <a href="https://sampo.website/blog/fi/">blogi</a> ·
+      Lisää tekijästä: <a href="https://sampo.website/">etusivu</a> ·{' '}
+      <a href="https://sampo.website/blog/fi/">blogi</a> ·{' '}
       <a href="https://www.linkedin.com/in/srapeli/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
     </p>
   </section>
