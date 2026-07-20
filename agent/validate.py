@@ -32,7 +32,6 @@ def assemble_briefing(topic: str, period: Period, period_start: date, period_end
         )
 
     all_warnings = list(extra_warnings or [])
-    all_warnings.extend(compose_result.warnings)
     if overview_result.warning:
         all_warnings.append(overview_result.warning)
 

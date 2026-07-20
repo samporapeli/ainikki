@@ -37,7 +37,7 @@ def test_assemble_briefing_happy_path():
 
 def test_assemble_briefing_collects_warnings_from_all_steps():
     compose_result = ComposeResult(
-        items=[_make_news_item(1)], warnings=["compose epäonnistui jutulle X"],
+        items=[_make_news_item(1)], warnings=[],
         persona_id="ainikki-v1", guardrails_version="v1", golden_examples_version="v1",
     )
     overview_result = OverviewResult(overview="Fallback-kooste.", warning="overview fallbackasi")
@@ -46,7 +46,7 @@ def test_assemble_briefing_collects_warnings_from_all_steps():
         topic="ai", period=Period.daily, period_start=date(2026, 7, 16), period_end=date(2026, 7, 16),
         overview_result=overview_result, compose_result=compose_result,
         models_used={}, pipeline_version="0.1.0", rubric_version="ai-v1",
-        extra_warnings=["cluster degradoitui singletoneihin"],
+        extra_warnings=["cluster degradoitui singletoneihin", "compose epäonnistui jutulle X"],
     )
 
     assert len(briefing.warnings) == 3

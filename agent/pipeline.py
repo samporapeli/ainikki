@@ -110,6 +110,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     llm_score = _resolve_llm_call("score", models_config, config_paths, model_overrides,
                                    llm_client, models_used)
     rubric = load_rubric(config_paths.rubric)
+    min_items = rubric["items_per_briefing"]["min"]
     previous_stories = load_previous_stories(topic, since.date(), output_dir=out_dir)
     clusters_before = len(cluster_result.clusters)
     clusters = filter_previous_clusters(cluster_result.clusters, previous_stories)
@@ -129,18 +130,43 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
         dropped_stories = enrich_result.dropped_stories
         logger.info("enrich: %d -> %d items (content fetched successfully)",
                     len(scored), len(enrich_result.items))
+
+        # 6. Compose
+        llm_compose = _resolve_llm_call("compose", models_config, config_paths, model_overrides,
+                                         llm_client, models_used)
+        compose_result = compose_items(enrich_result.items, config_paths.persona,
+                                        config_paths.guardrails, llm_compose,
+                                        golden_examples_dir=config_paths.golden_examples_dir)
+        all_warnings.extend(compose_result.warnings)
+        logger.info("compose: %d items written", len(compose_result.items))
+
+        # 6b. Backfill: if drops pushed us below minimum, try remaining scored candidates
+        if len(compose_result.items) < min_items:
+            attempted_urls = {str(e.items[0].url) for e in enrich_result.items}
+            attempted_urls |= {d.url for d in enrich_result.dropped_stories}
+            remaining = [sc for sc in scored if str(sc.items[0].url) not in attempted_urls]
+            logger.info("backfill: have %d items, need %d — trying %d remaining candidates",
+                         len(compose_result.items), min_items, len(remaining))
+            for sc in remaining:
+                if len(compose_result.items) >= min_items:
+                    break
+                url = str(sc.items[0].url)
+                if url in attempted_urls:
+                    continue
+                attempted_urls.add(url)
+                batch = enrich_candidates([sc], client=ec)
+                all_warnings.extend(batch.warnings)
+                dropped_stories.extend(batch.dropped_stories)
+                if not batch.items:
+                    continue
+                batch_compose = compose_items(batch.items, config_paths.persona,
+                                               config_paths.guardrails, llm_compose,
+                                               golden_examples_dir=config_paths.golden_examples_dir)
+                all_warnings.extend(batch_compose.warnings)
+                compose_result.items.extend(batch_compose.items)
     finally:
         if owns_enrich_client:
             ec.close()
-
-    # 6. Compose
-    llm_compose = _resolve_llm_call("compose", models_config, config_paths, model_overrides,
-                                     llm_client, models_used)
-    compose_result = compose_items(enrich_result.items, config_paths.persona,
-                                    config_paths.guardrails, llm_compose,
-                                    golden_examples_dir=config_paths.golden_examples_dir)
-    all_warnings.extend(compose_result.warnings)
-    logger.info("compose: %d items written", len(compose_result.items))
 
     # 7. Overview
     llm_overview = _resolve_llm_call("overview", models_config, config_paths, model_overrides,
