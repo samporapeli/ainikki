@@ -1,6 +1,7 @@
 # models.yaml
-# Step name -> which model runs it. CLI flags (e.g. --model-score=gpt-4o-mini)
-# override this on a per-run basis, e.g. for A/B comparisons.
+# Step name -> which model runs it. CLI flag --model-override
+# (e.g. --model-override score=openrouter:gpt-4o-mini) overrides this on a
+# per-run basis, e.g. for A/B comparisons.
 
 default_provider: openrouter
 

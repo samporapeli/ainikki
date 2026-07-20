@@ -55,8 +55,8 @@ missing, the Telegram step is silently skipped.
 | 1 | **Collect** | No | source URLs, time window | `list[RawItem]` per source | `sources/{topic}.yaml` |
 | 2 | **Dedup** | No | all RawItems | `list[Candidate]` (exact-URL dedup) | — |
 | 3 | **Cluster** | Yes | deduped candidates | `list[Candidate]` grouped | — |
-| 4 | **Score** | Yes | clustered candidates | ranking + `selection_reason` | `rubrics/{topic}_v*.yaml` |
-| 5 | **Enrich** | No | top N selected | full article content per item | — |
+| 4 | **Score** | Yes | clustered candidates | ranking + `selection_reason`, plus a backfill pool below the cutoff | `rubrics/{topic}_v*.yaml` |
+| 5 | **Enrich** | No | top N selected | extracted, truncated article text per item | — |
 | 6 | **Compose** | Yes (per item) | 1 item content + persona + guardrails | headline + summary in Finnish | `personas/*`, `guardrails/*`, `golden_examples/*` |
 | 7 | **Overview** | Yes | all composed items | 1–2 sentence daily overview | — |
 | 8 | **Validate** | No | all composed + overview | `Briefing` object, Pydantic-validated | `schema.py` |
@@ -93,6 +93,12 @@ under the headline on the site.
 
 - **Enrich only after scoring** — saves HTTP calls and context by
   fetching full content only for items that make the cut.
+- **Backfill pool** — Score ranks more candidates than the digest needs;
+  if Enrich/Compose drops push the count below the minimum, the pipeline
+  backfills from the next-best-ranked candidates instead of publishing
+  too few items.
+- **Cross-day dedup** — clusters whose primary URL was already published
+  in the last 7 days are filtered out before scoring.
 - **One LLM call per item in Compose** — small context, failure
   isolation, parallelizable later.
 - **Pydantic validation after Write** — roundtrip safety net that

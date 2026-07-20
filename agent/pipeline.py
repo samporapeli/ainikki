@@ -214,7 +214,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--out-dir", default=None, type=Path)
     parser.add_argument("--min-points", type=int, default=20)
     parser.add_argument("--model-override", action="append", default=[],
-                         help="step=provider:model, e.g. score=openai:gpt-4o-mini. Can be specified multiple times.")
+                         help="step=provider:model, e.g. score=openrouter:gpt-4o-mini. Can be specified multiple times.")
     parser.add_argument("--display-date", default=None,
                          help="Date shown to the user (default: same as --since)")
     parser.add_argument("--verbose", action="store_true")
