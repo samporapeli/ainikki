@@ -43,13 +43,13 @@ def _make_llm_handler(score_min=3, score_max=10):
         if "uutisanalyytikko" in system_prompt:
             clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(n)]
             content = json.dumps({"clusters": clusters})
-        elif "arvioi päivän ehdokaslistaa" in system_prompt:
+        elif "ehdokaslistaa" in system_prompt:
             k = max(score_min, min(n, score_max))
             selected = [{"candidate_index": i, "rank": i + 1, "selection_reason": f"peruste {i}"}
                         for i in range(k)]
             cutoff = score_min
             content = json.dumps({"selected": selected, "cutoff_rank": cutoff})
-        elif "AI-uutiskoosteen toimittaja" in system_prompt:
+        elif "Kohdeyleisö:" in system_prompt:
             content = json.dumps({"headline": "Testiotsikko juttu",
                                    "summary": "Testiyhteenveto joka kuvaa juttua lyhyesti."})
         elif "suodatettu aiheen" in system_prompt:

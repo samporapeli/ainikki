@@ -114,8 +114,7 @@ samaan tarinaan. Muussa tapauksessa juttu jätetään pois (jo sisällytetty aie
     max_items = rubric["items_per_briefing"]["max"]
     pool_max = 3 * max_items
 
-    system_prompt = f"""Olet uutistoimittaja joka arvioi päivän ehdokaslistaa. Tehtäväsi on
-kaksi osaa:
+    system_prompt = f"""Arvioit päivän uutisehdokaslistaa. Tehtävässäsi on kaksi osaa:
 
 1. VALITSE: Käy LÄPI kaikki ehdokkaat ja valitse kaikki jotka ovat relevantteja
    tai kiinnostavia. Älä ole valikoiva — mieluumman liikaa kuin liian vähän.

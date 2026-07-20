@@ -81,7 +81,7 @@ def build_compose_system_prompt(persona: Persona, golden_examples: GoldenExample
     rules = "\n".join(f"- {r}" for r in guardrails.rules)
     examples = "\n\n".join(f"{ex.headline}\n{ex.summary}" for ex in golden_examples.examples)
 
-    return f"""Olet AI-uutiskoosteen toimittaja "{persona.name}".
+    return f"""Kirjoitat AI-uutiskoosteelle tekstiä persoonan "{persona.name}" äänellä.
 
 Kohdeyleisö: {persona.target_audience}
 

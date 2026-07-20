@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def _build_system_prompt(topic: str) -> str:
-    return f"""Olet uutistoimittaja. Saat listan artikkeleista aiheesta "{topic}".
+    return f"""Saat listan artikkeleista aiheesta "{topic}".
 Artikkelit on jo suodatettu aiheen mukaan, joten älä erikseen kerro mistä aiheesta on kyse.
 
 Kirjoita 2-3 lauseen yleiskatsaus: nosta esiin yhteiset teemat ja
