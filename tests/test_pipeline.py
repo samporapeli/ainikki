@@ -43,11 +43,12 @@ def _make_llm_handler(score_min=3, score_max=10):
         if "uutisanalyytikko" in system_prompt:
             clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(n)]
             content = json.dumps({"clusters": clusters})
-        elif "valitsee päivän tärkeimmät" in system_prompt:
+        elif "arvioi päivän ehdokaslistaa" in system_prompt:
             k = max(score_min, min(n, score_max))
             selected = [{"candidate_index": i, "rank": i + 1, "selection_reason": f"peruste {i}"}
                         for i in range(k)]
-            content = json.dumps({"selected": selected})
+            cutoff = score_min
+            content = json.dumps({"selected": selected, "cutoff_rank": cutoff})
         elif "AI-uutiskoosteen toimittaja" in system_prompt:
             content = json.dumps({"headline": "Testiotsikko juttu",
                                    "summary": "Testiyhteenveto joka kuvaa juttua lyhyesti."})
@@ -88,7 +89,7 @@ def test_full_pipeline_happy_path(tmp_path):
 
     assert briefing.topic == "ai"
     assert briefing.period == Period.daily
-    assert len(briefing.items) == 4
+    assert len(briefing.items) == 3
     assert briefing.overview != ""
     assert briefing.meta.persona == "ainikki-v1"
     assert briefing.meta.rubric_version == "v1"
@@ -109,7 +110,7 @@ def test_pipeline_raises_on_critical_score_failure(tmp_path):
         is_anthropic = request.url.host == "api.anthropic.com"
         system_prompt = body.get("system", "") if is_anthropic else body["messages"][0]["content"]
 
-        if "valitsee päivän tärkeimmät" in system_prompt:
+        if "arvioi päivän ehdokaslistaa" in system_prompt:
             content = "tämä ei ole json:ia ollenkaan"
         elif "uutisanalyytikko" in system_prompt:
             user_content = body["messages"][0]["content"] if is_anthropic else body["messages"][1]["content"]

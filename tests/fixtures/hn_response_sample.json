@@ -47,9 +47,57 @@
       "created_at_i": 1752506539,
       "_tags": ["story", "author_someuser4", "story_444444"],
       "objectID": "444444"
+    },
+    {
+      "created_at": "2026-07-14T18:05:00.000Z",
+      "title": "Google DeepMind publishes new benchmark for multimodal reasoning",
+      "url": "https://deepmind.google/research/multimodal-benchmark",
+      "author": "someuser5",
+      "points": 156,
+      "story_text": null,
+      "num_comments": 67,
+      "created_at_i": 1752512700,
+      "_tags": ["story", "author_someuser5", "story_555555"],
+      "objectID": "555555"
+    },
+    {
+      "created_at": "2026-07-14T19:30:00.000Z",
+      "title": "Open source tool for testing LLM guardrails released",
+      "url": "https://github.com/guardrails-ai/guardrails",
+      "author": "someuser6",
+      "points": 124,
+      "story_text": null,
+      "num_comments": 45,
+      "created_at_i": 1752517800,
+      "_tags": ["story", "author_someuser6", "story_666666"],
+      "objectID": "666666"
+    },
+    {
+      "created_at": "2026-07-14T20:15:00.000Z",
+      "title": "How vector databases are evolving beyond RAG",
+      "url": "https://blog.pinecone.io/vector-db-evolution",
+      "author": "someuser7",
+      "points": 91,
+      "story_text": null,
+      "num_comments": 38,
+      "created_at_i": 1752520500,
+      "_tags": ["story", "author_someuser7", "story_777777"],
+      "objectID": "777777"
+    },
+    {
+      "created_at": "2026-07-14T21:45:00.000Z",
+      "title": "Mistral AI announces fine-tuning API with 10x cost reduction",
+      "url": "https://mistral.ai/news/fine-tuning-api",
+      "author": "someuser8",
+      "points": 178,
+      "story_text": null,
+      "num_comments": 89,
+      "created_at_i": 1752525900,
+      "_tags": ["story", "author_someuser8", "story_888888"],
+      "objectID": "888888"
     }
   ],
-  "nbHits": 4,
+  "nbHits": 8,
   "page": 0,
   "nbPages": 1,
   "hitsPerPage": 100

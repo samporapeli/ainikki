@@ -16,6 +16,7 @@ import json
 import re
 from datetime import date, timedelta
 from pathlib import Path
+from typing import NamedTuple
 
 import yaml
 from pydantic import BaseModel, ValidationError
@@ -38,6 +39,12 @@ class ScoreAssignment(BaseModel):
 
 class ScoreResponse(BaseModel):
     selected: list[ScoreAssignment]
+    cutoff_rank: int
+
+
+class ScoreResult(NamedTuple):
+    scored: list[ScoredCandidate]
+    cutoff_rank: int
 
 
 def load_rubric(path: Path) -> dict:
@@ -105,21 +112,32 @@ samaan tarinaan. Muussa tapauksessa juttu jätetään pois (jo sisällytetty aie
 
     min_items = rubric["items_per_briefing"]["min"]
     max_items = rubric["items_per_briefing"]["max"]
+    pool_max = 3 * max_items
 
-    system_prompt = f"""Olet uutistoimittaja joka valitsee päivän tärkeimmät jutut annetusta
-ehdokaslistasta. Käytä seuraavia kriteerejä arvioinnissa:
+    system_prompt = f"""Olet uutistoimittaja joka arvioi päivän ehdokaslistaa. Tehtäväsi on
+kaksi osaa:
+
+1. VALITSE: Käy LÄPI kaikki ehdokkaat ja valitse kaikki jotka ovat relevantteja
+   tai kiinnostavia. Älä ole valikoiva — mieluumman liikaa kuin liian vähän.
+   Tavoitale vähintään {pool_max} valittua, ellei listassa ole niin montaa relevanttia.
+   Käytä seuraavia kriteerejä arvioinnissa:
 
 {criteria_text}
 
-Älä valitse ehdokkaita jotka ovat:
+   Älä valitse ehdokkaita jotka ovat:
 {exclude_lines}
 {previous_lines}
-Valitse {min_items}-{max_items} ehdokasta, järjestä ne tärkeysjärjestykseen (1 = tärkein,
-ei toistuvia sijoituksia), ja kirjoita jokaiselle lyhyt (1 lause) selection_reason joka
-perustelee valinnan annetuilla kriteereillä.
+
+   Jokaiselle valitulle: anna rank (1 = tärkein), ja lyhyt selection_reason.
+
+2. CUTOFF: Määritä cutoff_rank — se on korkein rank, joka kuuluu päivän
+   TÄRKEIMPIEN juttujen joukkoon. Ensimmäinen uutiskokoonpano tehdään
+   cutoff_rankin asti (rank ≤ cutoff). cutoff_rank:n pitää olla vähintään
+   {min_items} ja enintään {max_items}.
 
 Vastaa VAIN JSON-muodossa, ei muuta tekstiä:
-{{"selected": [{{"candidate_index": 0, "rank": 1, "selection_reason": "..."}}, ...]}}"""
+{{"selected": [{{"candidate_index": 0, "rank": 1, "selection_reason": "..."}}, ...],
+ "cutoff_rank": {min_items}}}"""
 
     lines = []
     for i, cluster in enumerate(clusters):
@@ -140,9 +158,21 @@ Vastaa VAIN JSON-muodossa, ei muuta tekstiä:
 
 def _validate_response(response: ScoreResponse, n_candidates: int, min_items: int, max_items: int) -> None:
     n_selected = len(response.selected)
-    if not (min_items <= n_selected <= max_items):
+    pool_max = 3 * max_items
+    if not (min_items <= n_selected <= pool_max):
         raise ScoreValidationError(
-            f"number of selected items ({n_selected}) outside rubric bounds [{min_items}, {max_items}]"
+            f"number of selected items ({n_selected}) outside bounds [{min_items}, {pool_max}]"
+        )
+
+    if not (min_items <= response.cutoff_rank <= max_items):
+        raise ScoreValidationError(
+            f"cutoff_rank ({response.cutoff_rank}) outside bounds [{min_items}, {max_items}]"
+        )
+    backfill_size = n_selected - response.cutoff_rank
+    if backfill_size < min_items:
+        raise ScoreValidationError(
+            f"backfill pool too small ({backfill_size} items, need at least {min_items}) "
+            f"— if all primary items fail, there must be enough backfill to reach minimum"
         )
 
     indices = [s.candidate_index for s in response.selected]
@@ -160,9 +190,9 @@ def _validate_response(response: ScoreResponse, n_candidates: int, min_items: in
 
 def score_clusters(clusters: list[ClusteredCandidate], rubric_path: Path,
                     llm_call: LlmCall,
-                    previous_stories: list[dict] | None = None) -> list[ScoredCandidate]:
+                    previous_stories: list[dict] | None = None) -> ScoreResult:
     if not clusters:
-        return []
+        return ScoreResult(scored=[], cutoff_rank=0)
 
     rubric = load_rubric(rubric_path)
     min_items = rubric["items_per_briefing"]["min"]
@@ -189,4 +219,4 @@ def score_clusters(clusters: list[ClusteredCandidate], rubric_path: Path,
         for s in response.selected
     ]
     result.sort(key=lambda sc: sc.rank)
-    return result
+    return ScoreResult(scored=result, cutoff_rank=response.cutoff_rank)

@@ -25,7 +25,7 @@ from agent.collect.base import save_raw
 from agent.dedup import dedup_candidates, save_candidates
 from agent.cluster import cluster_candidates
 from agent.score import (score_clusters, load_rubric, load_previous_stories,
-                          filter_previous_clusters, ScoreValidationError)
+                          filter_previous_clusters, ScoreValidationError, ScoreResult)
 from agent.enrich import enrich_candidates
 from agent.compose import compose_items
 from agent.overview import generate_overview
@@ -119,17 +119,21 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
                      clusters_before - len(clusters))
     scored = score_clusters(clusters, config_paths.rubric, llm_score,
                             previous_stories=previous_stories)
-    logger.info("score: %d selected (rubric %s)", len(scored), rubric.get("version"))
+    initial_pool = [sc for sc in scored.scored if sc.rank <= scored.cutoff_rank]
+    backfill_pool = [sc for sc in scored.scored if sc.rank > scored.cutoff_rank]
+    logger.info("score: %d selected (cutoff %d, %d initial + %d backfill, rubric %s)",
+                len(scored.scored), scored.cutoff_rank, len(initial_pool),
+                len(backfill_pool), rubric.get("version"))
 
     # 5. Enrich
     owns_enrich_client = enrich_client is None
     ec = enrich_client or httpx.Client(timeout=15.0, follow_redirects=True)
     try:
-        enrich_result = enrich_candidates(scored, client=ec)
+        enrich_result = enrich_candidates(initial_pool, client=ec)
         all_warnings.extend(enrich_result.warnings)
         dropped_stories = enrich_result.dropped_stories
         logger.info("enrich: %d -> %d items (content fetched successfully)",
-                    len(scored), len(enrich_result.items))
+                    len(initial_pool), len(enrich_result.items))
 
         # 6. Compose
         llm_compose = _resolve_llm_call("compose", models_config, config_paths, model_overrides,
@@ -140,20 +144,13 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
         all_warnings.extend(compose_result.warnings)
         logger.info("compose: %d items written", len(compose_result.items))
 
-        # 6b. Backfill: if drops pushed us below minimum, try remaining scored candidates
-        if len(compose_result.items) < min_items:
-            attempted_urls = {str(e.items[0].url) for e in enrich_result.items}
-            attempted_urls |= {d.url for d in enrich_result.dropped_stories}
-            remaining = [sc for sc in scored if str(sc.items[0].url) not in attempted_urls]
-            logger.info("backfill: have %d items, need %d — trying %d remaining candidates",
-                         len(compose_result.items), min_items, len(remaining))
-            for sc in remaining:
+        # 6b. Backfill: if initial pool drops below minimum, try backfill pool
+        if len(compose_result.items) < min_items and backfill_pool:
+            logger.info("backfill: have %d items, need %d — trying %d backfill candidates",
+                         len(compose_result.items), min_items, len(backfill_pool))
+            for sc in backfill_pool:
                 if len(compose_result.items) >= min_items:
                     break
-                url = str(sc.items[0].url)
-                if url in attempted_urls:
-                    continue
-                attempted_urls.add(url)
                 batch = enrich_candidates([sc], client=ec)
                 all_warnings.extend(batch.warnings)
                 dropped_stories.extend(batch.dropped_stories)
