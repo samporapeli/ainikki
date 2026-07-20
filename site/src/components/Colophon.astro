@@ -1,0 +1,58 @@
+---
+// Kielimallit vaiheittain - tarkoituksella sivun alalaidassa ja piilossa
+// oletuksena, ei otsikon alla. Ainikki on tekijä, malli on työkalu; tämä
+// näyttää työkalut sille joka on niistä kiinnostunut, ei kaikille
+// oletuksena. Sanasto vastaa /tietoja/-sivun vaihenimiä.
+interface Props {
+  modelsUsed: Record<string, string>;
+}
+
+const { modelsUsed } = Astro.props;
+
+const LABELS: Record<string, string> = {
+  cluster: "Ryhmittely",
+  score: "Pisteytys",
+  compose: "Kirjoitus",
+  overview: "Yleiskuva",
+};
+
+const ORDER = ["cluster", "score", "compose", "overview"];
+
+const steps = ORDER
+  .filter(step => modelsUsed[step])
+  .map(step => [LABELS[step], modelsUsed[step].split("/").pop()] as [string, string]);
+---
+
+{steps.length > 0 && (
+  <details class="colophon">
+    <summary>Kielimallit</summary>
+    <ul>
+      {steps.map(([label, model]) => (
+        <li>{label} — {model}</li>
+      ))}
+    </ul>
+  </details>
+)}
+
+<style>
+  .colophon {
+    margin-top: 1.5rem;
+  }
+
+  .colophon summary {
+    font-size: 0.85rem;
+    color: var(--fg-subtle);
+    cursor: pointer;
+  }
+
+  .colophon ul {
+    margin-top: 0.5rem;
+    padding-left: 1.25rem;
+    font-size: 0.85rem;
+    color: var(--fg-subtle);
+  }
+
+  .colophon li {
+    margin-bottom: 0.35rem;
+  }
+</style>

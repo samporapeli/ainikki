@@ -4,7 +4,7 @@ import path from 'node:path';
 import Layout from '../../layouts/Layout.astro';
 import Overview from '../../components/Overview.astro';
 import StoryCard from '../../components/StoryCard.astro';
-import ModelBadge from '../../components/ModelBadge.astro';
+import Colophon from '../../components/Colophon.astro';
 import Warnings from '../../components/Warnings.astro';
 
 export function getStaticPaths() {
@@ -53,10 +53,9 @@ const ogUrl = `${import.meta.env.BASE_URL}/${briefing.topic}/${dateStr}/`;
   <header>
     <h1>{topicUpper}</h1>
     <p class="date">{prettyDate}</p>
-    <p class="generated">
-      Koostettu klo {new Date(briefing.meta.generated_at).toLocaleTimeString('fi-FI', { hour: 'numeric', minute: '2-digit' })}
+    <p class="byline">
+      Kirjoittanut Ainikki · klo {new Date(briefing.meta.generated_at).toLocaleTimeString('fi-FI', { hour: 'numeric', minute: '2-digit' })}
     </p>
-    <ModelBadge modelsUsed={briefing.meta.models_used} />
   </header>
 
   <Overview text={briefing.overview} />
@@ -71,6 +70,8 @@ const ogUrl = `${import.meta.env.BASE_URL}/${briefing.topic}/${dateStr}/`;
   </section>
 
   <Warnings warnings={briefing.warnings} droppedStories={briefing.dropped_stories} />
+
+  <Colophon modelsUsed={briefing.meta.models_used} />
 </Layout>
 
 <style>
@@ -89,7 +90,7 @@ const ogUrl = `${import.meta.env.BASE_URL}/${briefing.topic}/${dateStr}/`;
     margin-top: 0.25rem;
   }
 
-  .generated {
+  .byline {
     color: var(--fg-subtle);
     font-size: 0.8rem;
     margin-top: 0.35rem;
