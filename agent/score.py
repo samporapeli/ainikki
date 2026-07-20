@@ -13,13 +13,15 @@ candidate — not full article content.
 """
 
 import json
+import re
+from datetime import date, timedelta
 from pathlib import Path
 
 import yaml
 from pydantic import BaseModel, ValidationError
 
 from agent.json_utils import strip_code_fences
-from agent.schema import ClusteredCandidate, ScoredCandidate
+from agent.schema import Briefing, ClusteredCandidate, ScoredCandidate
 from agent.cluster import LlmCall
 
 
@@ -42,13 +44,64 @@ def load_rubric(path: Path) -> dict:
     return yaml.safe_load(path.read_text())
 
 
-def build_score_prompt(clusters: list[ClusteredCandidate], rubric: dict) -> tuple[str, str]:
+def load_previous_stories(topic: str, since: date, days: int = 7,
+                          output_dir: Path = Path("data/output")) -> list[dict]:
+    stories: list[dict] = []
+    for path in output_dir.glob(f"{topic}_daily_*.json"):
+        match = re.search(r"(\d{4}-\d{2}-\d{2})\.json$", path.name)
+        if not match:
+            continue
+        file_date = date.fromisoformat(match.group(1))
+        if file_date > since or file_date < since - timedelta(days=days):
+            continue
+        try:
+            briefing = Briefing(**json.loads(path.read_text()))
+        except Exception:
+            continue
+        for item in briefing.items:
+            url = str(item.sources[0].url) if item.sources else ""
+            stories.append({"title": item.headline, "url": url})
+    return stories
+
+
+def _normalize_for_compare(url: str) -> str:
+    return url.split("#")[0].rstrip("/")
+
+
+def filter_previous_clusters(clusters: list[ClusteredCandidate],
+                              previous_stories: list[dict]) -> list[ClusteredCandidate]:
+    """Hard-filter: remove clusters whose primary URL was already published."""
+    if not previous_stories:
+        return clusters
+    seen = {_normalize_for_compare(s["url"]) for s in previous_stories if s.get("url")}
+    filtered = []
+    for c in clusters:
+        primary_url = _normalize_for_compare(str(c.items[0].url))
+        if primary_url in seen:
+            continue
+        filtered.append(c)
+    return filtered
+
+
+def build_score_prompt(clusters: list[ClusteredCandidate], rubric: dict,
+                       previous_stories: list[dict] | None = None) -> tuple[str, str]:
     criteria_lines = []
     for c in rubric.get("criteria", []):
         criteria_lines.append(f"- {c['name']} (paino: {c['weight']}): {c['description'].strip()}")
     criteria_text = "\n".join(criteria_lines)
 
     exclude_lines = "\n".join(f"- {e}" for e in rubric.get("exclude", []))
+
+    previous_lines = ""
+    if previous_stories:
+        items = "\n".join(f"- {s['title']} ({s['url']})" for s in previous_stories)
+        previous_lines = f"""
+Seuraavat jutut on jo käsitelty aiemmissa koosteissa. Älä valitse samoja uutisia uudelleen.
+Jos juttua on jo käsitelty aiemmin, sen voi sisällyttää vain, jos kyseessä on uusi näkökulma
+samaan tarinaan. Muussa tapauksessa juttu jätetään pois (jo sisällytetty aiemmin):
+
+{items}
+"""
 
     min_items = rubric["items_per_briefing"]["min"]
     max_items = rubric["items_per_briefing"]["max"]
@@ -60,7 +113,7 @@ ehdokaslistasta. Käytä seuraavia kriteerejä arvioinnissa:
 
 Älä valitse ehdokkaita jotka ovat:
 {exclude_lines}
-
+{previous_lines}
 Valitse {min_items}-{max_items} ehdokasta, järjestä ne tärkeysjärjestykseen (1 = tärkein,
 ei toistuvia sijoituksia), ja kirjoita jokaiselle lyhyt (1 lause) selection_reason joka
 perustelee valinnan annetuilla kriteereillä.
@@ -106,7 +159,8 @@ def _validate_response(response: ScoreResponse, n_candidates: int, min_items: in
 
 
 def score_clusters(clusters: list[ClusteredCandidate], rubric_path: Path,
-                    llm_call: LlmCall) -> list[ScoredCandidate]:
+                    llm_call: LlmCall,
+                    previous_stories: list[dict] | None = None) -> list[ScoredCandidate]:
     if not clusters:
         return []
 
@@ -114,7 +168,7 @@ def score_clusters(clusters: list[ClusteredCandidate], rubric_path: Path,
     min_items = rubric["items_per_briefing"]["min"]
     max_items = rubric["items_per_briefing"]["max"]
 
-    system_prompt, user_prompt = build_score_prompt(clusters, rubric)
+    system_prompt, user_prompt = build_score_prompt(clusters, rubric, previous_stories)
     raw_response = llm_call(system_prompt, user_prompt)
 
     try:

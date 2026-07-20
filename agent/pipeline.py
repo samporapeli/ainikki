@@ -24,7 +24,8 @@ from agent.collect.hn import fetch_hn
 from agent.collect.base import save_raw
 from agent.dedup import dedup_candidates, save_candidates
 from agent.cluster import cluster_candidates
-from agent.score import score_clusters, load_rubric, ScoreValidationError
+from agent.score import (score_clusters, load_rubric, load_previous_stories,
+                          filter_previous_clusters, ScoreValidationError)
 from agent.enrich import enrich_candidates
 from agent.compose import compose_items
 from agent.overview import generate_overview
@@ -109,7 +110,14 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     llm_score = _resolve_llm_call("score", models_config, config_paths, model_overrides,
                                    llm_client, models_used)
     rubric = load_rubric(config_paths.rubric)
-    scored = score_clusters(cluster_result.clusters, config_paths.rubric, llm_score)
+    previous_stories = load_previous_stories(topic, since.date(), output_dir=out_dir)
+    clusters_before = len(cluster_result.clusters)
+    clusters = filter_previous_clusters(cluster_result.clusters, previous_stories)
+    if len(clusters) < clusters_before:
+        logger.info("cross-day dedup: filtered %d clusters already in previous digests",
+                     clusters_before - len(clusters))
+    scored = score_clusters(clusters, config_paths.rubric, llm_score,
+                            previous_stories=previous_stories)
     logger.info("score: %d selected (rubric %s)", len(scored), rubric.get("version"))
 
     # 5. Enrich

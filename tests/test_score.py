@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from agent.score import build_score_prompt, load_rubric, score_clusters, ScoreValidationError
+from agent.score import (build_score_prompt, load_rubric, load_previous_stories,
+                          filter_previous_clusters, score_clusters, ScoreValidationError)
 from agent.dedup import dedup_candidates
 from agent.collect.hn import parse_hn_hits
 from agent.schema import ClusteredCandidate
@@ -141,4 +142,204 @@ def test_code_fenced_json_is_parsed():
     result = score_clusters(clusters, FIXTURE_RUBRIC, mock_llm_code_fence)
     assert len(result) == 2
     assert result[0].rank == 1
+
+
+def _make_briefing_json(topic: str, date_str: str, headlines: list[str]) -> dict:
+    items = []
+    for i, h in enumerate(headlines):
+        items.append({
+            "headline": h,
+            "summary": f"Yhteenveto jutulle {h}",
+            "sources": [{"url": f"https://example.com/{date_str}/{i}", "title": h, "source_type": "hackernews"}],
+            "rank": i + 1,
+        })
+    return {
+        "topic": topic,
+        "period": "daily",
+        "period_start": date_str,
+        "period_end": date_str,
+        "overview": "Testi.",
+        "items": items,
+        "meta": {
+            "models_used": {},
+            "generated_at": f"{date_str}T12:00:00Z",
+            "pipeline_version": "0.1.0",
+            "persona": "test",
+            "rubric_version": "v1",
+            "guardrails_version": "v1",
+            "golden_examples_version": "v1",
+        },
+    }
+
+
+def test_load_previous_stories_returns_recent(tmp_path):
+    from datetime import date
+    today = date(2026, 7, 20)
+
+    briefing_3d = _make_briefing_json("ai", "2026-07-17", ["Story A", "Story B"])
+    (tmp_path / "ai_daily_2026-07-17.json").write_text(json.dumps(briefing_3d))
+
+    briefing_1d = _make_briefing_json("ai", "2026-07-19", ["Story C"])
+    (tmp_path / "ai_daily_2026-07-19.json").write_text(json.dumps(briefing_1d))
+
+    stories = load_previous_stories("ai", today, output_dir=tmp_path)
+    titles = [s["title"] for s in stories]
+    assert "Story A" in titles
+    assert "Story B" in titles
+    assert "Story C" in titles
+
+
+def test_load_previous_stories_excludes_outside_window(tmp_path):
+    from datetime import date
+    today = date(2026, 7, 20)
+
+    briefing_old = _make_briefing_json("ai", "2026-07-10", ["Old Story"])
+    (tmp_path / "ai_daily_2026-07-10.json").write_text(json.dumps(briefing_old))
+
+    briefing_recent = _make_briefing_json("ai", "2026-07-19", ["Recent Story"])
+    (tmp_path / "ai_daily_2026-07-19.json").write_text(json.dumps(briefing_recent))
+
+    stories = load_previous_stories("ai", today, output_dir=tmp_path)
+    titles = [s["title"] for s in stories]
+    assert "Recent Story" in titles
+    assert "Old Story" not in titles
+
+
+def test_load_previous_stories_includes_previous_day(tmp_path):
+    """The previous day's digest (file_date == since) should be included,
+    as it covers stories from the day before the current run."""
+    from datetime import date
+    today = date(2026, 7, 20)
+
+    briefing_prev = _make_briefing_json("ai", "2026-07-19", ["Yesterday Story"])
+    (tmp_path / "ai_daily_2026-07-19.json").write_text(json.dumps(briefing_prev))
+
+    stories = load_previous_stories("ai", today, output_dir=tmp_path)
+    assert len(stories) == 1
+    assert stories[0]["title"] == "Yesterday Story"
+
+
+def test_load_previous_stories_excludes_future(tmp_path):
+    from datetime import date
+    today = date(2026, 7, 20)
+
+    briefing_future = _make_briefing_json("ai", "2026-07-21", ["Future Story"])
+    (tmp_path / "ai_daily_2026-07-21.json").write_text(json.dumps(briefing_future))
+
+    briefing_current = _make_briefing_json("ai", "2026-07-20", ["Current Story"])
+    (tmp_path / "ai_daily_2026-07-20.json").write_text(json.dumps(briefing_current))
+
+    stories = load_previous_stories("ai", today, output_dir=tmp_path)
+    titles = [s["title"] for s in stories]
+    assert "Current Story" in titles
+    assert "Future Story" not in titles
+
+
+def test_load_previous_stories_skips_malformed_files(tmp_path):
+    from datetime import date
+    today = date(2026, 7, 20)
+
+    (tmp_path / "ai_daily_2026-07-19.json").write_text("not json")
+    briefing = _make_briefing_json("ai", "2026-07-18", ["Valid Story"])
+    (tmp_path / "ai_daily_2026-07-18.json").write_text(json.dumps(briefing))
+
+    stories = load_previous_stories("ai", today, output_dir=tmp_path)
+    assert len(stories) == 1
+    assert stories[0]["title"] == "Valid Story"
+
+
+def test_load_previous_stories_empty_dir(tmp_path):
+    from datetime import date
+    today = date(2026, 7, 20)
+    stories = load_previous_stories("ai", today, output_dir=tmp_path)
+    assert stories == []
+
+
+def test_load_previous_stories_ignores_different_topic(tmp_path):
+    from datetime import date
+    today = date(2026, 7, 20)
+
+    briefing_other = _make_briefing_json("ml", "2026-07-19", ["ML Story"])
+    (tmp_path / "ml_daily_2026-07-19.json").write_text(json.dumps(briefing_other))
+
+    stories = load_previous_stories("ai", today, output_dir=tmp_path)
+    assert stories == []
+
+
+def test_build_score_prompt_includes_previous_stories():
+    clusters = _build_test_clusters()
+    rubric = load_rubric(FIXTURE_RUBRIC)
+    previous = [{"title": "Yesterday Story", "url": "https://example.com/1"}]
+
+    system_prompt, _ = build_score_prompt(clusters, rubric, previous_stories=previous)
+    assert "Yesterday Story" in system_prompt
+    assert "aiemmissa koosteissa" in system_prompt
+
+
+def test_build_score_prompt_omits_previous_when_empty():
+    clusters = _build_test_clusters()
+    rubric = load_rubric(FIXTURE_RUBRIC)
+
+    system_prompt, _ = build_score_prompt(clusters, rubric, previous_stories=[])
+    assert "aiemmissa koosteissa" not in system_prompt
+
+
+def test_filter_previous_clusters_removes_matching_urls():
+    from datetime import datetime, timezone
+    from agent.schema import RawItem, SourceType
+
+    item_a = RawItem(title="Story A", url="https://example.com/a", source_type=SourceType.hn,
+                      raw_signal={"points": 100}, origin_id="1", fetched_at=datetime.now(timezone.utc))
+    item_b = RawItem(title="Story B", url="https://example.com/b", source_type=SourceType.hn,
+                      raw_signal={"points": 200}, origin_id="2", fetched_at=datetime.now(timezone.utc))
+    clusters = [
+        ClusteredCandidate(items=[item_a]),
+        ClusteredCandidate(items=[item_b]),
+    ]
+    previous = [{"title": "Story A", "url": "https://example.com/a"}]
+
+    result = filter_previous_clusters(clusters, previous)
+    assert len(result) == 1
+    assert result[0].items[0].title == "Story B"
+
+
+def test_filter_previous_clusters_handles_fragment_urls():
+    from datetime import datetime, timezone
+    from agent.schema import RawItem, SourceType
+
+    item = RawItem(title="Story", url="https://example.com/post#fnref:3",
+                    source_type=SourceType.hn, raw_signal={"points": 100},
+                    origin_id="1", fetched_at=datetime.now(timezone.utc))
+    clusters = [ClusteredCandidate(items=[item])]
+    previous = [{"title": "Story", "url": "https://example.com/post"}]
+
+    result = filter_previous_clusters(clusters, previous)
+    assert len(result) == 0
+
+
+def test_filter_previous_clusters_handles_trailing_slash():
+    from datetime import datetime, timezone
+    from agent.schema import RawItem, SourceType
+
+    item = RawItem(title="Story", url="https://example.com/post/",
+                    source_type=SourceType.hn, raw_signal={"points": 100},
+                    origin_id="1", fetched_at=datetime.now(timezone.utc))
+    clusters = [ClusteredCandidate(items=[item])]
+    previous = [{"title": "Story", "url": "https://example.com/post"}]
+
+    result = filter_previous_clusters(clusters, previous)
+    assert len(result) == 0
+
+
+def test_filter_previous_clusters_empty_previous():
+    from datetime import datetime, timezone
+    from agent.schema import RawItem, SourceType
+
+    item = RawItem(title="Story", url="https://example.com/a",
+                    source_type=SourceType.hn, raw_signal={"points": 100},
+                    origin_id="1", fetched_at=datetime.now(timezone.utc))
+    clusters = [ClusteredCandidate(items=[item])]
+
+    result = filter_previous_clusters(clusters, [])
+    assert len(result) == 1
 
