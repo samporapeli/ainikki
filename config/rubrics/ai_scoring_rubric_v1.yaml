@@ -32,7 +32,7 @@ criteria:
   - name: "vaikutuksen laajuus"
     description: >
       Koskeeko tämä laajaa kehittäjäkuntaa/toimialaa, vai on kyseessä
-      kapea nice-tapaus jolla on merkitystä vain pienelle ryhmälle.
+      kapea niche-tapaus jolla on merkitystä vain pienelle ryhmälle.
     weight: high
 
   - name: "lähteiden riippumattomuus"

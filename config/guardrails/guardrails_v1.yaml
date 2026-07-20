@@ -15,7 +15,7 @@ rules:
   - "Älä esitä mielipidettä faktana."
 
   # Finnish language
-  - "Kirjoita yhdyssanat yhteen: verkkosivusto (ei verkko sivusto), asiakaspalvelu (ei asiakas palvelu), tietoturva (ei tieto turva). Nominatiivilla alkavat substanttiiviyhdistelmät ovat AINA yhdyssanoja."
+  - "Kirjoita yhdyssanat yhteen: verkkosivusto (ei verkko sivusto), asiakaspalvelu (ei asiakas palvelu), tietoturva (ei tieto turva). Nominatiivilla alkavat substantiiviyhdistelmät ovat AINA yhdyssanoja."
   - "Käytä pilkkua desimaalierottimena: 3,14 (ei 3.14). Prosenttimerkkiin välilyönti edelle: 15 %."
   - "Kirjoita viikonpäivät, kuukaudet ja kansallisuudet pienellä alkukirjaimella: maanantai, tammikuu, suomalainen."
   - "Vältä anglismeja ja käännöslainoja: älä käytä sanoja 'implementoida', 'adressoida' tai muita suoraan englannista johdettuja verbejä - käytä suomenkielisiä vastineita (toteuttaa, käsitellä)."
