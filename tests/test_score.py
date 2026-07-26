@@ -120,8 +120,8 @@ def test_raises_on_cutoff_rank_too_high():
         score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
 
 
-def test_raises_on_empty_backfill_pool():
-    """Backfill pool too small — need at least min_items backfill candidates."""
+def test_proceeds_with_zero_backfill():
+    """Backfill pool can be empty — pipeline proceeds anyway."""
     clusters = _build_test_clusters()
 
     def mock_llm(system_prompt: str, user_prompt: str) -> str:
@@ -129,10 +129,11 @@ def test_raises_on_empty_backfill_pool():
             {"candidate_index": 0, "rank": 1, "selection_reason": "a"},
             {"candidate_index": 1, "rank": 2, "selection_reason": "b"},
             {"candidate_index": 2, "rank": 3, "selection_reason": "c"},
-        ], "cutoff_rank": 2})
+        ], "cutoff_rank": 3})
 
-    with pytest.raises(ScoreValidationError, match="backfill pool too small"):
-        score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
+    result = score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
+    assert len(result.scored) == 3
+    assert result.cutoff_rank == 3
 
 
 def test_prompt_builds_with_real_production_rubric():

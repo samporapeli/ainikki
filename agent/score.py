@@ -132,11 +132,13 @@ samaan tarinaan. Muussa tapauksessa juttu jätetään pois (jo sisällytetty aie
 2. CUTOFF: Määritä cutoff_rank — se on korkein rank, joka kuuluu päivän
    TÄRKEIMPIEN juttujen joukkoon. Ensimmäinen uutiskokoonpano tehdään
    cutoff_rankin asti (rank ≤ cutoff). cutoff_rank:n pitää olla vähintään
-   {min_items} ja enintään {max_items}.
+   {min_items} ja enintään {max_items}. cutoff_rank:n pitää olla AINA
+   selvästi pienempi kuin valittujen kokonaismäärä, jotta backfill-poolissa
+   on ehdokkaita jos ensisijaisia tarvitsee korvata.
 
 Vastaa VAIN JSON-muodossa, ei muuta tekstiä:
 {{"selected": [{{"candidate_index": 0, "rank": 1, "selection_reason": "..."}}, ...],
- "cutoff_rank": {min_items}}}"""
+ "cutoff_rank": 2}}"""
 
     lines = []
     for i, cluster in enumerate(clusters):
@@ -168,11 +170,6 @@ def _validate_response(response: ScoreResponse, n_candidates: int, min_items: in
             f"cutoff_rank ({response.cutoff_rank}) outside bounds [{min_items}, {max_items}]"
         )
     backfill_size = n_selected - response.cutoff_rank
-    if backfill_size < min_items:
-        raise ScoreValidationError(
-            f"backfill pool too small ({backfill_size} items, need at least {min_items}) "
-            f"— if all primary items fail, there must be enough backfill to reach minimum"
-        )
 
     indices = [s.candidate_index for s in response.selected]
     if len(indices) != len(set(indices)):

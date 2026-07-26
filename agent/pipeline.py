@@ -117,8 +117,13 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     if len(clusters) < clusters_before:
         logger.info("cross-day dedup: filtered %d clusters already in previous digests",
                      clusters_before - len(clusters))
-    scored = score_clusters(clusters, config_paths.rubric, llm_score,
-                            previous_stories=previous_stories)
+    try:
+        scored = score_clusters(clusters, config_paths.rubric, llm_score,
+                                previous_stories=previous_stories)
+    except ScoreValidationError:
+        logger.warning("score step failed, retrying once")
+        scored = score_clusters(clusters, config_paths.rubric, llm_score,
+                                previous_stories=previous_stories)
     initial_pool = [sc for sc in scored.scored if sc.rank <= scored.cutoff_rank]
     backfill_pool = [sc for sc in scored.scored if sc.rank > scored.cutoff_rank]
     logger.info("score: %d selected (cutoff %d, %d initial + %d backfill, rubric %s)",
