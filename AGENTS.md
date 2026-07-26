@@ -13,6 +13,7 @@
 - Never commit secrets or credentials to the repository.
 - When handling credentials in code, always use environment variables or secure secret management.
 - When handling credentials for humans, remind about safe practices: do not paste secrets into chat, do not share tokens openly, rotate compromised credentials immediately.
+- Committed docs (planning, roadmap, commit messages) should read as general technical rationale, not a transcript of the maintainer's personal reasoning or preferences. Keep personal working notes in gitignored `*.local.md` files instead.
 
 ## Code style
 

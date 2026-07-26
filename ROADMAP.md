@@ -19,18 +19,55 @@
   don't push the digest below the minimum item count
 - Retry compose once on an empty LLM response before dropping the item
 - OpenRouter-only model provider (dropped OpenAI/Anthropic/local support)
+- Colophon component: model list moved out of the header into a
+  collapsed `<details>` at the bottom of the digest, step names aligned
+  with `/tietoja/` (was three inconsistent label sets across the site)
+- Dropped "olet toimittaja" framing from LLM prompts (compose/score/
+  overview) - the app doesn't claim to do actual journalism, see
+  `planning/identity-and-voice.md`
 
 ## Next
 
+- **Failure alerting for `daily.sh`** — right now a pipeline crash
+  (e.g. `ScoreValidationError`) just exits and gets logged to
+  `ainikki-cron.log`; nobody is notified. Send a Telegram/email message
+  on failure, not just on success.
+- **Multi-source collection** — currently HN-only, which blocks adding
+  any topic that isn't well covered there and weakens the rubric's
+  "source independence" criterion (multiple HN submissions of the same
+  link aren't independent sources). See `planning/multi-source-and-topics.md`
+  for the adapter design and topic feasibility notes.
+  - Per-topic source configuration (`config/sources/`)
+  - RSS adapter as second source type
+- **Per-topic persona/guardrails** — `ConfigPaths` in `agent/pipeline.py`
+  only parameterizes the rubric by topic; persona and guardrails are
+  hardcoded to one file regardless of topic. Blocks adding a topic with
+  a different voice/audience. See `planning/identity-and-voice.md`.
+- Lightweight groundedness check after Compose/Overview (LLM-as-judge
+  or heuristic entity/number overlap against source text) — log as a
+  non-blocking warning, consistent with the existing failure-policy
+  philosophy, to catch drift now that nothing reviews output before
+  publish.
 - Parameterize `daily.sh` for multiple topics
 - Extract Telegram logic into its own script
-- Per-topic source configuration (`config/sources/`)
-- RSS adapter as second source type
 
 ## Ideas
 
 - Experimenting with Telegram message formats (current vs. full digest content vs. summary + links only)
-- Weekly or monthly digest variants
+- Weekly or monthly digest variants — could fit lower-velocity topics
+  (e.g. mechanical keyboards) better than a daily cadence
 - Async compose step for parallel LLM calls
 - Reddit and ArXiv adapters
 - Topic-specific golden examples
+- New topic candidates once multi-source collection exists — see
+  `planning/multi-source-and-topics.md` for feasibility per topic:
+  Linux/FOSS, design, mechanical keyboards, electronic music
+
+## Open questions
+
+- How should Ainikki's identity/branding work once there's more than
+  one persona (different topics likely want different voices/target
+  audiences)? Is "Ainikki" one author across all topics, or does each
+  topic get its own named persona under the Ainikki umbrella? See
+  `planning/identity-and-voice.md` for the options considered — no
+  decision made yet.
