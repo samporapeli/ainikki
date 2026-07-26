@@ -32,11 +32,11 @@
   (e.g. `ScoreValidationError`) just exits and gets logged to
   `ainikki-cron.log`; nobody is notified. Send a Telegram/email message
   on failure, not just on success.
-- **Multi-source collection** — currently HN-only, which blocks adding
-  any topic that isn't well covered there and weakens the rubric's
-  "source independence" criterion (multiple HN submissions of the same
-  link aren't independent sources). See `planning/multi-source-and-topics.md`
-  for the adapter design and topic feasibility notes.
+- **Multi-source collection** — currently HN-only, which limits topic
+  diversity and weakens the rubric's "source independence" criterion
+  (multiple HN submissions of the same link aren't independent sources).
+  See `planning/multi-source-and-topics.md` for source candidates (Yle
+  RSS, HS, Reddit, topic-specific feeds) and the adapter design.
   - Per-topic source configuration (`config/sources/`)
   - RSS adapter as second source type
 - **Per-topic persona/guardrails** — `ConfigPaths` in `agent/pipeline.py`
@@ -60,7 +60,7 @@
 - Reddit and ArXiv adapters
 - Topic-specific golden examples
 - New topic candidates once multi-source collection exists — see
-  `planning/multi-source-and-topics.md` for feasibility per topic:
+  `planning/multi-source-and-topics.md` for source fit per topic:
   Linux/FOSS, design, mechanical keyboards, electronic music
 
 ## Open questions
