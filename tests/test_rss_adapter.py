@@ -49,3 +49,19 @@ def test_fetch_and_parse_rss_with_mock():
     items = fetch_and_parse_rss("https://example.com/feed", client=client)
     assert len(items) == 3
     assert str(items[0].url) == "https://example.com/ai-story"
+
+
+def test_parse_rss_feed_filters_by_date():
+    since = datetime(2026, 7, 27, 0, 0, 0, tzinfo=timezone.utc)
+    until = datetime(2026, 7, 28, 0, 0, 0, tzinfo=timezone.utc)
+    items = parse_rss_feed(FIXTURE, "https://example.com/feed", since=since, until=until)
+    # items[0] has Jul 27, items[1] has Jul 27, items[2] has no date (kept)
+    assert len(items) == 3
+
+    # filter to only Jul 26 - both dated items are Jul 27, should be dropped
+    since_26 = datetime(2026, 7, 26, 0, 0, 0, tzinfo=timezone.utc)
+    until_26 = datetime(2026, 7, 27, 0, 0, 0, tzinfo=timezone.utc)
+    items2 = parse_rss_feed(FIXTURE, "https://example.com/feed", since=since_26, until=until_26)
+    # items[2] has no date so kept; items[0]/[1] are Jul 27 which is >= until, dropped
+    assert len(items2) == 1
+    assert items2[0].title == "Story without published date"

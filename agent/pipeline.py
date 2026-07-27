@@ -104,7 +104,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
                 if source_type == "hn":
                     items = fetch_hn(since, until, min_points=src.get("min_points", min_points))
                 elif source_type == "rss":
-                    items = fetch_and_parse_rss(src["url"])
+                    items = fetch_and_parse_rss(src["url"], since=since, until=until)
                 else:
                     logger.warning("collect: unknown source type '%s' - skipped", source_type)
                     continue

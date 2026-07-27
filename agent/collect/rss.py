@@ -19,12 +19,17 @@ logger = logging.getLogger(__name__)
 
 
 def parse_rss_feed(raw_xml: str, feed_url: str,
-                   fetched_at: datetime | None = None) -> list[RawItem]:
+                   fetched_at: datetime | None = None,
+                   since: datetime | None = None,
+                   until: datetime | None = None) -> list[RawItem]:
     """Pure function: RSS/Atom XML string -> list[RawItem].
     Handles both RSS 2.0 and Atom feeds.
 
     Each entry's link must be an absolute http(s) URL; relative or
     missing links produce a warning and the entry is skipped.
+
+    If since/until are provided, entries outside the window are skipped.
+    Entries without a parsed published_at are kept (we can't filter).
     """
     parsed = feedparser.parse(raw_xml)
     now = fetched_at or datetime.now(timezone.utc)
@@ -40,6 +45,10 @@ def parse_rss_feed(raw_xml: str, feed_url: str,
             continue
 
         published = _parse_published(entry)
+        if published and since and published < since:
+            continue
+        if published and until and published >= until:
+            continue
         categories = entry.get("tags", [])
         tag_names = [t.get("term", "") for t in categories if t.get("term")]
         summary_fragment = entry.get("summary", "") or ""
@@ -82,7 +91,9 @@ def _parse_published(entry: dict[str, Any]) -> datetime | None:
         return None
 
 
-def fetch_and_parse_rss(rss_url: str, client: Any = None) -> list[RawItem]:
+def fetch_and_parse_rss(rss_url: str, client: Any = None,
+                        since: datetime | None = None,
+                        until: datetime | None = None) -> list[RawItem]:
     if client is not None:
         resp = client.get(rss_url, timeout=15.0, follow_redirects=True)
         resp.raise_for_status()
@@ -94,4 +105,4 @@ def fetch_and_parse_rss(rss_url: str, client: Any = None) -> list[RawItem]:
             resp.raise_for_status()
             raw_xml = resp.text
 
-    return parse_rss_feed(raw_xml, rss_url)
+    return parse_rss_feed(raw_xml, rss_url, since=since, until=until)
