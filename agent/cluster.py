@@ -100,6 +100,37 @@ def _validate_full_coverage(response: ClusterResponse, n_candidates: int) -> boo
     return True
 
 
+def _recover_missing(response: ClusterResponse, n_candidates: int,
+                     candidates: list[Candidate]) -> ClusterResult:
+    """Accept partial clustering: use what the model got right,
+    treat missing/duplicate indices as singletons."""
+    seen: set[int] = set()
+    valid_clusters = []
+    for cluster in response.clusters:
+        clean_indices = [i for i in cluster.candidate_indices if i not in seen
+                         and 0 <= i < n_candidates]
+        if not clean_indices:
+            continue
+        for i in clean_indices:
+            seen.add(i)
+        primary = min(cluster.primary_index, len(clean_indices) - 1)
+        valid_clusters.append(ClusteredCandidate(
+            items=[item for idx in clean_indices for item in candidates[idx].items],
+            cluster_reason=cluster.reason,
+        ))
+
+    missing = [i for i in range(n_candidates) if i not in seen]
+    for idx in missing:
+        valid_clusters.append(ClusteredCandidate(
+            items=candidates[idx].items,
+            cluster_reason="fallback: not covered by model response",
+        ))
+
+    if missing:
+        logger.info("cluster: recovered %d missing indices as singletons", len(missing))
+    return ClusterResult(clusters=valid_clusters, warning=None)
+
+
 def _fallback_singletons(candidates: list[Candidate], reason: str) -> ClusterResult:
     """If the model response doesn't validate, don't crash — degrade safely
     to a state where each candidate is its own cluster (same outcome as
@@ -128,7 +159,7 @@ def cluster_candidates(candidates: list[Candidate], llm_call: LlmCall) -> Cluste
         return _fallback_singletons(candidates, f"model response is not valid JSON ({e})")
 
     if not _validate_full_coverage(response, len(candidates)):
-        return _fallback_singletons(candidates, "model response did not cover all candidates exactly once")
+        return _recover_missing(response, len(candidates), candidates)
 
     result = []
     for cluster in response.clusters:

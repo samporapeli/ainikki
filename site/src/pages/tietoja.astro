@@ -18,6 +18,11 @@ const steps = [
     description: 'Kielimalli tunnistaa samasta asiasta kertovat jutut eri lähteistä ja ryhmittelee ne yhteen.',
   },
   {
+    name: 'Aiheen suodatus',
+    llm: true,
+    description: 'Kielimalli tarkistaa jokaisen ehdokkaan ja pudottaa pois ne, jotka eivät liity käsiteltävään aiheeseen.',
+  },
+  {
     name: 'Pisteytys',
     llm: true,
     description: 'Kielimalli valitsee ja järjestää 3–10 uutista arviointikriteerien perusteella. Uutiset, joita on käsitelty viikon sisällä julkaistuissa koosteissa, jätetään pois.',
@@ -63,7 +68,7 @@ const steps = [
     <p>
       Ainikki kerää uutisia määritellyistä aiheista, valitsee niistä
       tärkeimmät ja kirjoittaa jokaisesta suomenkielisen tiivistelmän.
-      Prosessi koostuu yhdeksästä vaiheesta, joista osa käyttää kielimalleja
+      Prosessi koostuu kymmenestä vaiheesta, joista osa käyttää kielimalleja
       (tekoälyä) ja osa on determinististä logiikkaa eli perinteistä koodia.
     </p>
   </section>
@@ -91,7 +96,7 @@ const steps = [
   <section class="details">
     <h2>Mikä on kielimalli ja mikä koodia?</h2>
     <p>
-      Neljä vaihetta (ryhmittely, pisteytys, kirjoitus, yleiskuva) käyttää suuria
+      Viisi vaihetta (ryhmittely, aiheen suodatus, pisteytys, kirjoitus, yleiskuva) käyttää suuria
       kielimalleja (LLM). Ne tekevät päätöksiä, jotka vaativat ymmärrystä
       kielestä ja sisällöstä — esimerkiksi saman uutisen tunnistamista eri
       lähteistä tai uutisen merkityksen arvioimista.

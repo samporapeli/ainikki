@@ -49,6 +49,8 @@ def _make_llm_handler(score_min=3, score_max=10):
                         for i in range(k)]
             cutoff = score_min
             content = json.dumps({"selected": selected, "cutoff_rank": cutoff})
+        elif "aiheeseen liittyvä" in system_prompt:
+            content = json.dumps({"results": [{"index": i, "keep": True} for i in range(n)]})
         elif "Kohdeyleisö:" in system_prompt:
             content = json.dumps({"headline": "Testiotsikko juttu",
                                    "summary": "Testiyhteenveto joka kuvaa juttua lyhyesti."})
@@ -94,7 +96,7 @@ def test_full_pipeline_happy_path(tmp_path):
     assert briefing.meta.persona == "ainikki-v1"
     assert briefing.meta.rubric_version == "v1"
     assert briefing.meta.guardrails_version == "v1"
-    assert set(briefing.meta.models_used.keys()) == {"cluster", "score", "compose", "overview"}
+    assert set(briefing.meta.models_used.keys()) == {"cluster", "filter_topic", "score", "compose", "overview"}
     assert briefing.meta.models_used["compose"] == "openrouter/anthropic/claude-sonnet-4-6"
 
 

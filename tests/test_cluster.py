@@ -79,19 +79,22 @@ def test_fallback_on_malformed_json():
     assert "degraded" in result.warning
 
 
-def test_fallback_on_incomplete_coverage():
-    """Model forgot one candidate entirely in the response — must detect and fallback."""
+def test_recovery_on_incomplete_coverage():
+    """Model forgot some candidates — recovered as singletons, no warning."""
     candidates = _build_test_candidates()
 
-    def bad_response(system_prompt: str, user_prompt: str) -> str:
-        # only first 5 candidates mentioned out of 9 - incomplete coverage
+    def partial_response(system_prompt: str, user_prompt: str) -> str:
+        # only first 5 candidates mentioned out of 9
         clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(5)]
         return json.dumps({"clusters": clusters})
 
-    result = cluster_candidates(candidates, bad_response)
+    result = cluster_candidates(candidates, partial_response)
     assert len(result.clusters) == len(candidates)
-    assert all("fallback" in (c.cluster_reason or "") for c in result.clusters)
-    assert result.warning is not None
+    assert result.warning is None
+    covered = [c for c in result.clusters if c.cluster_reason != "fallback: not covered by model response"]
+    missing = [c for c in result.clusters if c.cluster_reason == "fallback: not covered by model response"]
+    assert len(covered) == 5
+    assert len(missing) == 4
 
 
 def test_prompt_stays_lightweight():

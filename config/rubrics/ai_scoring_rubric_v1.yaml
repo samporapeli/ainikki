@@ -7,6 +7,12 @@
 
 version: v1
 topic: ai
+topic_description: >
+  tekoäly, koneoppiminen, syväoppiminen, LLM, neuroverkot, GPT,
+  Claude, Gemini, ja muu tekoälyyn liittyvä tutkimus, työkalut,
+  julkaisut ja keskustelu. Myös tekoälyn soveltaminen ja vaikutus
+  eri aloihin on aiheeseen kuuluva, jos tekoäly on jutun pääaihe
+  eikä vain sivumaininta.
 
 # Criteria the model applies when scoring candidates.
 # Write these as concretely as possible - the more specific

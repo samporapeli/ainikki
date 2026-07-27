@@ -9,6 +9,9 @@ steps:
   cluster:
     provider: openrouter
     model: "openai/gpt-4o-mini"     # cheap, the task is mostly classification
+  filter_topic:
+    provider: openrouter
+    model: "openai/gpt-4o-mini"     # cheap, binary relevance check
   score:
     provider: openrouter
     model: "openai/gpt-4o-mini"     # cheap, structured output is sufficient

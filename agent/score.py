@@ -125,6 +125,20 @@ samaan tarinaan. Muussa tapauksessa juttu jätetään pois (jo sisällytetty aie
 
    Älä valitse ehdokkaita jotka ovat:
 {exclude_lines}
+
+   Esimerkkejä valinnoista:
+
+   Hyvä valinta:
+   - "GPT-5 julkaistu" → aihepiirin ydin, uutuusarvo, laaja vaikutus
+   - "Tutkijat kehittivät uuden koneoppimismenetelmän" → tutkimus, relevantti
+   - "AI:n vaikutus työelämään ja burnoutiin" → aiheeseen liittyvä keskustelu
+   - "Inflect-Micro-v2: TTS-malli julkaistu" → konkreettinen julkaisu
+
+   Huono valinta:
+   - "Python-lintteri Ruff päivitetty" → ei AI:ää, pelkkä kehitystyökalu
+   - "Uusi TypeScript-kääntäjä" → ohjelmointikieli, ei tekoälyä
+   - "Robottipysäköinti lentoasemalla" → robotiikka ilman AI/ML-yhteyttä
+   - "GrapheneOS puhelimen suojelu" → tietoturva, ei tekoälyä
 {previous_lines}
 
    Jokaiselle valitulle: anna rank (1 = tärkein), ja lyhyt selection_reason.

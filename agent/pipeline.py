@@ -24,6 +24,7 @@ from agent.collect.hn import fetch_hn
 from agent.collect.base import save_raw
 from agent.dedup import dedup_candidates, save_candidates
 from agent.cluster import cluster_candidates
+from agent.filter_topic import filter_topic
 from agent.score import (score_clusters, load_rubric, load_previous_stories,
                           filter_previous_clusters, ScoreValidationError, ScoreResult)
 from agent.enrich import enrich_candidates
@@ -36,7 +37,7 @@ from agent.llm import make_llm_call, load_models_config, resolve_step_config
 logger = logging.getLogger(__name__)
 
 PIPELINE_VERSION = "0.1.0"
-LLM_STEPS = ["cluster", "score", "compose", "overview"]
+LLM_STEPS = ["cluster", "filter_topic", "score", "compose", "overview"]
 
 
 class ConfigPaths:
@@ -97,19 +98,29 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
 
     models_config = load_models_config(config_paths.models)
     models_used: dict[str, str] = {}
+    rubric = load_rubric(config_paths.rubric)
 
-    # 3. Cluster
+    # 3. Filter by topic relevance
+    llm_filter = _resolve_llm_call("filter_topic", models_config, config_paths, model_overrides,
+                                    llm_client, models_used)
+    topic_description = rubric.get("topic_description", topic)
+    filter_result = filter_topic(candidates, topic_description, llm_filter)
+    if filter_result.warning:
+        all_warnings.append(filter_result.warning)
+    logger.info("filter_topic: %d -> %d candidates (%d dropped)",
+                len(candidates), filter_result.n_kept, filter_result.n_dropped)
+
+    # 4. Cluster
     llm_cluster = _resolve_llm_call("cluster", models_config, config_paths, model_overrides,
                                      llm_client, models_used)
-    cluster_result = cluster_candidates(candidates, llm_cluster)
+    cluster_result = cluster_candidates(filter_result.candidates, llm_cluster)
     if cluster_result.warning:
         all_warnings.append(cluster_result.warning)
-    logger.info("cluster: %d -> %d clusters", len(candidates), len(cluster_result.clusters))
+    logger.info("cluster: %d -> %d clusters", len(filter_result.candidates), len(cluster_result.clusters))
 
-    # 4. Score (CRITICAL - no fallback, ScoreValidationError crashes the entire run)
+    # 5. Score (CRITICAL - no fallback, ScoreValidationError crashes the entire run)
     llm_score = _resolve_llm_call("score", models_config, config_paths, model_overrides,
                                    llm_client, models_used)
-    rubric = load_rubric(config_paths.rubric)
     min_items = rubric["items_per_briefing"]["min"]
     previous_stories = load_previous_stories(topic, since.date(), output_dir=out_dir)
     clusters_before = len(cluster_result.clusters)
