@@ -77,7 +77,7 @@ def test_raises_on_count_outside_rubric_bounds():
         score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
 
 
-def test_raises_on_duplicate_candidate_index():
+def test_deduplicates_candidate_indices():
     clusters = _build_test_clusters()
 
     def mock_llm(system_prompt: str, user_prompt: str) -> str:
@@ -88,11 +88,14 @@ def test_raises_on_duplicate_candidate_index():
             {"candidate_index": 2, "rank": 4, "selection_reason": "d"},
         ], "cutoff_rank": 2})
 
-    with pytest.raises(ScoreValidationError, match="more than once"):
-        score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
+    result = score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
+    assert len(result.scored) == 3
+    assert result.scored[0].rank == 1
+    assert result.scored[1].rank == 2
+    assert result.scored[2].rank == 3
 
 
-def test_raises_on_invalid_rank_sequence():
+def test_normalizes_rank_sequence():
     clusters = _build_test_clusters()
 
     def mock_llm(system_prompt: str, user_prompt: str) -> str:
@@ -103,11 +106,13 @@ def test_raises_on_invalid_rank_sequence():
             {"candidate_index": 3, "rank": 4, "selection_reason": "d"},
         ], "cutoff_rank": 2})
 
-    with pytest.raises(ScoreValidationError, match="rank"):
-        score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
+    result = score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
+    assert len(result.scored) == 4
+    ranks = [s.rank for s in result.scored]
+    assert ranks == [1, 2, 3, 4]
 
 
-def test_raises_on_cutoff_rank_too_high():
+def test_normalizes_cutoff_rank_too_high():
     clusters = _build_test_clusters()
 
     def mock_llm(system_prompt: str, user_prompt: str) -> str:
@@ -116,8 +121,9 @@ def test_raises_on_cutoff_rank_too_high():
             {"candidate_index": 1, "rank": 2, "selection_reason": "b"},
         ], "cutoff_rank": 5})
 
-    with pytest.raises(ScoreValidationError, match="outside bounds"):
-        score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
+    result = score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
+    assert result.cutoff_rank == 2
+    assert len(result.scored) == 2
 
 
 def test_proceeds_with_zero_backfill():

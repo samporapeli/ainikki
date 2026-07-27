@@ -157,6 +157,20 @@ Vastaa VAIN JSON-muodossa, ei muuta tekstiä:
     return system_prompt, user_prompt
 
 
+def _normalize_response(response: ScoreResponse, n_candidates: int) -> ScoreResponse:
+    """Fix common LLM failures: duplicate indices, rank gaps/duplicates."""
+    seen: set[int] = set()
+    deduped: list[ScoreAssignment] = []
+    for s in sorted(response.selected, key=lambda x: x.rank):
+        if s.candidate_index not in seen:
+            seen.add(s.candidate_index)
+            deduped.append(s)
+    for i, s in enumerate(deduped, 1):
+        s.rank = i
+    cutoff = min(response.cutoff_rank, len(deduped))
+    return ScoreResponse(selected=deduped, cutoff_rank=cutoff)
+
+
 def _validate_response(response: ScoreResponse, n_candidates: int, min_items: int, max_items: int) -> None:
     n_selected = len(response.selected)
     pool_max = 3 * max_items
@@ -165,23 +179,11 @@ def _validate_response(response: ScoreResponse, n_candidates: int, min_items: in
             f"number of selected items ({n_selected}) outside bounds [{min_items}, {pool_max}]"
         )
 
-    if not (min_items <= response.cutoff_rank <= max_items):
-        raise ScoreValidationError(
-            f"cutoff_rank ({response.cutoff_rank}) outside bounds [{min_items}, {max_items}]"
-        )
     backfill_size = n_selected - response.cutoff_rank
 
     indices = [s.candidate_index for s in response.selected]
-    if len(indices) != len(set(indices)):
-        raise ScoreValidationError("same candidate_index selected more than once")
     if any(i < 0 or i >= n_candidates for i in indices):
         raise ScoreValidationError(f"candidate_index out of bounds [0, {n_candidates - 1}]")
-
-    ranks = sorted(s.rank for s in response.selected)
-    if ranks != list(range(1, n_selected + 1)):
-        raise ScoreValidationError(
-            f"rank values must be 1..{n_selected} without gaps/duplicates, got {ranks}"
-        )
 
 
 def score_clusters(clusters: list[ClusteredCandidate], rubric_path: Path,
@@ -203,6 +205,7 @@ def score_clusters(clusters: list[ClusteredCandidate], rubric_path: Path,
     except (json.JSONDecodeError, ValidationError) as e:
         raise ScoreValidationError(f"model response is not valid JSON: {e}") from e
 
+    response = _normalize_response(response, len(clusters))
     _validate_response(response, len(clusters), min_items, max_items)
 
     result = [
