@@ -18,9 +18,11 @@ from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 
 import httpx
+import yaml
 
 from agent.schema import Period, RawItem
 from agent.collect.hn import fetch_hn
+from agent.collect.rss import fetch_and_parse_rss
 from agent.collect.base import save_raw
 from agent.dedup import dedup_candidates, save_candidates
 from agent.cluster import cluster_candidates
@@ -47,6 +49,16 @@ class ConfigPaths:
         self.guardrails = config_dir / "guardrails" / "guardrails_v1.yaml"
         self.golden_examples_dir = config_dir / "golden_examples"
         self.rubric = config_dir / "rubrics" / f"{topic}_scoring_rubric_v1.yaml"
+
+
+def _load_sources_config(topic: str, config_dir: Path) -> list[dict]:
+    """Reads config/sources/{topic}.yaml and returns the source list."""
+    path = config_dir / "sources" / f"{topic}.yaml"
+    if not path.exists():
+        logger.info("no sources config at %s, falling back to HN only", path)
+        return [{"type": "hn", "min_points": 20}]
+    data = yaml.safe_load(path.read_text())
+    return data.get("sources", [])
 
 
 def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
@@ -82,14 +94,28 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
         raw_items = raw_items_override
         logger.info("collect: using raw_items_override (%d items) - test run", len(raw_items))
     else:
-        try:
-            raw_items = fetch_hn(since, until, min_points=min_points)
-        except Exception as e:
-            logger.warning("collect: HN adapter failed (%s) - continuing with empty list", e)
-            raw_items = []
-            all_warnings.append(f"Keruu: HN-adapteri epäonnistui: {e}")
-    save_raw(topic, date_str, "hn", raw_items, data_dir=data_dir / "raw")
-    logger.info("collect: %d raw items", len(raw_items))
+        raw_items = []
+        sources_config = _load_sources_config(topic, config_dir)
+
+        for src in sources_config:
+            source_type = src.get("type", "hn")
+            source_name = src.get("name", source_type)
+            try:
+                if source_type == "hn":
+                    items = fetch_hn(since, until, min_points=src.get("min_points", min_points))
+                elif source_type == "rss":
+                    items = fetch_and_parse_rss(src["url"])
+                else:
+                    logger.warning("collect: unknown source type '%s' - skipped", source_type)
+                    continue
+                raw_items.extend(items)
+                save_raw(topic, date_str, source_name, items, data_dir=data_dir / "raw")
+                logger.info("collect (%s): %d items", source_name, len(items))
+            except Exception as e:
+                logger.warning("collect (%s) failed: %s - continuing", source_name, e)
+                all_warnings.append(f"Keruu ({source_name}): {e}")
+
+    logger.info("collect: total %d raw items across all sources", len(raw_items))
 
     # 2. Dedup
     candidates = dedup_candidates(raw_items)
