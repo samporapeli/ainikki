@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+  <title>Test Feed</title>
+  <description>A test RSS feed</description>
+  <link>https://example.com</link>
+  <item>
+    <title>A story about AI and machine learning</title>
+    <link>https://example.com/ai-story</link>
+    <description>A detailed article about recent advances in LLMs.</description>
+    <pubDate>Mon, 27 Jul 2026 10:00:00 +0300</pubDate>
+    <guid>https://example.com/ai-story</guid>
+    <category>AI</category>
+    <category>Technology</category>
+  </item>
+  <item>
+    <title>A story about Linux kernel updates</title>
+    <link>https://example.com/linux-story</link>
+    <description>New kernel version released with security fixes.</description>
+    <pubDate>Mon, 27 Jul 2026 08:30:00 +0300</pubDate>
+    <guid>https://example.com/linux-story</guid>
+    <category>Linux</category>
+    <category>Open Source</category>
+  </item>
+  <item>
+    <title>Story without published date</title>
+    <link>https://example.com/no-date</link>
+    <description>No publication date provided.</description>
+    <guid>https://example.com/no-date</guid>
+  </item>
+  <item>
+  </item>
+</channel>
+</rss>

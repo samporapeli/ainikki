@@ -1,0 +1,12 @@
+# Source configuration for the AI topic.
+# Each entry defines one adapter and its parameters.
+# The collect step iterates over this list and merges all items.
+sources:
+  - type: hn
+    min_points: 20
+  - type: rss
+    url: https://yle.fi/rss/tuoreimmat
+    name: yle-tuoreimmat
+  - type: rss
+    url: https://yle.fi/rss/tiede
+    name: yle-tiede
