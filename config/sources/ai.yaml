@@ -8,5 +8,11 @@ sources:
     url: https://yle.fi/rss/tuoreimmat
     name: yle-tuoreimmat
   - type: rss
-    url: https://yle.fi/rss/t/18-819/fi
+    url: https://yle.fi/rss/t/18-212923/fi
     name: yle-tiede
+  - type: rss
+    url: https://openai.com/news/rss.xml
+    name: openai-blog
+  - type: rss
+    url: https://arstechnica.com/tag/ai/feed/
+    name: ars-technica-ai
