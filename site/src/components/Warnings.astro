@@ -25,7 +25,7 @@ const { warnings, droppedStories = [] } = Astro.props as {
 
 {warnings.length > 0 && (
   <details class="warnings">
-    <summary>{warnings.length} vikaa</summary>
+    <summary>{warnings.length} {warnings.length === 1 ? 'vika' : 'vikaa'}</summary>
     <ul>
       {warnings.map(w => <li>{w}</li>)}
     </ul>
