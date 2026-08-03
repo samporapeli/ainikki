@@ -14,9 +14,10 @@ const LABELS: Record<string, string> = {
   score: "Pisteytys",
   compose: "Kirjoitus",
   overview: "Yleiskuva",
+  filter_topic: "Aiheen suodatus",
 };
 
-const ORDER = ["cluster", "score", "compose", "overview"];
+const ORDER = ["cluster", "filter_topic", "score", "compose", "overview"];
 
 const steps = ORDER
   .filter(step => modelsUsed[step])
