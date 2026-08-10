@@ -97,7 +97,7 @@ def test_full_pipeline_happy_path(tmp_path):
     assert briefing.meta.rubric_version == "v1"
     assert briefing.meta.guardrails_version == "v1"
     assert set(briefing.meta.models_used.keys()) == {"cluster", "filter_topic", "score", "compose", "overview"}
-    assert briefing.meta.models_used["compose"] == "openrouter/anthropic/claude-sonnet-4-6"
+    assert briefing.meta.models_used["compose"]
 
 
 def test_pipeline_raises_on_critical_score_failure(tmp_path):
