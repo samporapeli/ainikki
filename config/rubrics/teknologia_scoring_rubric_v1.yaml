@@ -1,0 +1,69 @@
+# scoring_rubric.yaml
+# Used in the scoring step (before composition, before persona).
+# Purpose: make the "what is a big deal" assessment repeatable and
+# tunable, even though it is ultimately still someone's (yours, in this
+# case via the written rubric) opinion of what matters. No claim of
+# objectivity - consistency is what is claimed.
+
+version: v1
+topic: teknologia
+topic_description: >
+  teknologia yleisesti — laitteisto (esim. uudet puhelimet, tietokoneet,
+  komponentit), ohjelmisto ja julkaisut, verkkoteknologiat, tietoturva,
+  avoimen lähdekoodin projektit, kehittäjätyökalut, ja isommat
+  AI/ML-julkaisut. Pelkkä niche-tutkimus ilman laajempaa
+  teknologiakontekstia tai markkinointipuhe ilman uutisarvoa ei kuulu
+  tähän. Uutisen on oltava tarpeeksi iso — kevyt päivitys tai
+  marginaalinen tuote ei riitä.
+
+criteria:
+  - name: "aihepiirin ydinolennaisuus"
+    description: >
+      Onko teknologia jutun VARSINAINEN pääaihe, ei vain
+      sivumaininta tai käytetty työkalu. Tunnista tämä sisällön perusteella,
+      älä vaadi tiettyjä avainsanoja. Esimerkkejä EI-valittavista:
+      yritysuutinen jossa teknologia mainitaan ohimennen kontekstina;
+      poliittinen päätös jonka toteutus käyttää teknologiaa.
+    weight: high
+
+  - name: "uutuusarvo"
+    description: >
+      Onko kyseessä uusi julkaisu, laite, työkalu tai tapahtuma —
+      ei mielipidekirjoitus tai vanhan asian uudelleenkäsittely.
+    weight: high
+
+  - name: "vaikutuksen laajuus"
+    description: >
+      Koskeeko tämä laajaa kehittäjäkuntaa/kuluttajakuntaa/toimialaa,
+      vai on kyseessä kapea niche-tapaus jolla on merkitystä vain
+      pienelle ryhmälle.
+    weight: high
+
+  - name: "lähteiden riippumattomuus"
+    description: >
+      Onko useampi riippumaton lähde nostanut saman asian, vai
+      perustuuko nousu yhteen viraaliin HN-postaukseen.
+    weight: medium
+
+  - name: "yhteisösignaali"
+    description: >
+      HN-pisteet/kommentit — käytetään TUKENA muille kriteereille,
+      ei ainoana perusteena. Korkea yhteisösignaali ilman muuta
+      relevanssia ei riitä.
+    weight: low
+
+  - name: "aihepiirien monipuolisuus"
+    description: >
+      Vältä valitsemasta montaa itemiä samasta kapeasta aihepiiristä
+      (esim. kolme eri artikkelia samasta laitejulkistuksesta) ellei
+      jokainen ole itsenäisesti merkittävä. Viikon mittaisessa
+      koosteessa on erityisen tärkeää kattaa eri teknologian osa-alueita.
+    weight: medium
+
+exclude:
+  - "puhtaasti markkinointisisältö ilman uutisarvoa"
+  - "duplikaatit jotka eivät tuo uutta näkökulmaa jo valittuun juttuun"
+
+items_per_briefing:
+  min: 3
+  max: 10

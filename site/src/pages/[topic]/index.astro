@@ -29,8 +29,13 @@ export function getStaticPaths() {
   });
 }
 
+const topicInfo: Record<string, { name: string; period: string; telegram: string; telegramUrl: string }> = {
+  ai: { name: 'Tekoäly', period: 'päivittäinen', telegram: 'Päivän AI-uutiset — Ainikki', telegramUrl: 'https://t.me/ainikki_ai' },
+  teknologia: { name: 'Teknologia', period: 'viikoittainen', telegram: 'Viikon teknologiauutiset — Ainikki', telegramUrl: 'https://t.me/ainikki_teknologia' },
+};
+
 const { topic, briefings } = Astro.props;
-const topicUpper = topic.toUpperCase();
+const info = topicInfo[topic] ?? { name: topic.toUpperCase(), period: '', telegram: '', telegramUrl: '' };
 
 const WEEKDAYS = ['sunnuntai', 'maanantai', 'tiistai', 'keskiviikko', 'torstai', 'perjantai', 'lauantai'];
 
@@ -41,13 +46,19 @@ function fiDate(iso: string): string {
 }
 ---
 
-<Layout title={`${topicUpper} — Ainikki`}>
+<Layout title={`${info.name} — Ainikki`}>
   <nav class="back">
     <a href="../">← Ainikki</a>
   </nav>
 
   <header>
-    <h1>{topicUpper}</h1>
+    <h1>{info.name}</h1>
+    <p class="meta">
+      {info.period && <span>{info.period} kooste</span>}
+      {info.telegram && (
+        <span> · <a href={info.telegramUrl} target="_blank" rel="noopener noreferrer">{info.telegram}</a></span>
+      )}
+    </p>
   </header>
 
   <section class="list">
@@ -72,6 +83,16 @@ function fiDate(iso: string): string {
 
   header {
     margin-bottom: 2rem;
+  }
+
+  .meta {
+    color: var(--fg-muted);
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+  }
+
+  .meta a {
+    color: var(--link);
   }
 
   .list {

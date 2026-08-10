@@ -29,7 +29,7 @@ def test_system_prompt_includes_all_three_configs():
     golden_examples = GoldenExamplesConfig.load(GOLDEN_EXAMPLES_DIR / persona.golden_examples_ref)
     guardrails = GuardrailsConfig.load(GUARDRAILS_PATH)
 
-    prompt = build_compose_system_prompt(persona, golden_examples, guardrails)
+    prompt = build_compose_system_prompt(persona, golden_examples, guardrails, "ai")
 
     assert "ainikki" in prompt
     assert "clickbait" in prompt  # persona.avoid
@@ -56,6 +56,7 @@ def test_compose_items_happy_path():
                             "summary": "Tutkijat löysivät yllättävän tuloksen."})
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
+                            topic="test",
                             golden_examples_dir=GOLDEN_EXAMPLES_DIR)
 
     assert len(result.items) == 2
@@ -84,6 +85,7 @@ def test_partial_failure_drops_only_bad_item():
         return "tämä ei ole JSON:ia"
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
+                            topic="test",
                             golden_examples_dir=GOLDEN_EXAMPLES_DIR)
 
     assert len(result.items) == 1, "only the successful item should remain"
@@ -99,6 +101,7 @@ def test_empty_headline_is_rejected():
         return json.dumps({"headline": "   ", "summary": "Jotain tekstiä."})
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
+                            topic="test",
                             golden_examples_dir=GOLDEN_EXAMPLES_DIR)
 
     assert len(result.items) == 0
@@ -114,6 +117,7 @@ def test_code_fenced_json_is_parsed():
         return f"```json\n{inner}\n```"
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm_code_fence,
+                            topic="test",
                             golden_examples_dir=GOLDEN_EXAMPLES_DIR)
 
     assert len(result.items) == 1
@@ -132,6 +136,7 @@ def test_compose_retries_on_empty_response():
         return json.dumps({"headline": "Toistettu otsikko", "summary": "Toistettu yhteenveto."})
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
+                            topic="test",
                             golden_examples_dir=GOLDEN_EXAMPLES_DIR)
 
     assert len(result.items) == 1
@@ -149,6 +154,7 @@ def test_compose_gives_up_after_retry():
         return ""
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
+                            topic="test",
                             golden_examples_dir=GOLDEN_EXAMPLES_DIR)
 
     assert len(result.items) == 0
@@ -170,6 +176,7 @@ def test_compose_retries_on_empty_code_fence():
         return json.dumps({"headline": "Toistettu otsikko", "summary": "Toistettu yhteenveto."})
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
+                            topic="test",
                             golden_examples_dir=GOLDEN_EXAMPLES_DIR)
 
     assert len(result.items) == 1

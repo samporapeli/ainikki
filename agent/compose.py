@@ -75,13 +75,13 @@ class GuardrailsConfig(BaseModel):
 # --- Prompt construction -------------------------------------------------
 
 def build_compose_system_prompt(persona: Persona, golden_examples: GoldenExamplesConfig,
-                                 guardrails: GuardrailsConfig) -> str:
+                                 guardrails: GuardrailsConfig, topic: str) -> str:
     voice = "\n".join(f"- {t}" for t in persona.voice_traits)
     avoid = "\n".join(f"- {a}" for a in persona.avoid)
     rules = "\n".join(f"- {r}" for r in guardrails.rules)
     examples = "\n\n".join(f"{ex.headline}\n{ex.summary}" for ex in golden_examples.examples)
 
-    return f"""Kirjoitat AI-uutiskoosteelle tekstiä persoonan "{persona.name}" äänellä.
+    return f"""Kirjoitat {topic}-aiheiselle uutiskoosteelle tekstiä persoonan "{persona.name}" äänellä.
 
 Kohdeyleisö: {persona.target_audience}
 
@@ -139,12 +139,13 @@ def _raw_item_to_source(raw_item: RawItem) -> Source:
 
 def compose_items(enriched: list[EnrichedCandidate], persona_path: Path,
                    guardrails_path: Path, llm_call: LlmCall,
+                   topic: str = "",
                    golden_examples_dir: Path = Path("config/golden_examples")) -> ComposeResult:
     persona = Persona.load(persona_path)
     golden_examples = GoldenExamplesConfig.load(golden_examples_dir / persona.golden_examples_ref)
     guardrails = GuardrailsConfig.load(guardrails_path)
 
-    system_prompt = build_compose_system_prompt(persona, golden_examples, guardrails)
+    system_prompt = build_compose_system_prompt(persona, golden_examples, guardrails, topic)
 
     news_items: list[NewsItem] = []
     warnings: list[str] = []

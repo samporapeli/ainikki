@@ -1,0 +1,34 @@
+# Golden examples for Teknologia topic (v1).
+# Hand-curated set of good headline+summary pairs for technology news.
+# These set the expected style and quality bar — keep them representative
+# of the range of topics covered.
+version: v1
+examples:
+  - headline: "Applen uusi M4-piiri tuo tekoälyominaisuudet Mac-koneisiin"
+    summary: >
+      Apple julkisti M4-piirisarjan, joka tuo merkittävän
+      suorituskykyhypyn Mac-tietokoneisiin. Uusi piiri keskittyy erityisesti
+      tekoälylaskentaan ja mahdollistaa paikallisten AI-ominaisuuksien
+      käytön ilman verkkoyhteyttä.
+
+  - headline: "Linux-ytimen uusi versio tuo tukea RISC-V-suorittimille"
+    summary: >
+      Linux 6.10 tuo laajan tuen RISC-V-arkkitehtuurille ja parantaa
+      Bcachefs-tiedostojärjestelmän vakautta. Päivitys helpottaa
+      avoimen laitteistostandardin käyttöönottoa palvelin- ja
+      sulautetuissa järjestelmissä.
+
+  - headline: "Tietoturvahaavoittuvuus vaikutti miljooniin verkkosivustoihin"
+    summary: >
+      Tutkijat löysivät kriittisen haavoittuvuuden suositusta
+      WordPress-lisäosasta, joka on asennettuna yli viidelle miljoonalle
+      sivustolle. Haavoittuvuus mahdollisti palvelimen täyden
+      haltuunoton, ja korjauspäivitys on julkaistu välittömästi.
+
+  - headline: "Googlen uusi kvanttitietokone ratkaisi ongelman minuuteissa"
+    summary: >
+      Googlen Willow-kvanttipiiri suoritti laskutehtävän, jolta
+      nykyisiltä supertietokoneilta kuluisi yli 10^25 vuotta.
+      Vaikka kyseessä on kokeellinen ongelma ilman käytännön
+      sovelluksia, tulos on merkittävä virstanpylväs
+      kvanttilaskennan kehityksessä.

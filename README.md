@@ -1,7 +1,8 @@
 # Ainikki — AI news digest agent
 
-Collects news from Hacker News, deduplicates, clusters, scores, enriches,
-and writes a Finnish-language daily digest. The Astro site renders the
+Collects news from Hacker News and RSS feeds, deduplicates, clusters,
+scores, enriches, and writes Finnish-language digests. Two topics:
+**tekoäly** (daily) and **teknologia** (weekly). The Astro site renders
 output as static HTML.
 
 ## Setup
@@ -38,15 +39,34 @@ Generated HTML lands in `site/dist/`. Deploy:
 
     DEPLOY_TARGET=user@host:/var/www/ainikki ./site/deploy.sh
 
-## Daily automation
+## Automation
 
-Cron entry (daily at 06:30):
+### Daily digest (AI, daily at 06:30)
 
-    30 6 * * * OPENROUTER_API_KEY='sk-...' DEPLOY_TARGET='user@host:/var/www/ainikki' TELEGRAM_BOT_TOKEN='...' TELEGRAM_CHAT_ID='...' /path/to/ainikki/daily.sh >> /path/to/ainikki-cron.log 2>&1
+    OPENROUTER_API_KEY='sk-...' DEPLOY_TARGET='user@host:/var/www/ainikki' \
+      TELEGRAM_BOT_TOKEN='...' TELEGRAM_CHAT_ID_AI='...' TELEGRAM_ERROR_CHAT_ID='...' \
+      /path/to/ainikki/daily.sh >> /path/to/ainikki-cron.log 2>&1
+
+### Weekly digest (Teknologia, Monday at 06:30)
+
+    OPENROUTER_API_KEY='sk-...' DEPLOY_TARGET='user@host:/var/www/ainikki' \
+      TELEGRAM_BOT_TOKEN='...' TELEGRAM_CHAT_ID_TEKNOLOGIA='...' TELEGRAM_ERROR_CHAT_ID='...' \
+      /path/to/ainikki/weekly.sh >> /path/to/ainikki-cron.log 2>&1
 
 Set keys and target directly in the cron entry, not in profile files.
-Telegram is optional: if `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are
-missing, the Telegram step is silently skipped.
+Telegram is optional: if bot token and chat ID are missing, Telegram
+steps are silently skipped.
+
+### Environment variables
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `OPENROUTER_API_KEY` | Yes | LLM access |
+| `DEPLOY_TARGET` | Yes | `user@host:/path` for rsync deploy |
+| `TELEGRAM_BOT_TOKEN` | No | Bot token for Telegram notifications |
+| `TELEGRAM_CHAT_ID_AI` | No | Chat ID for daily AI digest channel |
+| `TELEGRAM_CHAT_ID_TEKNOLOGIA` | No | Chat ID for weekly Teknologia digest channel |
+| `TELEGRAM_ERROR_CHAT_ID` | No | Chat ID for error alerts (shared across topics) |
 
 ## Pipeline steps
 
@@ -127,11 +147,12 @@ Set `OPENROUTER_API_KEY` in the environment or in the cron entry.
 
 ## Known limitations
 
-- Only one collect source (HN). No RSS adapter yet.
 - Cluster step is title-based, not fully reliable.
 - Enrich uses trafilatura, doesn't work on JS-rendered pages.
 - Compose uses only the primary source, multi-source synthesis is v2.
 - No async — Compose runs items sequentially.
+- Weekly topic currently only has HN + Yle Tiede feeds — more sources
+  would improve coverage.
 
 ## Roadmap
 

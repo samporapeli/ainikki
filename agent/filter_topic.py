@@ -57,21 +57,6 @@ def build_filter_prompt(candidates: list[Candidate],
 joko aiheeseen liittyvä tai ei. Pääsääntö: kyseessä on aihe ({topic_description}),
 ei pelkkä sivumaininta tai aiheeseen liittyvä työkalu.
 
-Esimerkkejä (AI/ML-aihe):
-
-Kyllä:
-- "GPT-5 julkaistu" → uusi LLM, selvästi AI-uutinen
-- "Tutkijat kehittivät uuden koneoppimismenetelmän" → AI-tutkimus
-- "AI:n vaikutus työelämään" → AI-aiheinen keskustelu, Relevantti
-- "Mallin arvioinnista selvisi että..." → AI-malli keskustelussa
-- "Inflect-Micro-v2: TTS-malli julkaistu" → puheen syntetisointi, koneoppiminen
-
-Ei:
-- "Python-lintteri Ruff päivitetty" → ei AI:ää, pelkkä kehitystyökalu
-- "Uusi TypeScript-kääntäjä" → ohjelmointikieli, ei tekoälyä
-- "Robottipysäköinti lentoasemalla" → robotiikka ilman AI/ML-yhteyttä
-- "GrapheneOS puhelimen suojelu" → tietoturva, ei tekoälyä
-
 Vastaa VAIN JSON-muodossa:
 {{"results": [{{"index": 0, "keep": true}}, {{"index": 1, "keep": false}}, ...]}}"""
 

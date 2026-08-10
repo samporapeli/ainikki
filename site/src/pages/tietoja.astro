@@ -11,10 +11,14 @@ const sourceDisplay = {
 };
 
 const nameDisplay = {
-  'yle-tuoreimmat': 'Yle',
   'yle-tiede': 'Yle Tiede',
   'openai-blog': 'OpenAI',
   'ars-technica-ai': 'Ars Technica',
+};
+
+const telegramDisplay = {
+  ai: { name: 'Päivän AI-uutiset — Ainikki', url: 'https://t.me/ainikki_ai' },
+  teknologia: { name: 'Viikon teknologiauutiset — Ainikki', url: 'https://t.me/ainikki_teknologia' },
 };
 
 const topics = readdirSync(sourcesDir)
@@ -34,6 +38,11 @@ const topics = readdirSync(sourcesDir)
     });
     return { topic, sources };
   });
+
+const periodDisplay: Record<string, string> = {
+  ai: 'päivittäinen',
+  teknologia: 'viikoittainen',
+};
 
 const steps = [
   {
@@ -142,13 +151,16 @@ const steps = [
     </p>
   </section>
 
-  {topics.map(t => (
+  {topics.map(t => {
+      const topicName = t.topic === 'ai' ? 'tekoäly' : t.topic;
+      const period = periodDisplay[t.topic] ?? t.topic;
+      const tg = telegramDisplay[t.topic];
+      return (
       <section class="details">
         <h2>Aiheet, lähteet ja julkaisu</h2>
         <p>
-          Tällä hetkellä Ainikilla on yksi aihepiiri,{" "}
-          {t.topic === 'ai' ? 'tekoäly' : t.topic}, ja{" "}
-          {t.sources.length} lähdettä:
+          Aihepiiri: <strong>{topicName}</strong> ({period} kooste).
+          Lähteet ({t.sources.length}):
         </p>
         <ul>
           {t.sources.map(s => (
@@ -159,11 +171,12 @@ const steps = [
           ))}
         </ul>
         <p>
-          Uusi kooste julkaistaan aamuisin verkkosivulla ja lähetetään myös
-          aihekohtaiselle Telegram-kanavalle: <a href="https://t.me/ainikki_ai" target="_blank" rel="noopener noreferrer">Ainikki — päivän AI-uutiset</a>.
+          Kooste julkaistaan verkkosivulla ja lähetetään{" "}
+          {tg ? <a href={tg.url} target="_blank" rel="noopener noreferrer">{tg.name}</a> : 'aihekohtaiselle Telegram-kanavalle'}.
         </p>
       </section>
-    ))}
+      );
+    })}
 
   <section class="details">
     <h2>Asetukset ja ääni</h2>

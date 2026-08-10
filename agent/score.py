@@ -54,7 +54,7 @@ def load_rubric(path: Path) -> dict:
 def load_previous_stories(topic: str, since: date, days: int = 7,
                           output_dir: Path = Path("data/output")) -> list[dict]:
     stories: list[dict] = []
-    for path in output_dir.glob(f"{topic}_daily_*.json"):
+    for path in output_dir.glob(f"{topic}_*.json"):
         match = re.search(r"(\d{4}-\d{2}-\d{2})\.json$", path.name)
         if not match:
             continue
@@ -171,14 +171,18 @@ Vastaa VAIN JSON-muodossa, ei muuta tekstiä:
     return system_prompt, user_prompt
 
 
-def _normalize_response(response: ScoreResponse, n_candidates: int) -> ScoreResponse:
-    """Fix common LLM failures: duplicate indices, rank gaps/duplicates."""
+def _normalize_response(response: ScoreResponse, n_candidates: int, max_items: int) -> ScoreResponse:
+    """Fix common LLM failures: duplicate indices, rank gaps/duplicates,
+    and selected count exceeding pool_max (capped silently instead of failing)."""
+    pool_max = 3 * max_items
     seen: set[int] = set()
     deduped: list[ScoreAssignment] = []
     for s in sorted(response.selected, key=lambda x: x.rank):
         if s.candidate_index not in seen:
             seen.add(s.candidate_index)
             deduped.append(s)
+    # Cap at pool_max — model occasionally overshoots, no need to crash
+    deduped = deduped[:pool_max]
     for i, s in enumerate(deduped, 1):
         s.rank = i
     cutoff = min(response.cutoff_rank, len(deduped))
@@ -219,7 +223,7 @@ def score_clusters(clusters: list[ClusteredCandidate], rubric_path: Path,
     except (json.JSONDecodeError, ValidationError) as e:
         raise ScoreValidationError(f"model response is not valid JSON: {e}") from e
 
-    response = _normalize_response(response, len(clusters))
+    response = _normalize_response(response, len(clusters), max_items)
     _validate_response(response, len(clusters), min_items, max_items)
 
     result = [

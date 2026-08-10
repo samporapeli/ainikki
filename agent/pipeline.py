@@ -45,7 +45,8 @@ LLM_STEPS = ["cluster", "filter_topic", "score", "compose", "overview"]
 class ConfigPaths:
     def __init__(self, config_dir: Path, topic: str):
         self.models = config_dir / "models.yaml"
-        self.persona = config_dir / "personas" / "ainikki_v1.yaml"
+        path = config_dir / "personas" / f"{topic}_v1.yaml"
+        self.persona = path if path.exists() else config_dir / "personas" / "ainikki_v1.yaml"
         self.guardrails = config_dir / "guardrails" / "guardrails_v1.yaml"
         self.golden_examples_dir = config_dir / "golden_examples"
         self.rubric = config_dir / "rubrics" / f"{topic}_scoring_rubric_v1.yaml"
@@ -182,6 +183,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
                                          llm_client, models_used)
         compose_result = compose_items(enrich_result.items, config_paths.persona,
                                         config_paths.guardrails, llm_compose,
+                                        topic=topic,
                                         golden_examples_dir=config_paths.golden_examples_dir)
         all_warnings.extend(compose_result.warnings)
         logger.info("compose: %d items written", len(compose_result.items))
@@ -200,6 +202,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
                     continue
                 batch_compose = compose_items(batch.items, config_paths.persona,
                                                config_paths.guardrails, llm_compose,
+                                               topic=topic,
                                                golden_examples_dir=config_paths.golden_examples_dir)
                 all_warnings.extend(batch_compose.warnings)
                 compose_result.items.extend(batch_compose.items)

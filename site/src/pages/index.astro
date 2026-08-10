@@ -5,6 +5,11 @@ import Layout from '../layouts/Layout.astro';
 
 const dataDir = path.resolve('../data/output');
 
+const topicInfo: Record<string, { name: string; period: string; telegram: string; telegramUrl: string }> = {
+  ai: { name: 'Tekoäly', period: 'päivittäinen', telegram: 'Päivän AI-uutiset — Ainikki', telegramUrl: 'https://t.me/ainikki_ai' },
+  teknologia: { name: 'Teknologia', period: 'viikoittainen', telegram: 'Viikon teknologiauutiset — Ainikki', telegramUrl: 'https://t.me/ainikki_teknologia' },
+};
+
 let topics: string[] = [];
 
 if (fs.existsSync(dataDir)) {
@@ -26,8 +31,8 @@ if (fs.existsSync(dataDir)) {
 
   <section class="about">
     <p>
-      Ainikki seuraa uutisia ja kokoaa tärkeimmät suomenkieliseen
-      päiväkoosteeseen. Tällä hetkellä Ainikki keskittyy tekoälyuutisiin.
+      Ainikki kerää uutisia määritellyistä aiheista ja kokoaa tärkeimmät
+      suomenkielisiin koosteisiin.
     </p>
     <p class="disclaimer">
       Ainikki on kielimallipohjainen ja voi tehdä virheitä.{' '}
@@ -41,17 +46,22 @@ if (fs.existsSync(dataDir)) {
     <section class="topic-list">
       <h2>Aiheet</h2>
       <nav class="topics">
-        {topics.map(t => (
-          <a href={`${import.meta.env.BASE_URL}/${t}/`} class="topic-link">
-            {t.toUpperCase()}
-          </a>
-        ))}
+        {topics.map(t => {
+          const info = topicInfo[t] ?? { name: t.toUpperCase(), period: '', telegram: '', telegramUrl: '' };
+          return (
+            <a href={`${import.meta.env.BASE_URL}/${t}/`} class="topic-link">
+              <span class="topic-name">{info.name}</span>
+              <span class="topic-period">{info.period}</span>
+              {info.telegram && <span class="topic-telegram">{info.telegram}</span>}
+            </a>
+          );
+        })}
       </nav>
     </section>
   )}
 
   <p class="footer">
-    Avoin lähdekoodi · <a href="https://github.com/samporapeli/ainikki">GitHub</a>
+    Avoin lähdekoodi · <a href="https://github.com/samporapeli/ainikki">GitHub</a> · <a href={`${import.meta.env.BASE_URL}/tietoja/`}>Tietoja</a>
   </p>
 </Layout>
 
@@ -97,11 +107,12 @@ if (fs.existsSync(dataDir)) {
   }
 
   .topic-link {
-    display: block;
+    display: flex;
+    flex-direction: column;
     padding: 1rem 0;
     border-bottom: 1px solid var(--border);
-    font-weight: 600;
-    font-size: 1.1rem;
+    text-decoration: none;
+    color: var(--fg);
   }
 
   .topic-link:first-child {
@@ -110,6 +121,27 @@ if (fs.existsSync(dataDir)) {
 
   .topic-link:hover {
     text-decoration: none;
+  }
+
+  .topic-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+
+  .topic-period {
+    font-size: 0.8rem;
+    color: var(--fg-subtle);
+    margin-top: 0.15rem;
+  }
+
+  .topic-telegram {
+    font-size: 0.8rem;
+    color: var(--link);
+    margin-top: 0.15rem;
+  }
+
+  .topic-link:hover .topic-telegram {
+    text-decoration: underline;
   }
 
   .footer {
