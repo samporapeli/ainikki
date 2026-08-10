@@ -4,3 +4,4 @@ venv/
 .env
 ainikki-cron.log
 *.local.md
+logs/
