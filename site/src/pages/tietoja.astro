@@ -1,11 +1,45 @@
 ---
+import { readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+import { load } from 'js-yaml';
 import Layout from '../layouts/Layout.astro';
+
+const sourcesDir = path.resolve('../config/sources');
+
+const sourceDisplay = {
+  hn: { name: 'Hacker News', siteUrl: 'https://news.ycombinator.com/', note: 'Algolian rajapinnan kautta' },
+};
+
+const nameDisplay = {
+  'yle-tuoreimmat': 'Yle',
+  'yle-tiede': 'Yle Tiede',
+  'openai-blog': 'OpenAI',
+  'ars-technica-ai': 'Ars Technica',
+};
+
+const topics = readdirSync(sourcesDir)
+  .filter(f => f.endsWith('.yaml'))
+  .map(file => {
+    const config = load(readFileSync(path.join(sourcesDir, file), 'utf-8'));
+    const topic = file.replace('.yaml', '');
+    const sources = config.sources.map(s => {
+      if (s.type === 'hn') return { ...sourceDisplay.hn, type: 'hn' };
+      const url = new URL(s.url);
+      return {
+        type: 'rss',
+        name: nameDisplay[s.name] ?? s.name,
+        siteUrl: `${url.protocol}//${url.hostname}`,
+        note: 'RSS-syötteen kautta',
+      };
+    });
+    return { topic, sources };
+  });
 
 const steps = [
   {
     name: 'Keruu',
     llm: false,
-    description: 'Hakee uutisia lähteestä (tällä hetkellä Hacker News). Suodattaa pois jutut, jotka ovat saaneet vähän pisteitä.',
+    description: 'Hakee uutisia määritellyistä lähteistä (Hacker News, uutissivustojen RSS-syötteet). Suodattaa pois jutut, jotka ovat saaneet vähän pisteitä.',
   },
   {
     name: 'Duplikaattien poisto',
@@ -108,22 +142,28 @@ const steps = [
     </p>
   </section>
 
-  <section class="details">
-    <h2>Aiheet, lähteet ja julkaisu</h2>
-    <p>
-      Tällä hetkellä Ainikilla on yksi aihepiiri, tekoäly, ja kaksi lähdettä:{' '}
-      <a href="https://news.ycombinator.com/" target="_blank" rel="noopener noreferrer">Hacker News</a>{' '}
-      (Algolian rajapinnan kautta) sekä{' '}
-      <a href="https://yle.fi/" target="_blank" rel="noopener noreferrer">Yle</a>{' '}
-      (RSS-syötteen kautta). Rakenne tukee useampaa aihetta ja
-      lähdettä, joten molempia voi lisätä myöhemmin ilman, että arkkitehtuuria
-      tarvitsee muuttaa.
-    </p>
-    <p>
-      Uusi kooste julkaistaan aamuisin verkkosivulla ja lähetetään myös
-      aihekohtaiselle Telegram-kanavalle: <a href="https://t.me/ainikki_ai" target="_blank" rel="noopener noreferrer">Ainikki — päivän AI-uutiset</a>.
-    </p>
-  </section>
+  {topics.map(t => (
+      <section class="details">
+        <h2>Aiheet, lähteet ja julkaisu</h2>
+        <p>
+          Tällä hetkellä Ainikilla on yksi aihepiiri,{" "}
+          {t.topic === 'ai' ? 'tekoäly' : t.topic}, ja{" "}
+          {t.sources.length} lähdettä:
+        </p>
+        <ul>
+          {t.sources.map(s => (
+            <li>
+              <a href={s.siteUrl} target="_blank" rel="noopener noreferrer">{s.name}</a>
+              {' '}({s.note})
+            </li>
+          ))}
+        </ul>
+        <p>
+          Uusi kooste julkaistaan aamuisin verkkosivulla ja lähetetään myös
+          aihekohtaiselle Telegram-kanavalle: <a href="https://t.me/ainikki_ai" target="_blank" rel="noopener noreferrer">Ainikki — päivän AI-uutiset</a>.
+        </p>
+      </section>
+    ))}
 
   <section class="details">
     <h2>Asetukset ja ääni</h2>
@@ -193,8 +233,8 @@ const steps = [
     <p>
       Jos artikkelin sisältöä ei saada ladattua (esim. robots.txt estää
       haun, sivu on tyhjä tai vaatii JavaScriptin), uutinen jätetään
-      koosteesta pois kokonaan. Koska lähteitä on vain yksi, samasta
-      asiasta voi puuttua näkökulmia.
+      koosteesta pois kokonaan. Jos artikkelia ei ole käsitelty
+      riittävän monessa lähteessä, tiettyjä näkökulmia saattaa puuttua.
     </p>
     <p>
       Pisteytys, aihevalinta ja tiivistäminen ovat luonnoltaan subjektiivisia
