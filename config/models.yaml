@@ -14,7 +14,7 @@ steps:
     model: "openai/gpt-4o-mini"     # cheap, binary relevance check
   score:
     provider: openrouter
-    model: "openai/gpt-4o-mini"     # cheap, structured output is sufficient
+    model: "deepseek/deepseek-v4-flash"     # cheap, structured output is sufficient
   compose:
     provider: openrouter
     model: "anthropic/claude-sonnet-5"    # higher quality, fluent Finnish text
