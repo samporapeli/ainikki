@@ -52,7 +52,6 @@ if (fs.existsSync(dataDir)) {
             <a href={`${import.meta.env.BASE_URL}/${t}/`} class="topic-link">
               <span class="topic-name">{info.name}</span>
               <span class="topic-period">{info.period}</span>
-              {info.telegram && <span class="topic-telegram">{info.telegram}</span>}
             </a>
           );
         })}
@@ -132,16 +131,6 @@ if (fs.existsSync(dataDir)) {
     font-size: 0.8rem;
     color: var(--fg-subtle);
     margin-top: 0.15rem;
-  }
-
-  .topic-telegram {
-    font-size: 0.8rem;
-    color: var(--link);
-    margin-top: 0.15rem;
-  }
-
-  .topic-link:hover .topic-telegram {
-    text-decoration: underline;
   }
 
   .footer {

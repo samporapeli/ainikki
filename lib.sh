@@ -93,8 +93,6 @@ ${link}"
     echo "== Sending Telegram notification =="
     curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
         -d chat_id="${chat_id}" \
-        -d text="${msg}" \
-        -d parse_mode="Markdown" \
         --data-urlencode "text=${msg}" > /dev/null
     echo "Telegram: done."
 }
