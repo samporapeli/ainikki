@@ -44,6 +44,32 @@ const periodDisplay: Record<string, string> = {
   teknologia: 'viikoittainen',
 };
 
+const topicNameDisplay: Record<string, string> = {
+  ai: 'Tekoäly',
+  teknologia: 'Teknologia',
+};
+
+const topicSlug = (name: string) => name.replace(/\s+/g, '').toLowerCase();
+
+// Build a unified source list across all topics, collecting which
+// topics use each source. Sources are ordered by frequency (most-used first)
+// then alphabetically, so "common across topics" sources appear first.
+const sourceUsage = new Map<string, { label: string; siteUrl: string; topics: string[] }>();
+for (const t of topics) {
+  for (const s of t.sources) {
+    const key = s.name;
+    if (!sourceUsage.has(key)) {
+      sourceUsage.set(key, { label: key, siteUrl: s.siteUrl, topics: [] });
+    }
+    sourceUsage.get(key)!.topics.push(t.topic);
+  }
+}
+const allSources = [...sourceUsage.entries()]
+  .sort((a, b) => (b[1].topics.length - a[1].topics.length) || a[0].localeCompare(b[0]))
+  .map(([, v]) => v);
+
+const topicCount = topics.length;
+
 const steps = [
   {
     name: 'Keruu',
@@ -151,32 +177,43 @@ const steps = [
     </p>
   </section>
 
-  {topics.map(t => {
-      const topicName = t.topic === 'ai' ? 'tekoäly' : t.topic;
-      const period = periodDisplay[t.topic] ?? t.topic;
-      const tg = telegramDisplay[t.topic];
-      return (
-      <section class="details">
-        <h2>Aiheet, lähteet ja julkaisu</h2>
-        <p>
-          Aihepiiri: <strong>{topicName}</strong> ({period} kooste).
-          Lähteet ({t.sources.length}):
-        </p>
-        <ul>
-          {t.sources.map(s => (
-            <li>
-              <a href={s.siteUrl} target="_blank" rel="noopener noreferrer">{s.name}</a>
-              {' '}({s.note})
-            </li>
+  <section class="details">
+    <h2>Aiheet, lähteet ja julkaisu</h2>
+    <div class="matrix" style={`grid-template-columns: auto repeat(${topicCount}, 1fr);`}>
+      <div class="matrix-row matrix-header">
+        <div class="matrix-label"></div>
+        {topics.map(t => (
+          <div class="matrix-topic">{topicNameDisplay[t.topic] ?? t.topic}</div>
+        ))}
+      </div>
+
+      <div class="matrix-row matrix-row-rytmi">
+        <div class="matrix-label">Julkaisurytmi</div>
+        {topics.map(t => (
+          <div class="matrix-cell">{(periodDisplay as any)[t.topic] ?? t.topic}</div>
+        ))}
+      </div>
+
+      {allSources.map(s => (
+        <div class="matrix-row">
+          <div class="matrix-label"><a href={s.siteUrl} target="_blank" rel="noopener noreferrer">{s.label}</a></div>
+          {topics.map(t => (
+            <div class="matrix-cell">{s.topics.includes(t.topic) ? '✓' : ''}</div>
           ))}
-        </ul>
-        <p>
-          Kooste julkaistaan verkkosivulla ja lähetetään{" "}
-          {tg ? <a href={tg.url} target="_blank" rel="noopener noreferrer">{tg.name}</a> : 'aihekohtaiselle Telegram-kanavalle'}.
-        </p>
-      </section>
-      );
-    })}
+        </div>
+      ))}
+
+      <div class="matrix-row matrix-row-tg">
+        <div class="matrix-label">Telegram</div>
+        {topics.map(t => {
+          const tg = (telegramDisplay as any)[t.topic];
+          return (
+            <div class="matrix-cell">{tg ? <a href={tg.url} target="_blank" rel="noopener noreferrer">{tg.name}</a> : ''}</div>
+          );
+        })}
+      </div>
+    </div>
+  </section>
 
   <section class="details">
     <h2>Asetukset ja ääni</h2>
@@ -441,6 +478,65 @@ const steps = [
 
   .details li {
     margin-bottom: 0.25rem;
+  }
+
+  .matrix {
+    display: grid;
+    grid-template-columns: 1fr; /* overridden by inline style */
+    gap: 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    max-width: 40rem;
+  }
+
+  .matrix-row {
+    display: contents;
+  }
+
+  .matrix-label {
+    padding: 0.35rem 0.75rem 0.35rem 0;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    color: var(--fg);
+    min-width: 8rem;
+  }
+
+  .matrix-label a {
+    color: var(--fg);
+  }
+
+  .matrix-label a:hover {
+    color: var(--link);
+  }
+
+  .matrix-cell {
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    color: var(--fg-muted);
+  }
+
+  .matrix-cell a {
+    font-size: 0.8rem;
+  }
+
+  .matrix-topic {
+    padding: 0.35rem 0.5rem;
+    font-weight: 600;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--fg);
+    border-bottom: 2px solid var(--fg);
+  }
+
+  .matrix-row-rytmi .matrix-cell,
+  .matrix-row-tg .matrix-cell {
+    font-style: italic;
+  }
+
+  .matrix-row-tg .matrix-label,
+  .matrix-row-tg .matrix-cell {
+    border-bottom: none;
   }
 
   .footer {
