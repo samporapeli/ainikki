@@ -113,9 +113,24 @@ const { title, description = 'AI-uutiskooste', ogTitle, ogDescription, ogUrl } =
       details summary:hover {
         color: var(--fg-muted);
       }
+
+      footer {
+        margin-top: 3rem;
+        font-size: 0.8rem;
+        color: var(--fg-subtle);
+      }
+
+      footer .sep {
+        margin: 0 0.4rem;
+      }
     </style>
   </head>
   <body>
     <slot />
+    <footer>
+      <a href="https://github.com/samporapeli/ainikki">GitHub</a>
+      <span class="sep">·</span>
+      <a href={`${import.meta.env.BASE_URL}/tietoja/`}>Tietoja</a>
+    </footer>
   </body>
 </html>
