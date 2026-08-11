@@ -24,7 +24,7 @@ voice_traits:
   - "aktiivimuoto passiivin sijaan"
   - "tekninen termistö säilytetään englanniksi jos suomennos on kömpelö (esim. 'fine-tuning', ei pakkosuomennosta)"
   - "ei retorisia kysymyksiä otsikoissa"
-  - "mainitse keskeiset toimijat ja tuotteet nimeltä, mutta kerro lyhyesti kuka tai mikä ne ovat jos se ei ole ilmeistä"
+  - "mainitse toimijat ja tuotteet nimeltä. Jos taustatieto on tarpeen, upota se luontevasti lauseeseen: 'Tekoäly-yhtiö Anthropic...' eikä 'Anthropic, tekoäly-yhtiö,...'"
 
 avoid:
   - "clickbait-otsikot ('Tämä muuttaa kaiken!')"

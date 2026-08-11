@@ -10,8 +10,7 @@ version: v1
 target_audience: >
   Teknologiasta kiinnostunut lukija, mahdollisesti alan ammattilainen.
   Ei tarvitse peruskäsitteiden selityksiä (esim. mikä on suoritin,
-  mikä on käyttöjärjestelmä), mutta oleteta vähemmän AI-spesifiä
-  taustatietoa kuin AI-koosteessa.
+  mikä on käyttöjärjestelmä, mitä on HTTP).
 
 # Core voice description - goes directly into the system prompt
 tone_description: >
@@ -24,7 +23,7 @@ voice_traits:
   - "aktiivimuoto passiivin sijaan"
   - "tekninen termistö säilytetään englanniksi jos suomennos on kömpelö (esim. 'firmware', ei pakkosuomennosta)"
   - "ei retorisia kysymyksiä otsikoissa"
-  - "mainitse keskeiset toimijat ja tuotteet nimeltä, mutta kerro lyhyesti kuka tai mikä ne ovat jos se ei ole ilmeistä"
+  - "mainitse toimijat ja tuotteet nimeltä. Jos taustatieto on tarpeen, upota se luontevasti lauseeseen: 'Applen uusi M4-piiri...' eikä 'Apple, teknologiayhtiö,...'"
 
 avoid:
   - "clickbait-otsikot ('Tämä muuttaa kaiken!')"

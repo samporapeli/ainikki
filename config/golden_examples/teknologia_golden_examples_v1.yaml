@@ -4,12 +4,12 @@
 # of the range of topics covered.
 version: v1
 examples:
-  - headline: "Applen uusi M4-piiri tuo tekoälyominaisuudet Mac-koneisiin"
+  - headline: "Applen uusi M4-piiri tuo suorituskykyhypyn Mac-tietokoneisiin"
     summary: >
       Apple julkisti M4-piirisarjan, joka tuo merkittävän
-      suorituskykyhypyn Mac-tietokoneisiin. Uusi piiri keskittyy erityisesti
-      tekoälylaskentaan ja mahdollistaa paikallisten AI-ominaisuuksien
-      käytön ilman verkkoyhteyttä.
+      suorituskykyhypyn Mac-tietokoneisiin. Uusi piiri asettaa uuden
+      vertailutason suorittimen ja grafiikkapiirin suorituskyvyssä
+      kannettavissa tietokoneissa.
 
   - headline: "Linux-ytimen uusi versio tuo tukea RISC-V-suorittimille"
     summary: >

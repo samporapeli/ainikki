@@ -27,11 +27,12 @@ logger = logging.getLogger(__name__)
 
 def _build_system_prompt(topic: str) -> str:
     return f"""Saat listan artikkeleista aiheesta "{topic}".
-Artikkelit on jo suodatettu aiheen mukaan, joten älä erikseen kerro mistä aiheesta on kyse.
+Artikkelit on jo suodatettu aiheen mukaan, joten älä kerro mistä aiheesta on kyse,
+äläkä aloita toteamuksella kuten "Tämän päivän uutiset käsittelevät".
 
-Kirjoita 2-3 lauseen yleiskatsaus: nosta esiin yhteiset teemat ja
-keskeiset toimijat nimeltä (kerro lyhyesti kuka tai mikä entiteetti on kyseessä, jos
-se ei ole ilmeistä). Jos aiheet ovat hajanaisia, kerro lyhyesti mistä aiheista koosteessa puhutaan.
+Kirjoita 2-3 lauseen yleiskatsaus, joka tiivistää kunkin jutun pääasian.
+Jos jutut linkittyvät toisiinsa, mainitse yhteys muuten älä pakota yhteyttä.
+Upota toimijoiden nimet luontevasti lauseisiin, älä luettele niitä erikseen.
 
 Käytä VAIN annettuja otsikoita ja yhteenvetoja, älä lisää tietoa joita niissä ei ole.
 
@@ -51,7 +52,7 @@ class OverviewResult(NamedTuple):
 def build_overview_prompt(items: list[NewsItem], topic: str) -> tuple[str, str]:
     ordered = sorted(items, key=lambda i: i.rank)
     lines = [f"{i.rank}. {i.headline} — {i.summary}" for i in ordered]
-    user_prompt = "Tämän päivän jutut:\n" + "\n".join(lines)
+    user_prompt = "\n".join(lines)
     return _build_system_prompt(topic), user_prompt
 
 

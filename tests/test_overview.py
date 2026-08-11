@@ -19,8 +19,10 @@ def test_build_overview_prompt_uses_only_headline_and_summary():
 
     assert "Tutkimus yllättää" in user_prompt
     assert "Uusi malli julkaistu" in user_prompt
+    assert not user_prompt.startswith("Jutut"), "should not prefix the list"
+    assert "Tämän päivän" not in user_prompt, "should not prime filler framing"
     # rank order: lowest rank first
-    assert user_prompt.index("Tutkimus yllättää") < user_prompt.index("Uusi malli julkaistu")
+    assert user_prompt.index("1. Tutkimus yllättää") < user_prompt.index("2. Uusi malli julkaistu")
 
 
 def test_generate_overview_happy_path():
