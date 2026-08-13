@@ -53,6 +53,12 @@ sources:
     site_url: https://yle.fi/t/18-215844/fi
     feed_url: https://yle.fi/rss/t/18-215844/fi
 
+  - key: evanhahn
+    type: rss
+    pretty_name: Evan Hahn
+    site_url: https://evanhahn.com/blog/
+    feed_url: https://evanhahn.com/blog/index.xml
+
   - key: openai
     type: rss
     pretty_name: OpenAI
