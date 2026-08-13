@@ -63,4 +63,10 @@ sources:
     type: rss
     pretty_name: Ars Technica
     site_url: https://arstechnica.com/
+    feed_url: https://arstechnica.com/feed/
+
+  - key: arstechnica-ai
+    type: rss
+    pretty_name: Ars Technica (AI)
+    site_url: https://arstechnica.com/
     feed_url: https://arstechnica.com/tag/ai/feed/
