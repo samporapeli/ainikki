@@ -1,5 +1,4 @@
-# Topic: AI
-# References keys from config/sources/shared.yaml.
+# Sources to use for the AI topic (keys from config/sources.yaml).
 sources:
   - hn
   - yle-tiede

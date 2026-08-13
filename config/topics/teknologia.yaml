@@ -1,0 +1,5 @@
+# Sources to use for the Teknologia topic (keys from config/sources.yaml).
+sources:
+  - hn
+  - yle-tiede
+  - yle-mot

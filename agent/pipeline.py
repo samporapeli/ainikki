@@ -44,32 +44,34 @@ LLM_STEPS = ["cluster", "filter_topic", "score", "compose", "overview"]
 
 class ConfigPaths:
     def __init__(self, config_dir: Path, topic: str):
+        self.topic_name = topic
         self.models = config_dir / "models.yaml"
+        self.topics_dir = config_dir / "topics"
         path = config_dir / "personas" / f"{topic}_v1.yaml"
         self.persona = path if path.exists() else config_dir / "personas" / "ainikki_v1.yaml"
         self.guardrails = config_dir / "guardrails" / "guardrails_v1.yaml"
         self.golden_examples_dir = config_dir / "golden_examples"
         self.rubric = config_dir / "rubrics" / f"{topic}_scoring_rubric_v1.yaml"
+        self.sources = config_dir / "sources.yaml"
 
 
-def _load_sources_config(topic: str, config_dir: Path) -> list[dict]:
-    """Reads topic source keys and merges with shared source definitions.
+def _load_sources_config(config_paths: ConfigPaths) -> list[dict]:
+    """Reads config/sources.yaml (all source definitions) and
+    config/topics/{topic}.yaml (which sources to use for this topic).
 
-    config/sources/shared.yaml defines all sources with full properties.
-    config/sources/{topic}.yaml lists source keys to use for that topic.
+    Returns a list of source dicts ready for the collect step.
     """
-    shared_path = config_dir / "sources" / "shared.yaml"
+    shared_path = config_paths.sources
     if not shared_path.exists():
-        logger.warning("no shared sources config at %s, falling back to HN only",
-                       shared_path)
+        logger.warning("no sources config at %s, falling back to HN only", shared_path)
         return [{"type": "hn", "min_points": 20}]
 
     shared = yaml.safe_load(shared_path.read_text())
     sources_map = {s["key"]: s for s in shared.get("sources", [])}
 
-    topic_path = config_dir / "sources" / f"{topic}.yaml"
+    topic_path = config_paths.topics_dir / f"{config_paths.topic_name}.yaml"
     if not topic_path.exists():
-        logger.info("no sources config at %s, falling back to HN only", topic_path)
+        logger.info("no topics config at %s, falling back to HN only", topic_path)
         return [{"type": "hn", "min_points": 20}]
 
     topic_data = yaml.safe_load(topic_path.read_text())
@@ -120,7 +122,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
         logger.info("collect: using raw_items_override (%d items) - test run", len(raw_items))
     else:
         raw_items = []
-        sources_config = _load_sources_config(topic, config_dir)
+        sources_config = _load_sources_config(config_paths)
 
         for src in sources_config:
             source_type = src.get("type", "hn")

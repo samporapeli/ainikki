@@ -4,11 +4,11 @@ import path from 'node:path';
 import { load } from 'js-yaml';
 import Layout from '../layouts/Layout.astro';
 
-const sharedPath = path.resolve('../config/sources/shared.yaml');
-const sharedData = load(readFileSync(sharedPath, 'utf-8'));
-const sourcesMap = Object.fromEntries((sharedData.sources || []).map((s: any) => [s.key, s]));
+const sourcesPath = path.resolve('../config/sources.yaml');
+const sourcesData = load(readFileSync(sourcesPath, 'utf-8'));
+const sourcesMap = Object.fromEntries((sourcesData.sources || []).map((s: any) => [s.key, s]));
 
-const topicsDir = path.resolve('../config/sources');
+const topicsDir = path.resolve('../config/topics');
 
 const telegramDisplay = {
   ai: { name: 'Päivän AI-uutiset — Ainikki', url: 'https://t.me/ainikki_ai' },
@@ -16,7 +16,7 @@ const telegramDisplay = {
 };
 
 const topics = readdirSync(topicsDir)
-  .filter(f => f.endsWith('.yaml') && f !== 'shared.yaml')
+  .filter(f => f.endsWith('.yaml') && f !== 'sources.yaml')
   .map(file => {
     const config = load(readFileSync(path.join(topicsDir, file), 'utf-8'));
     const topic = file.replace('.yaml', '');

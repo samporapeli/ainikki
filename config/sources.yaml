@@ -1,4 +1,4 @@
-# All sources defined once. Topics reference keys via their source lists.
+# All sources defined once. Topics reference sources by key.
 sources:
   - key: hn
     type: hn
@@ -7,49 +7,49 @@ sources:
 
   - key: yle-tiede
     type: rss
-    pretty_name: Yle Tiede
+    pretty_name: Yle (Tiede)
     site_url: https://yle.fi/t/18-212923/fi
     feed_url: https://yle.fi/rss/t/18-212923/fi
 
   - key: yle-internet
     type: rss
-    pretty_name: Yle Internet
+    pretty_name: Yle (Internet)
     site_url: https://yle.fi/t/18-207812/fi
     feed_url: https://yle.fi/rss/t/18-207812/fi
 
   - key: yle-mot
     type: rss
-    pretty_name: Yle MOT
+    pretty_name: Yle (MOT)
     site_url: https://yle.fi/t/18-186623/fi
     feed_url: https://yle.fi/rss/t/18-186623/fi
 
   - key: yle-talous
     type: rss
-    pretty_name: Yle Talous
+    pretty_name: Yle (Talous)
     site_url: https://yle.fi/t/18-204933/fi
     feed_url: https://yle.fi/rss/t/18-204933/fi
 
   - key: yle-kotimaa
     type: rss
-    pretty_name: Yle Kotimaa
+    pretty_name: Yle (Kotimaa)
     site_url: https://yle.fi/t/18-34837/fi
     feed_url: https://yle.fi/rss/t/18-34837/fi
 
   - key: yle-ulkomaat
     type: rss
-    pretty_name: Yle Ulkomaat
+    pretty_name: Yle (Ulkomaat)
     site_url: https://yle.fi/t/18-34953/fi
     feed_url: https://yle.fi/rss/t/18-34953/fi
 
   - key: yle-politiikka
     type: rss
-    pretty_name: Yle Politiikka
+    pretty_name: Yle (Politiikka)
     site_url: https://yle.fi/t/18-220306/fi
     feed_url: https://yle.fi/rss/t/18-220306/fi
 
   - key: yle-kolumnit
     type: rss
-    pretty_name: Yle Kolumnit
+    pretty_name: Yle (Kolumnit)
     site_url: https://yle.fi/t/18-215844/fi
     feed_url: https://yle.fi/rss/t/18-215844/fi
 
