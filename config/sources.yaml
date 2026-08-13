@@ -59,6 +59,12 @@ sources:
     site_url: https://evanhahn.com/blog/
     feed_url: https://evanhahn.com/blog/index.xml
 
+  - key: simonwillison
+    type: rss
+    pretty_name: Simon Willison
+    site_url: https://simonwillison.net/entries/
+    feed_url: https://simonwillison.net/atom/entries/
+
   - key: openai
     type: rss
     pretty_name: OpenAI
