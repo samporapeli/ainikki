@@ -1,21 +1,9 @@
-# Source configuration for the AI topic.
-# Each entry defines one adapter and its parameters.
-# The collect step iterates over this list and merges all items.
+# Topic: AI
+# References keys from config/sources/shared.yaml.
 sources:
-  - type: hn
-    min_points: 20
-  - type: rss
-    url: https://yle.fi/rss/tuoreimmat
-    name: yle-tuoreimmat
-  - type: rss
-    url: https://yle.fi/rss/t/18-212923/fi
-    name: yle-tiede
-  - type: rss
-    url: https://yle.fi/rss/t/18-207812/fi
-    name: yle-internet
-  - type: rss
-    url: https://openai.com/news/rss.xml
-    name: openai-blog
-  - type: rss
-    url: https://arstechnica.com/tag/ai/feed/
-    name: ars-technica-ai
+  - hn
+  - yle-tiede
+  - yle-internet
+  - yle-mot
+  - openai
+  - arstechnica

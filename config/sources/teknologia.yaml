@@ -1,8 +1,6 @@
-# Source configuration for the Teknologia topic.
-# Weekly cadence — broader net than AI, but fewer feeds.
+# Topic: Teknologia
+# References keys from config/sources/shared.yaml.
 sources:
-  - type: hn
-    min_points: 15
-  - type: rss
-    url: https://yle.fi/rss/t/18-212923/fi
-    name: yle-tiede
+  - hn
+  - yle-tiede
+  - yle-mot

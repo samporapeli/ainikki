@@ -4,38 +4,32 @@ import path from 'node:path';
 import { load } from 'js-yaml';
 import Layout from '../layouts/Layout.astro';
 
-const sourcesDir = path.resolve('../config/sources');
+const sharedPath = path.resolve('../config/sources/shared.yaml');
+const sharedData = load(readFileSync(sharedPath, 'utf-8'));
+const sourcesMap = Object.fromEntries((sharedData.sources || []).map((s: any) => [s.key, s]));
 
-const sourceDisplay = {
-  hn: { name: 'Hacker News', siteUrl: 'https://news.ycombinator.com/', note: 'Algolian rajapinnan kautta' },
-};
-
-const nameDisplay = {
-  'yle-tiede': 'Yle Tiede',
-  'openai-blog': 'OpenAI',
-  'ars-technica-ai': 'Ars Technica',
-};
+const topicsDir = path.resolve('../config/sources');
 
 const telegramDisplay = {
   ai: { name: 'Päivän AI-uutiset — Ainikki', url: 'https://t.me/ainikki_ai' },
   teknologia: { name: 'Viikon teknologiauutiset — Ainikki', url: 'https://t.me/ainikki_teknologia' },
 };
 
-const topics = readdirSync(sourcesDir)
-  .filter(f => f.endsWith('.yaml'))
+const topics = readdirSync(topicsDir)
+  .filter(f => f.endsWith('.yaml') && f !== 'shared.yaml')
   .map(file => {
-    const config = load(readFileSync(path.join(sourcesDir, file), 'utf-8'));
+    const config = load(readFileSync(path.join(topicsDir, file), 'utf-8'));
     const topic = file.replace('.yaml', '');
-    const sources = config.sources.map(s => {
-      if (s.type === 'hn') return { ...sourceDisplay.hn, type: 'hn' };
-      const url = new URL(s.url);
-      return {
-        type: 'rss',
-        name: nameDisplay[s.name] ?? s.name,
-        siteUrl: `${url.protocol}//${url.hostname}`,
-        note: 'RSS-syötteen kautta',
-      };
-    });
+    const sourceKeys = config.sources || [];
+    const sources = sourceKeys
+      .map((key: string) => sourcesMap[key])
+      .filter(Boolean)
+      .map((s: any) => ({
+        type: s.type,
+        name: s.pretty_name,
+        siteUrl: s.site_url,
+        note: s.type === 'hn' ? 'Algolian rajapinnan kautta' : 'RSS-syötteen kautta',
+      }));
     return { topic, sources };
   });
 

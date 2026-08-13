@@ -1,0 +1,66 @@
+# All sources defined once. Topics reference keys via their source lists.
+sources:
+  - key: hn
+    type: hn
+    pretty_name: Hacker News
+    site_url: https://news.ycombinator.com/
+
+  - key: yle-tiede
+    type: rss
+    pretty_name: Yle Tiede
+    site_url: https://yle.fi/t/18-212923/fi
+    feed_url: https://yle.fi/rss/t/18-212923/fi
+
+  - key: yle-internet
+    type: rss
+    pretty_name: Yle Internet
+    site_url: https://yle.fi/t/18-207812/fi
+    feed_url: https://yle.fi/rss/t/18-207812/fi
+
+  - key: yle-mot
+    type: rss
+    pretty_name: Yle MOT
+    site_url: https://yle.fi/t/18-186623/fi
+    feed_url: https://yle.fi/rss/t/18-186623/fi
+
+  - key: yle-talous
+    type: rss
+    pretty_name: Yle Talous
+    site_url: https://yle.fi/t/18-204933/fi
+    feed_url: https://yle.fi/rss/t/18-204933/fi
+
+  - key: yle-kotimaa
+    type: rss
+    pretty_name: Yle Kotimaa
+    site_url: https://yle.fi/t/18-34837/fi
+    feed_url: https://yle.fi/rss/t/18-34837/fi
+
+  - key: yle-ulkomaat
+    type: rss
+    pretty_name: Yle Ulkomaat
+    site_url: https://yle.fi/t/18-34953/fi
+    feed_url: https://yle.fi/rss/t/18-34953/fi
+
+  - key: yle-politiikka
+    type: rss
+    pretty_name: Yle Politiikka
+    site_url: https://yle.fi/t/18-220306/fi
+    feed_url: https://yle.fi/rss/t/18-220306/fi
+
+  - key: yle-kolumnit
+    type: rss
+    pretty_name: Yle Kolumnit
+    site_url: https://yle.fi/t/18-215844/fi
+    feed_url: https://yle.fi/rss/t/18-215844/fi
+
+  - key: openai
+    type: rss
+    pretty_name: OpenAI
+    site_url: https://openai.com/
+    feed_url: https://openai.com/news/rss.xml
+
+  - key: arstechnica
+    type: rss
+    pretty_name: Ars Technica
+    site_url: https://arstechnica.com/
+    feed_url: https://arstechnica.com/tag/ai/feed/

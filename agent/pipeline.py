@@ -53,13 +53,37 @@ class ConfigPaths:
 
 
 def _load_sources_config(topic: str, config_dir: Path) -> list[dict]:
-    """Reads config/sources/{topic}.yaml and returns the source list."""
-    path = config_dir / "sources" / f"{topic}.yaml"
-    if not path.exists():
-        logger.info("no sources config at %s, falling back to HN only", path)
+    """Reads topic source keys and merges with shared source definitions.
+
+    config/sources/shared.yaml defines all sources with full properties.
+    config/sources/{topic}.yaml lists source keys to use for that topic.
+    """
+    shared_path = config_dir / "sources" / "shared.yaml"
+    if not shared_path.exists():
+        logger.warning("no shared sources config at %s, falling back to HN only",
+                       shared_path)
         return [{"type": "hn", "min_points": 20}]
-    data = yaml.safe_load(path.read_text())
-    return data.get("sources", [])
+
+    shared = yaml.safe_load(shared_path.read_text())
+    sources_map = {s["key"]: s for s in shared.get("sources", [])}
+
+    topic_path = config_dir / "sources" / f"{topic}.yaml"
+    if not topic_path.exists():
+        logger.info("no sources config at %s, falling back to HN only", topic_path)
+        return [{"type": "hn", "min_points": 20}]
+
+    topic_data = yaml.safe_load(topic_path.read_text())
+    source_keys = topic_data.get("sources", [])
+
+    result = []
+    for key in source_keys:
+        src = sources_map.get(key)
+        if src is None:
+            logger.warning("collect: unknown source key '%s' - skipped", key)
+            continue
+        entry = dict(src)  # shallow copy
+        result.append(entry)
+    return result
 
 
 def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
@@ -100,12 +124,12 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
 
         for src in sources_config:
             source_type = src.get("type", "hn")
-            source_name = src.get("name", source_type)
+            source_name = src.get("pretty_name", source_type)
             try:
                 if source_type == "hn":
-                    items = fetch_hn(since, until, min_points=src.get("min_points", min_points))
+                    items = fetch_hn(since, until, min_points=min_points)
                 elif source_type == "rss":
-                    items = fetch_and_parse_rss(src["url"], since=since, until=until)
+                    items = fetch_and_parse_rss(src["feed_url"], since=since, until=until)
                 else:
                     logger.warning("collect: unknown source type '%s' - skipped", source_type)
                     continue
