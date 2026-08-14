@@ -125,6 +125,7 @@ class Briefing(BaseModel):
     period_end: date
     display_date: date | None = None  # date shown to the user; None = period_start
     display_date_fi: str | None = None  # Finnish format (e.g. "tiistai 18.7.2026")
+    digest_topic: str = ""
     overview: str
     items: list[NewsItem]
     meta: GenerationMeta

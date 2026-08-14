@@ -27,25 +27,46 @@ logger = logging.getLogger(__name__)
 
 def _build_system_prompt(topic: str) -> str:
     return f"""Saat listan artikkeleista aiheesta "{topic}".
-Artikkelit on jo suodatettu aiheen mukaan, joten älä kerro mistä aiheesta on kyse,
-äläkä aloita toteamuksella kuten "Tämän päivän uutiset käsittelevät".
 
-Kirjoita 2-3 lauseen yleiskatsaus, joka tiivistää kunkin jutun pääasian.
-Jos jutut linkittyvät toisiinsa, mainitse yhteys muuten älä pakota yhteyttä.
-Upota toimijoiden nimet luontevasti lauseisiin, älä luettele niitä erikseen.
+Tee kaksi asiaa:
 
-Käytä VAIN annettuja otsikoita ja yhteenvetoja, älä lisää tietoa joita niissä ei ole.
+1) Tiivistelmäotsikko (digest_topic): 2-8 sanan otsikko, joka kuvaa koosteen
+   keskeistä teemaa.
+   - Asiallinen ja informatiivinen, ei klikkiotsikko
+   - Vältä ylisanoja (mullistava, uskomaton, shokeeraava), kysymysmuotoa
+     ja liioittelua
+   - Otsikon on perustuttava alla oleviin artikkeleihin, älä keksi
+   - Suomen kielellä
+
+2) Yleiskatsaus (overview): 2-3 lauseen yhteenveto koko koosteesta.
+   - Älä kerro mistä aiheesta on kyse, äläkä aloita toteamuksella kuten
+     "Tämän päivän uutiset käsittelevät"
+   - Tiivistä kunkin jutun pääasia
+   - Jos jutut linkittyvät toisiinsa, mainitse yhteys — muuten älä pakota
+   - Upota toimijoiden nimet luontevasti lauseisiin
+
+Käytä VAIN annettuja otsikoita ja yhteenvetoja, älä lisää tietoa jota niissä
+ole.
+
+Esimerkkejä hyvistä tiivistelmäotsikoista:
+- Avoimet kielimallit haastavat kaupalliset toimijat
+- Tekoälyagentit astuvat työelämään
+- Euroopan tekoälysääntely kiristyy
+- Tekstin tunnistus ja muistin rajoitukset esillä
+- Oppimisen tulevaisuus tekoälyn aikakaudella
 
 Vastaa VAIN JSON-muodossa:
-{{"overview": "..."}}"""
+{{"digest_topic": "...", "overview": "..."}}"""
 
 
 class OverviewResponse(BaseModel):
     overview: str
+    digest_topic: str
 
 
 class OverviewResult(NamedTuple):
     overview: str
+    digest_topic: str
     warning: str | None
 
 
@@ -57,17 +78,24 @@ def build_overview_prompt(items: list[NewsItem], topic: str) -> tuple[str, str]:
 
 
 def _fallback_overview(items: list[NewsItem], max_headlines: int = 3) -> str:
-    """Deterministic, non-LLM fallback. Not as good as a model-written
-    synthesis, but ALWAYS works — schema requires the overview field."""
+    """Deterministic, non-LLM fallback for the overview text.
+    Not as good as a model-written synthesis, but ALWAYS works."""
     ordered = sorted(items, key=lambda i: i.rank)
     top_headlines = [i.headline for i in ordered[:max_headlines]]
     return "Tämän päivän aiheita: " + "; ".join(top_headlines) + "."
 
 
+def _fallback_digest_topic(topic: str) -> str:
+    """Deterministic fallback when LLM fails to produce a digest topic.
+    Returns the config topic name as-is — better than nothing."""
+    return topic
+
+
 def generate_overview(items: list[NewsItem], llm_call: LlmCall,
                        topic: str) -> OverviewResult:
     if not items:
-        return OverviewResult(overview="Ei julkaistavia juttuja tälle ajalle.", warning=None)
+        return OverviewResult(overview="Ei julkaistavia juttuja tälle ajalle.",
+                               digest_topic="", warning=None)
 
     system_prompt, user_prompt = build_overview_prompt(items, topic)
     raw_response = llm_call(system_prompt, user_prompt)
@@ -77,9 +105,13 @@ def generate_overview(items: list[NewsItem], llm_call: LlmCall,
         response = OverviewResponse(**parsed)
         if not response.overview.strip():
             raise ValueError("overview is empty")
-        return OverviewResult(overview=response.overview.strip(), warning=None)
+        digest_topic = response.digest_topic.strip() if response.digest_topic else ""
+        return OverviewResult(overview=response.overview.strip(),
+                               digest_topic=digest_topic, warning=None)
     except (json.JSONDecodeError, ValidationError, ValueError) as e:
-        fallback = _fallback_overview(items)
+        fallback_overview = _fallback_overview(items)
+        fallback_digest = _fallback_digest_topic(topic)
         warning = f"Overview generation failed ({e}) - deterministic fallback used"
         logger.warning(warning)
-        return OverviewResult(overview=fallback, warning=warning)
+        return OverviewResult(overview=fallback_overview,
+                               digest_topic=fallback_digest, warning=warning)

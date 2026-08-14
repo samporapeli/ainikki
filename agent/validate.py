@@ -50,6 +50,7 @@ def assemble_briefing(topic: str, period: Period, period_start: date, period_end
     return Briefing(
         topic=topic, period=period, period_start=period_start, period_end=period_end,
         display_date=display_date, display_date_fi=fi_date(effective_dd.isoformat()),
+        digest_topic=overview_result.digest_topic,
         overview=overview_result.overview,
         items=compose_result.items, meta=meta,
         dropped_stories=dropped_stories or [], warnings=all_warnings,

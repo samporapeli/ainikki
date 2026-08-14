@@ -19,7 +19,7 @@ def test_assemble_briefing_happy_path():
         items=[_make_news_item(1), _make_news_item(2)], warnings=[],
         persona_id="ainikki-v1", guardrails_version="v1", golden_examples_version="v1",
     )
-    overview_result = OverviewResult(overview="Päivän kooste.", warning=None)
+    overview_result = OverviewResult(overview="Päivän kooste.", digest_topic="", warning=None)
 
     briefing = assemble_briefing(
         topic="ai", period=Period.daily, period_start=date(2026, 7, 16), period_end=date(2026, 7, 16),
@@ -40,7 +40,7 @@ def test_assemble_briefing_collects_warnings_from_all_steps():
         items=[_make_news_item(1)], warnings=[],
         persona_id="ainikki-v1", guardrails_version="v1", golden_examples_version="v1",
     )
-    overview_result = OverviewResult(overview="Fallback-kooste.", warning="overview fallbackasi")
+    overview_result = OverviewResult(overview="Fallback-kooste.", digest_topic="", warning="overview fallbackasi")
 
     briefing = assemble_briefing(
         topic="ai", period=Period.daily, period_start=date(2026, 7, 16), period_end=date(2026, 7, 16),
@@ -60,7 +60,7 @@ def test_assemble_briefing_raises_on_empty_items():
         items=[], warnings=["kaikki epäonnistuivat"],
         persona_id="ainikki-v1", guardrails_version="v1", golden_examples_version="v1",
     )
-    overview_result = OverviewResult(overview="Ei julkaistavia juttuja tälle ajalle.", warning=None)
+    overview_result = OverviewResult(overview="Ei julkaistavia juttuja tälle ajalle.", digest_topic="", warning=None)
 
     with pytest.raises(EmptyBriefingError, match="ai"):
         assemble_briefing(

@@ -30,10 +30,12 @@ def test_generate_overview_happy_path():
              _make_news_item("Juttu B", "Kuvaus B.", rank=2)]
 
     def mock_llm(system_prompt: str, user_prompt: str) -> str:
-        return json.dumps({"overview": "Päivän isoin aihe oli uusi mallijulkaisu."})
+        return json.dumps({"overview": "Päivän isoin aihe oli uusi mallijulkaisu.",
+                           "digest_topic": "Uusi mallijulkaisu puhuttaa"})
 
     result = generate_overview(items, mock_llm, "testi-aihe")
     assert result.overview == "Päivän isoin aihe oli uusi mallijulkaisu."
+    assert result.digest_topic == "Uusi mallijulkaisu puhuttaa"
     assert result.warning is None
 
 
@@ -49,6 +51,7 @@ def test_generate_overview_fallback_on_malformed_response():
     assert "Juttu A" in result.overview
     assert "Juttu B" in result.overview
     assert "Juttu C" in result.overview
+    assert result.digest_topic == "testi-aihe"
 
 
 def test_generate_overview_empty_items_skips_llm_call():
@@ -56,12 +59,14 @@ def test_generate_overview_empty_items_skips_llm_call():
 
     def mock_llm(system_prompt: str, user_prompt: str) -> str:
         call_count["n"] += 1
-        return json.dumps({"overview": "ei pitäisi tulla tänne"})
+        return json.dumps({"overview": "ei pitäisi tulla tänne",
+                           "digest_topic": "ei pitäisi"})
 
     result = generate_overview([], mock_llm, "testi-aihe")
 
     assert call_count["n"] == 0, "with empty item list, LLM should not be called at all"
     assert "Ei julkaistavia" in result.overview
+    assert result.digest_topic == ""
     assert result.warning is None
 
 
@@ -84,10 +89,12 @@ def test_code_fenced_json_is_parsed():
     items = [_make_news_item("Juttu A", "Kuvaus A.", rank=1)]
 
     def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> str:
-        inner = json.dumps({"overview": "Koodiblokki-yleiskatsaus."})
+        inner = json.dumps({"overview": "Koodiblokki-yleiskatsaus.",
+                            "digest_topic": "Koodiblokin aihe"})
         return f"```json\n{inner}\n```"
 
     result = generate_overview(items, mock_llm_code_fence, "testi-aihe")
     assert result.overview == "Koodiblokki-yleiskatsaus."
+    assert result.digest_topic == "Koodiblokin aihe"
     assert result.warning is None
 

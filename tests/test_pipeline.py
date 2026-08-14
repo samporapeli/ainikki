@@ -54,8 +54,9 @@ def _make_llm_handler(score_min=3, score_max=10):
         elif "Kohdeyleisö:" in system_prompt:
             content = json.dumps({"headline": "Testiotsikko juttu",
                                    "summary": "Testiyhteenveto joka kuvaa juttua lyhyesti."})
-        elif "suodatettu aiheen" in system_prompt:
-            content = json.dumps({"overview": "Päivän aiheet liittyivät tekoälyyn ja sen kehitykseen."})
+        elif "Tiivistelmäotsikko" in system_prompt:
+            content = json.dumps({"overview": "Päivän aiheet liittyivät tekoälyyn ja sen kehitykseen.",
+                                   "digest_topic": "Tekoäly ja sen kehitys"})
         else:
             raise AssertionError(f"unrecognized system prompt: {system_prompt[:100]}")
 

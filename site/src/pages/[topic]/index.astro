@@ -62,6 +62,7 @@ const info = TOPIC_META[topic] ?? { name: topic.toUpperCase(), period: '', teleg
       return (
         <a href={`${dd}/`} class="entry">
           <span class="date">{pretty}</span>
+          {b.digest_topic && <span class="topic-line">{b.digest_topic}</span>}
           <p class="overview">{b.overview}</p>
         </a>
       );
@@ -113,8 +114,17 @@ const info = TOPIC_META[topic] ?? { name: topic.toUpperCase(), period: '', teleg
   .date {
     display: block;
     font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--fg-subtle);
+    margin-bottom: 0.15rem;
+  }
+
+  .topic-line {
+    display: block;
+    font-weight: 600;
     font-size: 1rem;
     margin-bottom: 0.35rem;
+    color: var(--fg);
   }
 
   .overview {
