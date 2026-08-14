@@ -2,13 +2,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import Layout from '../layouts/Layout.astro';
+import { TOPIC_META } from '../lib/topics';
 
 const dataDir = path.resolve('../data/output');
-
-const topicInfo: Record<string, { name: string; period: string; telegram: string; telegramUrl: string }> = {
-  ai: { name: 'Tekoäly', period: 'päivittäinen', telegram: 'Päivän AI-uutiset — Ainikki', telegramUrl: 'https://t.me/ainikki_ai' },
-  teknologia: { name: 'Teknologia', period: 'viikoittainen', telegram: 'Viikon teknologiauutiset — Ainikki', telegramUrl: 'https://t.me/ainikki_teknologia' },
-};
 
 let topics: string[] = [];
 
@@ -45,7 +41,7 @@ if (fs.existsSync(dataDir)) {
       <h2>Aiheet</h2>
       <nav class="topics">
         {topics.map(t => {
-          const info = topicInfo[t] ?? { name: t.toUpperCase(), period: '', telegram: '', telegramUrl: '' };
+          const info = TOPIC_META[t] ?? { name: t.toUpperCase(), period: '', telegram: '', telegramUrl: '' };
           return (
             <a href={`${import.meta.env.BASE_URL}/${t}/`} class="topic-link">
               <span class="topic-name">{info.name}</span>

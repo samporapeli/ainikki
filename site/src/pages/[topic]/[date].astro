@@ -6,6 +6,8 @@ import Overview from '../../components/Overview.astro';
 import StoryCard from '../../components/StoryCard.astro';
 import Colophon from '../../components/Colophon.astro';
 import Warnings from '../../components/Warnings.astro';
+import { TOPIC_META } from '../../lib/topics';
+import { fiDate } from '../../lib/date';
 
 export function getStaticPaths() {
   const dataDir = path.resolve('../data/output');
@@ -30,25 +32,12 @@ export function getStaticPaths() {
 const { briefing } = Astro.props;
 const topicUpper = briefing.topic.toUpperCase();
 const dateStr = briefing.display_date || briefing.period_start;
-
-const WEEKDAYS = ['sunnuntai', 'maanantai', 'tiistai', 'keskiviikko', 'torstai', 'perjantai', 'lauantai'];
-
-function fiDate(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  const wd = WEEKDAYS[new Date(y, m - 1, d).getDay()];
-  return `${wd} ${d}.${m}.${y}`;
-}
-
 const prettyDate = briefing.display_date_fi || fiDate(dateStr);
 const ogTitle = `Ainikki — ${topicUpper} — ${prettyDate}`;
 const ogUrl = `${import.meta.env.BASE_URL}/${briefing.topic}/${dateStr}/`;
 
-const topicTelegram: Record<string, { name: string; url: string }> = {
-  ai: { name: 'Päivän AI-uutiset — Ainikki', url: 'https://t.me/ainikki_ai' },
-  teknologia: { name: 'Viikon teknologiauutiset — Ainikki', url: 'https://t.me/ainikki_teknologia' },
-};
 const topic = briefing.topic;
-const telegram = topicTelegram[topic];
+const meta = TOPIC_META[topic];
 const TIETOJA_URL = `${import.meta.env.BASE_URL}/tietoja/`;
 ---
 
@@ -63,7 +52,7 @@ const TIETOJA_URL = `${import.meta.env.BASE_URL}/tietoja/`;
     <p class="date">{prettyDate}</p>
     <p class="byline">
       Kirjoittanut Ainikki (tekoäly) · klo {new Date(briefing.meta.generated_at).toLocaleTimeString('fi-FI', { hour: 'numeric', minute: '2-digit' })}
-      {telegram && <span> · <a href={telegram.url} target="_blank" rel="noopener noreferrer">Telegram</a></span>}
+      {meta?.telegramUrl && <span> · <a href={meta.telegramUrl} target="_blank" rel="noopener noreferrer">Telegram</a></span>}
       <span> · <a href={TIETOJA_URL}>Lisätietoja Ainikista</a></span>
     </p>
   </header>

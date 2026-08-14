@@ -2,6 +2,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import Layout from '../../layouts/Layout.astro';
+import { TOPIC_META } from '../../lib/topics';
+import { fiDate } from '../../lib/date';
 
 export function getStaticPaths() {
   const dataDir = path.resolve('../data/output');
@@ -29,23 +31,14 @@ export function getStaticPaths() {
   });
 }
 
-const topicInfo: Record<string, { name: string; period: string; telegram: string; telegramUrl: string }> = {
-  ai: { name: 'Tekoäly', period: 'päivittäinen', telegram: 'Päivän AI-uutiset — Ainikki', telegramUrl: 'https://t.me/ainikki_ai' },
-  teknologia: { name: 'Teknologia', period: 'viikoittainen', telegram: 'Viikon teknologiauutiset — Ainikki', telegramUrl: 'https://t.me/ainikki_teknologia' },
-};
+
 
 const TIETOJA_URL = `${import.meta.env.BASE_URL}/tietoja/`;
 
 const { topic, briefings } = Astro.props;
-const info = topicInfo[topic] ?? { name: topic.toUpperCase(), period: '', telegram: '', telegramUrl: '' };
+const info = TOPIC_META[topic] ?? { name: topic.toUpperCase(), period: '', telegram: '', telegramUrl: '' };
 
-const WEEKDAYS = ['sunnuntai', 'maanantai', 'tiistai', 'keskiviikko', 'torstai', 'perjantai', 'lauantai'];
 
-function fiDate(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  const wd = WEEKDAYS[new Date(y, m - 1, d).getDay()];
-  return `${wd} ${d}.${m}.${y}`;
-}
 ---
 
 <Layout title={`${info.name} — Ainikki`}>

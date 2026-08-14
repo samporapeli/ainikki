@@ -3,17 +3,13 @@ import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { load } from 'js-yaml';
 import Layout from '../layouts/Layout.astro';
+import { TOPIC_META } from '../lib/topics';
 
 const sourcesPath = path.resolve('../config/sources.yaml');
 const sourcesData = load(readFileSync(sourcesPath, 'utf-8'));
 const sourcesMap = Object.fromEntries((sourcesData.sources || []).map((s: any) => [s.key, s]));
 
 const topicsDir = path.resolve('../config/topics');
-
-const telegramDisplay = {
-  ai: { name: 'Päivän AI-uutiset — Ainikki', url: 'https://t.me/ainikki_ai' },
-  teknologia: { name: 'Viikon teknologiauutiset — Ainikki', url: 'https://t.me/ainikki_teknologia' },
-};
 
 const topics = readdirSync(topicsDir)
   .filter(f => f.endsWith('.yaml') && f !== 'sources.yaml')
@@ -32,17 +28,6 @@ const topics = readdirSync(topicsDir)
       }));
     return { topic, sources };
   });
-
-const periodDisplay: Record<string, string> = {
-  ai: 'päivittäinen',
-  teknologia: 'viikoittainen',
-};
-
-const topicNameDisplay: Record<string, string> = {
-  ai: 'Tekoäly',
-  teknologia: 'Teknologia',
-};
-
 const topicSlug = (name: string) => name.replace(/\s+/g, '').toLowerCase();
 
 // Build a unified source list across all topics, collecting which
@@ -177,14 +162,14 @@ const steps = [
       <div class="matrix-row matrix-header">
         <div class="matrix-label"></div>
         {topics.map(t => (
-          <div class="matrix-topic">{topicNameDisplay[t.topic] ?? t.topic}</div>
+          <div class="matrix-topic">{TOPIC_META[t.topic]?.name ?? t.topic}</div>
         ))}
       </div>
 
       <div class="matrix-row matrix-row-rytmi">
         <div class="matrix-label">Julkaisurytmi</div>
         {topics.map(t => (
-          <div class="matrix-cell">{(periodDisplay as any)[t.topic] ?? t.topic}</div>
+          <div class="matrix-cell">{TOPIC_META[t.topic]?.period ?? t.topic}</div>
         ))}
       </div>
 
@@ -200,9 +185,9 @@ const steps = [
       <div class="matrix-row matrix-row-tg">
         <div class="matrix-label">Telegram</div>
         {topics.map(t => {
-          const tg = (telegramDisplay as any)[t.topic];
+          const meta = TOPIC_META[t.topic];
           return (
-            <div class="matrix-cell">{tg ? <a href={tg.url} target="_blank" rel="noopener noreferrer">{tg.name}</a> : ''}</div>
+            <div class="matrix-cell">{meta?.telegramUrl ? <a href={meta.telegramUrl} target="_blank" rel="noopener noreferrer">{meta.telegram}</a> : ''}</div>
           );
         })}
       </div>
