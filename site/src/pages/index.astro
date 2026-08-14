@@ -32,10 +32,8 @@ if (fs.existsSync(dataDir)) {
   <section class="about">
     <p>
       Ainikki kerää uutisia määritellyistä aiheista ja kokoaa tärkeimmät
-      suomenkielisiin koosteisiin.
-    </p>
-    <p class="disclaimer">
-      Ainikki on kielimallipohjainen ja voi tehdä virheitä.{' '}
+      suomenkielisiin koosteisiin. Ainikki on kielimallipohjainen ja voi tehdä
+      virheitä.{' '}
       <a href={`${import.meta.env.BASE_URL}/tietoja/`}>Lue lisää siitä, miten Ainikki toimii.</a>
     </p>
   </section>
@@ -76,12 +74,6 @@ if (fs.existsSync(dataDir)) {
     margin-bottom: 2.5rem;
     color: var(--fg-muted);
     line-height: 1.7;
-  }
-
-  .disclaimer {
-    margin-top: 0.5rem;
-    font-size: 0.9rem;
-    color: var(--fg-subtle);
   }
 
   .topic-list h2 {
