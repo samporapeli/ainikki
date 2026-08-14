@@ -42,6 +42,14 @@ function fiDate(iso: string): string {
 const prettyDate = briefing.display_date_fi || fiDate(dateStr);
 const ogTitle = `Ainikki — ${topicUpper} — ${prettyDate}`;
 const ogUrl = `${import.meta.env.BASE_URL}/${briefing.topic}/${dateStr}/`;
+
+const topicTelegram: Record<string, { name: string; url: string }> = {
+  ai: { name: 'Päivän AI-uutiset — Ainikki', url: 'https://t.me/ainikki_ai' },
+  teknologia: { name: 'Viikon teknologiauutiset — Ainikki', url: 'https://t.me/ainikki_teknologia' },
+};
+const topic = briefing.topic;
+const telegram = topicTelegram[topic];
+const TIETOJA_URL = `${import.meta.env.BASE_URL}/tietoja/`;
 ---
 
 <Layout title={`${topicUpper} — ${prettyDate}`} description={briefing.overview}
@@ -54,7 +62,9 @@ const ogUrl = `${import.meta.env.BASE_URL}/${briefing.topic}/${dateStr}/`;
     <h1>{topicUpper}</h1>
     <p class="date">{prettyDate}</p>
     <p class="byline">
-      Kirjoittanut Ainikki · klo {new Date(briefing.meta.generated_at).toLocaleTimeString('fi-FI', { hour: 'numeric', minute: '2-digit' })}
+      Kirjoittanut Ainikki (tekoäly) · klo {new Date(briefing.meta.generated_at).toLocaleTimeString('fi-FI', { hour: 'numeric', minute: '2-digit' })}
+      {telegram && <span> · <a href={telegram.url} target="_blank" rel="noopener noreferrer">Telegram</a></span>}
+      <span> · <a href={TIETOJA_URL}>Lisätietoja Ainikista</a></span>
     </p>
   </header>
 
