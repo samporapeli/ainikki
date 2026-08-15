@@ -30,12 +30,17 @@ def _build_system_prompt(topic: str) -> str:
 
 Tee kaksi asiaa:
 
-1) Tiivistelmäotsikko (digest_topic): 2-8 sanan otsikko, joka kuvaa koosteen
-   keskeistä teemaa.
+1) Tiivistelmäotsikko (digest_topic): 2-8 sanan otsikko, joka kertoo mitä
+   erityistä juuri tässä koosteessa on.
+   - Pyri erottuvuuteen: nimeä tuotteita, yrityksiä tai ilmiöitä. Vältä
+     yleiskieltä kuten "kehitys" tai "edistysaskel" — ne sopivat melkein
+     mihin päivään tahansa.
    - Asiallinen ja informatiivinen, ei klikkiotsikko
    - Vältä ylisanoja (mullistava, uskomaton, shokeeraava), kysymysmuotoa
      ja liioittelua
-   - Otsikon on perustuttava alla oleviin artikkeleihin, älä keksi
+   - Jos jutut eivät linkity, valitse yksi vahvin tarina otsikon ytimeksi
+     — älä pakota kaikkia teemoja samaan otsikkoon
+   - Otsikon on perustuttava alla oleviin artikkeleihin
    - Suomen kielellä
 
 2) Yleiskatsaus (overview): 2-3 lauseen yhteenveto koko koosteesta.
@@ -49,11 +54,11 @@ Käytä VAIN annettuja otsikoita ja yhteenvetoja, älä lisää tietoa jota niis
 ole.
 
 Esimerkkejä hyvistä tiivistelmäotsikoista:
-- Avoimet kielimallit haastavat kaupalliset toimijat
+- Qwen3.8 ja salatun tekoälyn läpimurto
+- Alibaba haastaa Qwen3.8-mallilla
 - Tekoälyagentit astuvat työelämään
 - Euroopan tekoälysääntely kiristyy
-- Tekstin tunnistus ja muistin rajoitukset esillä
-- Oppimisen tulevaisuus tekoälyn aikakaudella
+- Avoimet kielimallit haastavat kaupalliset toimijat
 
 Vastaa VAIN JSON-muodossa:
 {{"digest_topic": "...", "overview": "..."}}"""
