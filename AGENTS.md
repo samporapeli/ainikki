@@ -33,6 +33,17 @@
 - When adding a feature, actively consider if something else becomes obsolete. Remove it after verifying it can be done.
 - Complete refactors cleanly. Do not leave backwards compatibility code rotting. Confirm with the user whether to backfill old data or drop fallbacks.
 
+## Transparency
+
+- All digest content is LLM-generated. Every digest is labeled as such
+  (byline, /tietoja/ page explains each step). No human reviews
+  individual digests before publication.
+- Disclosure is intentional — we are proud to use LLMs and want to be
+  open about it. It also supports good-faith compliance with the EU AI
+  Act transparency obligations (Art. 50).
+- Do not remove or obscure AI disclosure. If the site layout changes,
+  ensure the AI-generated nature of the content remains visible.
+
 ## Pipeline
 
 Collect → Dedup → Cluster → Score → Enrich → Compose → Overview → Validate → Write
