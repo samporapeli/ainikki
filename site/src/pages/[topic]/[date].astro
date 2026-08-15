@@ -48,8 +48,7 @@ const TIETOJA_URL = `${import.meta.env.BASE_URL}/tietoja/`;
   </nav>
 
   <header>
-    <h1>{topicUpper}</h1>
-    <p class="date">{prettyDate}</p>
+    <h1>{topicUpper} — {prettyDate}</h1>
     {briefing.digest_topic && <p class="digest-topic">{briefing.digest_topic}</p>}
     <p class="byline">
       Kirjoittanut Ainikki (tekoäly) · klo {new Date(briefing.meta.generated_at).toLocaleTimeString('fi-FI', { hour: 'numeric', minute: '2-digit' })}
@@ -84,17 +83,11 @@ const TIETOJA_URL = `${import.meta.env.BASE_URL}/tietoja/`;
     margin-bottom: 2rem;
   }
 
-  .date {
-    font-size: 1.1rem;
-    color: var(--fg-muted);
-    margin-top: 0.25rem;
-  }
-
   .digest-topic {
     font-size: 1.15rem;
     font-weight: 600;
     color: var(--fg);
-    margin-top: 0.5rem;
+    margin-top: 0.35rem;
     line-height: 1.4;
   }
 
