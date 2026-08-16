@@ -65,7 +65,7 @@ deploy_site() {
 
 send_telegram() {
     local topic="$1" period="$2" display_date="$3" chat_id="$4"
-    local json_file link overview display_date_fi digest_topic msg
+    local json_file link overview digest_topic msg
 
     json_file="data/output/${topic}_${period}_${display_date}.json"
     if [ ! -f "$json_file" ]; then
@@ -78,11 +78,6 @@ import json, sys
 d = json.load(open('$json_file'))
 print(d.get('overview', 'No overview available.'))
 ")
-    display_date_fi=$("$VENV_PYTHON" -c "
-import json, sys
-d = json.load(open('$json_file'))
-print(d.get('display_date_fi', '$display_date'))
-")
     digest_topic=$("$VENV_PYTHON" -c "
 import json, sys
 d = json.load(open('$json_file'))
@@ -90,9 +85,9 @@ print(d.get('digest_topic', ''))
 ")
     link="${SITE_BASE_URL}/${topic}/${display_date}/"
     if [ -n "$digest_topic" ]; then
-        msg="${digest_topic}\n\n${display_date_fi}\n\n${overview}\n\n${link}"
+        msg="${digest_topic}\n\n${overview}\n\n${link}"
     else
-        msg="${display_date_fi}\n\n${overview}\n\n${link}"
+        msg="${overview}\n\n${link}"
     fi
 
     echo "== Sending Telegram notification =="
