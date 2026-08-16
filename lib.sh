@@ -65,7 +65,7 @@ deploy_site() {
 
 send_telegram() {
     local topic="$1" period="$2" display_date="$3" chat_id="$4"
-    local json_file link overview display_date_fi msg
+    local json_file link overview display_date_fi digest_topic msg
 
     json_file="data/output/${topic}_${period}_${display_date}.json"
     if [ ! -f "$json_file" ]; then
@@ -83,12 +83,17 @@ import json, sys
 d = json.load(open('$json_file'))
 print(d.get('display_date_fi', '$display_date'))
 ")
+    digest_topic=$("$VENV_PYTHON" -c "
+import json, sys
+d = json.load(open('$json_file'))
+print(d.get('digest_topic', ''))
+")
     link="${SITE_BASE_URL}/${topic}/${display_date}/"
-    msg="${display_date_fi}
-
-${overview}
-
-${link}"
+    if [ -n "$digest_topic" ]; then
+        msg="${digest_topic}\n\n${display_date_fi}\n\n${overview}\n\n${link}"
+    else
+        msg="${display_date_fi}\n\n${overview}\n\n${link}"
+    fi
 
     echo "== Sending Telegram notification =="
     curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \

@@ -33,7 +33,8 @@ const { briefing } = Astro.props;
 const topicUpper = briefing.topic.toUpperCase();
 const dateStr = briefing.display_date || briefing.period_start;
 const prettyDate = briefing.display_date_fi || fiDate(dateStr);
-const ogTitle = `Ainikki — ${topicUpper} — ${prettyDate}`;
+const digestTopic = briefing.digest_topic || "";
+const ogTitle = digestTopic ? `${digestTopic} — Ainikki` : `Ainikki — ${topicUpper} — ${prettyDate}`;
 const ogUrl = `${import.meta.env.BASE_URL}/${briefing.topic}/${dateStr}/`;
 
 const topic = briefing.topic;
