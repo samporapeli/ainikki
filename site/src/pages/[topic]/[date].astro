@@ -40,6 +40,9 @@ const ogUrl = `${import.meta.env.BASE_URL}/${briefing.topic}/${dateStr}/`;
 const topic = briefing.topic;
 const meta = TOPIC_META[topic];
 const TIETOJA_URL = `${import.meta.env.BASE_URL}/tietoja/`;
+const period = briefing.period || "daily";
+const pipelinePath = path.resolve(`../data/pipeline/${topic}_${period}_${dateStr}.json`);
+const hasPipelineDebug = fs.existsSync(pipelinePath);
 ---
 
 <Layout title={`${topicUpper} — ${prettyDate}`} description={briefing.overview}
@@ -69,9 +72,18 @@ const TIETOJA_URL = `${import.meta.env.BASE_URL}/tietoja/`;
       .map((item: any) => <StoryCard item={item} />)}
   </section>
 
-  <Warnings warnings={briefing.warnings} droppedStories={briefing.dropped_stories} />
+  <Warnings droppedStories={briefing.dropped_stories} />
 
-  <Colophon modelsUsed={briefing.meta.models_used} />
+  {hasPipelineDebug && (
+    <p class="lapivalaisu-link">
+      <a href={`${import.meta.env.BASE_URL}/läpivalaisu/?topic=${topic}&date=${dateStr}`}>Läpivalaisu</a> — tutki, miten kooste syntyi
+    </p>
+  )}
+
+  <div class="digest-meta">
+    <Colophon modelsUsed={briefing.meta.models_used} />
+    <Warnings warnings={briefing.warnings} />
+  </div>
 </Layout>
 
 <style>
@@ -96,6 +108,16 @@ const TIETOJA_URL = `${import.meta.env.BASE_URL}/tietoja/`;
     color: var(--fg-subtle);
     font-size: 0.8rem;
     margin-top: 0.35rem;
+  }
+
+  .digest-meta {
+    margin-top: 0.75rem;
+  }
+
+  .lapivalaisu-link {
+    font-size: 0.85rem;
+    color: var(--fg-subtle);
+    margin: 0.75rem 0;
   }
 
   .stories {

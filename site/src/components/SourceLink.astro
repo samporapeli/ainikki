@@ -1,0 +1,19 @@
+---
+interface Props {
+  url: string;
+  title?: string;
+}
+
+const { url, title } = Astro.props;
+
+let hostname = '';
+try {
+  hostname = new URL(url).hostname.replace(/^www\./, '');
+} catch {
+  hostname = url;
+}
+
+const displayText = title ? `${title} (${hostname}) ↗` : `${hostname} ↗`;
+---
+
+<a href={url} target="_blank" rel="noopener">{displayText}</a>

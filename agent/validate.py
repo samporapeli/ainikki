@@ -24,7 +24,8 @@ def assemble_briefing(topic: str, period: Period, period_start: date, period_end
                        models_used: dict[str, str], pipeline_version: str,
                        rubric_version: str, display_date: date | None = None,
                        dropped_stories: list[DroppedStory] | None = None,
-                       extra_warnings: list[str] | None = None) -> Briefing:
+                       extra_warnings: list[str] | None = None,
+                       duration_seconds: float | None = None) -> Briefing:
     if not compose_result.items:
         raise EmptyBriefingError(
             f"No validated items remaining for topic '{topic}' "
@@ -38,6 +39,7 @@ def assemble_briefing(topic: str, period: Period, period_start: date, period_end
     meta = GenerationMeta(
         models_used=models_used,
         generated_at=datetime.now(timezone.utc),
+        duration_seconds=duration_seconds,
         pipeline_version=pipeline_version,
         persona=compose_result.persona_id,
         rubric_version=rubric_version,

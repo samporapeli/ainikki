@@ -87,6 +87,7 @@ def parse_hn_hits(hits: list[dict[str, Any]]) -> list[RawItem]:
             title=title,
             url=url,
             source_type=SourceType.hn,
+            source_badge="HN",
             published_at=published_at,
             raw_signal={
                 "points": hit.get("points") or 0,

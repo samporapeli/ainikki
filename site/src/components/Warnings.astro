@@ -1,11 +1,13 @@
 ---
+import SourceLink from './SourceLink.astro';
+
 interface DroppedStory {
   title: string;
   url: string;
 }
 
-const { warnings, droppedStories = [] } = Astro.props as {
-  warnings: string[];
+const { warnings = [], droppedStories = [] } = Astro.props as {
+  warnings?: string[];
   droppedStories?: DroppedStory[];
 };
 ---
@@ -14,14 +16,11 @@ const { warnings, droppedStories = [] } = Astro.props as {
   <section class="dropped">
     <h3>Ei voitu sisällyttää</h3>
     <ul>
-      {droppedStories.map(s => {
-        const hostname = new URL(s.url).hostname.replace(/^www\./, '');
-        return (
-          <li>
-            <a href={s.url} target="_blank" rel="noopener">{s.title} ({hostname}) ↗</a>
-          </li>
-        );
-      })}
+      {droppedStories.map(s => (
+        <li>
+          <SourceLink url={s.url} title={s.title} />
+        </li>
+      ))}
     </ul>
   </section>
 )}
@@ -60,7 +59,7 @@ const { warnings, droppedStories = [] } = Astro.props as {
   }
 
   .warnings {
-    margin-top: 1.5rem;
+    margin-top: 0.75rem;
   }
 
   .warnings summary {

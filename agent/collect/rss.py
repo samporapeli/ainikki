@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 def parse_rss_feed(raw_xml: str, feed_url: str,
                    fetched_at: datetime | None = None,
                    since: datetime | None = None,
-                   until: datetime | None = None) -> list[RawItem]:
+                   until: datetime | None = None,
+                   source_badge: str | None = None) -> list[RawItem]:
     """Pure function: RSS/Atom XML string -> list[RawItem].
     Handles both RSS 2.0 and Atom feeds.
 
@@ -58,6 +59,7 @@ def parse_rss_feed(raw_xml: str, feed_url: str,
             title=title,
             url=link,
             source_type=SourceType.rss,
+            source_badge=source_badge,
             published_at=published,
             raw_signal={"summary_chars": summary_len, "tags": ",".join(tag_names)},
             origin_id=f"rss:{feed_url}:{entry.get('id', entry.get('link', ''))}",
@@ -93,7 +95,8 @@ def _parse_published(entry: dict[str, Any]) -> datetime | None:
 
 def fetch_and_parse_rss(rss_url: str, client: Any = None,
                         since: datetime | None = None,
-                        until: datetime | None = None) -> list[RawItem]:
+                        until: datetime | None = None,
+                        source_badge: str | None = None) -> list[RawItem]:
     if client is not None:
         resp = client.get(rss_url, timeout=15.0, follow_redirects=True)
         resp.raise_for_status()
@@ -105,4 +108,4 @@ def fetch_and_parse_rss(rss_url: str, client: Any = None,
             resp.raise_for_status()
             raw_xml = resp.text
 
-    return parse_rss_feed(raw_xml, rss_url, since=since, until=until)
+    return parse_rss_feed(raw_xml, rss_url, since=since, until=until, source_badge=source_badge)

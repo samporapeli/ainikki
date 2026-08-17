@@ -1,0 +1,759 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+import { load } from 'js-yaml';
+
+const topicsDir = path.resolve('../config/topics');
+const topicPeriods: Record<string, string> = {};
+for (const file of readdirSync(topicsDir)) {
+  if (!file.endsWith('.yaml')) continue;
+  const key = file.replace('.yaml', '');
+  const cfg = load(readFileSync(path.join(topicsDir, file), 'utf-8')) as { period?: string };
+  topicPeriods[key] = cfg.period ?? 'weekly';
+}
+---
+
+<Layout title="Läpivalaisu — Ainikki"
+        description="Tutki, miten kooste on syntynyt: mitä uutisia kerättiin, miten ne ryhmiteltiin ja miksi juuri nämä valikoituivat mukaan.">
+  <nav class="back">
+    <a id="backlink" href="../">← Ainikki</a>
+  </nav>
+
+  <header>
+    <h1>Läpivalaisu</h1>
+    <p class="subtitle">Tutki, miten kooste on syntynyt: mitä uutisia kerättiin, miten ne ryhmiteltiin ja miksi juuri nämä valikoituivat mukaan.</p>
+  </header>
+
+  <div class="controls">
+    <label>Aihe
+      <select id="topic-select">
+        <option value="ai">AI</option>
+        <option value="teknologia">Teknologia</option>
+      </select>
+    </label>
+    <label>Päivämäärä
+      <input type="date" id="date-input" />
+    </label>
+  </div>
+
+  <div id="status" class="status">Valitse aihe ja päivämäärä.</div>
+
+  <div id="content" style="display:none">
+    <div id="notice" class="notice" style="display:none"></div>
+    <hr />
+    <section id="funnel" class="section"></section>
+    <hr />
+    <section id="clusters" class="section"></section>
+    <hr />
+    <section id="stories" class="section"></section>
+    <section id="dropped" class="section"></section>
+  </div>
+</Layout>
+
+<script define:vars={{ topicPeriods }}>
+  const topicSel = document.getElementById('topic-select');
+  const dateInput = document.getElementById('date-input');
+  const status = document.getElementById('status');
+  const content = document.getElementById('content');
+  const backlink = document.getElementById('backlink');
+  const notice = document.getElementById('notice');
+
+  let debounceTimer = null;
+
+  topicSel.addEventListener('change', onInputChange);
+  dateInput.addEventListener('change', onInputChange);
+  dateInput.addEventListener('input', onInputChange);
+
+  (function init() {
+    const p = new URLSearchParams(window.location.search);
+    const topic = p.get('topic') || 'ai';
+    const date = p.get('date') || '';
+    topicSel.value = topic;
+    if (date) dateInput.value = date;
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.max = today;
+    if (!dateInput.value) dateInput.value = today;
+    if (topic && date) loadPipeline();
+  })();
+
+  function onInputChange() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(loadPipeline, 300);
+  }
+
+  function updateUrl() {
+    const topic = topicSel.value;
+    const date = dateInput.value;
+    if (date) {
+      const url = new URL(window.location);
+      url.searchParams.set('topic', topic);
+      url.searchParams.set('date', date);
+      window.history.replaceState({}, '', url);
+    }
+  }
+
+  function dataPath() {
+    const p = decodeURIComponent(window.location.pathname)
+      .replace(/\/läpivalaisu(\/.*)?$/, '');
+    return p + '/data';
+  }
+
+  function sourceBadgeText(item) {
+    return item.source_badge || item.source_type?.toUpperCase() || '?';
+  }
+
+  async function loadPipeline() {
+    const topic = topicSel.value;
+    const date = dateInput.value;
+    const period = topicPeriods[topic] ?? 'weekly';
+
+    if (!date) return;
+
+    status.textContent = 'Ladataan…';
+    status.style.display = 'block';
+    content.style.display = 'none';
+
+    try {
+      const [outputData, pipelineData] = await Promise.all([
+        tryFetch(`${dataPath()}/output/${topic}_${period}_${date}.json`),
+        tryFetch(`${dataPath()}/pipeline/${topic}_${period}_${date}.json`),
+      ]);
+
+      if (!outputData) {
+        status.textContent = `Koostetta ei löydy aiheelle "${topic}" päivälle ${date}.`;
+        return;
+      }
+
+      updateUrl();
+      status.style.display = 'none';
+      content.style.display = 'block';
+
+      if (!pipelineData) {
+        notice.style.display = 'block';
+        notice.innerHTML = '<p class="notice-text">Tälle päivämäärälle ei ole tallennettu yksityiskohtaista vaihedataa (kuten raakauutisten määrää tai ryhmittelyä). Alla näkyy koosteen lopputulos.</p>';
+      } else {
+        notice.style.display = 'none';
+      }
+
+      const pipe = pipelineData?.steps || {};
+      renderBacklink(backlink, outputData, topic, date);
+      renderFunnel(document.getElementById('funnel'), pipe, outputData, pipelineData);
+      renderClusters(document.getElementById('clusters'), pipe);
+      renderStories(document.getElementById('stories'), outputData);
+      renderDropped(document.getElementById('dropped'), outputData);
+    } catch (e) {
+      status.textContent = 'Virhe: ' + e.message;
+    }
+  }
+
+  async function tryFetch(url) {
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) return null;
+      return await resp.json();
+    } catch {
+      return null;
+    }
+  }
+
+  function renderBacklink(el, data, topic, date) {
+    const topicUpper = topic.toUpperCase();
+    const dd = data.display_date || data.period_start;
+    const base = decodeURIComponent(window.location.pathname).replace(/\/läpivalaisu(\/.*)?$/, '');
+    const dateFi = data.display_date_fi || dd;
+    el.href = `${base}/${topic}/${dd}/`;
+    el.textContent = `← ${topicUpper} — ${dateFi}`;
+  }
+
+  function renderDots(count) {
+    if (typeof count !== 'number' || count <= 0) return '';
+    const dots = [];
+    for (let i = 0; i < count; i++) {
+      dots.push('<span class="dot"></span>');
+    }
+    return `<div class="dot-matrix" aria-hidden="true">${dots.join('')}</div>`;
+  }
+
+  function formatLinkWithHost(url, title) {
+    const hostname = hostFromUrl(url);
+    const displayText = title ? `${escHtml(title)} (${escHtml(hostname)}) ↗` : `${escHtml(hostname)} ↗`;
+    return `<a href="${escHtml(url)}" target="_blank" rel="noopener">${displayText}</a>`;
+  }
+
+  function renderFunnel(el, pipe, output, pipelineData) {
+    const collectRaw = pipe.collect?.total_raw;
+    const dedupCount = pipe.dedup?.candidates;
+    const filterKept = pipe.filter_topic?.n_kept;
+    const filterDropped = pipe.filter_topic?.n_dropped;
+    const clusterCount = pipe.cluster?.n_clusters;
+    const scoreCutoff = pipe.score?.cutoff_rank;
+    const scoreCandidates = pipe.score?.candidates?.length;
+    const enrichSuccess = pipe.enrich?.n_success;
+    const composeWritten = pipe.compose?.n_written || output.items?.length;
+
+    const totalDur = pipelineData?.total_duration_s;
+    const durText = totalDur != null ? ` · Kesto ${totalDur} s` : '';
+
+    const modelsUsed = output.meta?.models_used || {};
+
+    const steps = [
+      {
+        num: 1,
+        name: 'Keruu',
+        llm: false,
+        model: null,
+        countText: collectRaw != null ? `${collectRaw} raakauutista` : null,
+        desc: 'Hakee uutisia määritellyistä lähteistä (Hacker News, RSS).',
+        dots: collectRaw,
+      },
+      {
+        num: 2,
+        name: 'Duplikaattien poisto',
+        llm: false,
+        model: null,
+        countText: dedupCount != null ? `${dedupCount} uniikkia ehdokasta` : null,
+        desc: 'Normalisoi URL-osoitteet ja yhdistää samat linkit toisiinsa.',
+        dots: dedupCount,
+      },
+      {
+        num: 3,
+        name: 'Aiheen suodatus',
+        llm: true,
+        model: modelsUsed['filter_topic'] ? modelsUsed['filter_topic'].split('/').pop() : null,
+        countText: filterKept != null ? `${filterKept} aiheeseen kuuluvaa` : null,
+        desc: filterDropped != null
+          ? `Kielimalli tarkisti uutiset ja pudotti ${filterDropped} aiheen ulkopuolista juttua.`
+          : 'Kielimalli tarkistaa jokaisen ehdokkaan ja pudottaa aiheeseen kuulumattomat.',
+        dots: filterKept,
+      },
+      {
+        num: 4,
+        name: 'Ryhmittely',
+        llm: true,
+        model: modelsUsed['cluster'] ? modelsUsed['cluster'].split('/').pop() : null,
+        countText: clusterCount != null ? `${clusterCount} uutisryhmää` : null,
+        desc: 'Kielimalli tunnistaa samasta aiheesta kertovat jutut ja ryhmittelee ne yhteen.',
+        dots: clusterCount,
+      },
+      {
+        num: 5,
+        name: 'Pisteytys',
+        llm: true,
+        model: modelsUsed['score'] ? modelsUsed['score'].split('/').pop() : null,
+        countText: scoreCutoff != null ? `${scoreCutoff} valittu` : null,
+        desc: scoreCandidates != null
+          ? `Kielimalli arvioi ${scoreCandidates} ehdokasta ja valitsi kärkijutut arviointikriteerien perusteella.`
+          : 'Kielimalli valitsee ja järjestää uutiset arviointikriteerien perusteella.',
+        dots: scoreCutoff || scoreCandidates,
+      },
+      {
+        num: 6,
+        name: 'Rikastaminen',
+        llm: false,
+        model: null,
+        countText: enrichSuccess != null ? `${enrichSuccess} noudettu` : null,
+        desc: 'Lataa pisteytyksessä valittujen artikkeleiden sivut ja erottaa varsinaisen leipätekstin.',
+        dots: enrichSuccess,
+      },
+      {
+        num: 7,
+        name: 'Kirjoitus',
+        llm: true,
+        model: modelsUsed['compose'] ? modelsUsed['compose'].split('/').pop() : null,
+        countText: composeWritten != null ? `${composeWritten} tiivistelmää` : null,
+        desc: 'Kielimalli kirjoittaa jokaisesta uutisesta otsikon ja suomenkielisen tiivistelmän.',
+        dots: composeWritten,
+      },
+    ];
+
+    let html = `<h2>Prosessi${durText}</h2><div class="flow">`;
+    for (const s of steps) {
+      const llmClass = s.llm ? 'llm' : 'code';
+      const badgeClass = s.llm ? 'badge badge-llm' : 'badge badge-code';
+      const badgeText = s.llm ? (s.model ? `Kielimalli · ${s.model}` : 'Kielimalli') : 'Koodi';
+      const countHtml = s.countText ? `<span class="step-metric">· ${s.countText}</span>` : '';
+      const dotsHtml = s.dots != null ? renderDots(s.dots) : '';
+
+      html += `
+        <div class="step ${llmClass}">
+          <div class="step-head">
+            <span class="step-num">${s.num}</span>
+            <span class="step-name">${s.name}</span>
+            <span class="${badgeClass}">${badgeText}</span>
+            ${countHtml}
+          </div>
+          <p class="step-desc">${s.desc}</p>
+          ${dotsHtml}
+        </div>`;
+    }
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  function renderClusters(el, pipe) {
+    const clusters = pipe.cluster?.clusters;
+    if (!clusters || clusters.length === 0) {
+      el.style.display = 'none';
+      return;
+    }
+    el.style.display = 'block';
+    let html = `<h2>Uutisryhmät (${clusters.length})</h2><div class="cluster-list">`;
+    for (let i = 0; i < clusters.length; i++) {
+      const c = clusters[i];
+      const primary = c.items[0];
+      const countLabel = c.items.length === 1 ? '1 uutinen' : `${c.items.length} uutista`;
+      html += `<details class="cluster-item">
+        <summary>
+          <span class="cluster-qty">${countLabel}</span>
+          <span class="cluster-title">${escHtml(primary?.title || '(tuntematon)')}</span>
+        </summary>
+        <div class="cluster-body">`;
+      if (c.cluster_reason) {
+        html += `<p class="cluster-reason">${escHtml(c.cluster_reason)}</p>`;
+      }
+      html += '<ul class="cluster-links">';
+      for (const item of c.items) {
+        const badge = sourceBadgeText(item);
+        html += `<li>
+          ${formatLinkWithHost(item.url, item.title)}
+          <span class="badge badge-code">${escHtml(badge)}</span>
+        </li>`;
+      }
+      html += '</ul></div></details>';
+    }
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  function renderStories(el, data) {
+    const items = data.items?.slice().sort((a, b) => a.rank - b.rank) || [];
+    let html = '<h2>Koosteen artikkelit</h2><div class="story-list">';
+    for (const item of items) {
+      const reasonHtml = item.selection_reason
+        ? `<div class="story-reason"><span class="reason-label">Valinnan peruste:</span> ${escHtml(item.selection_reason)}</div>`
+        : '';
+      const sourcesHtml = item.sources.map(s => {
+        const badge = sourceBadgeText(s);
+        return `<li>
+          ${formatLinkWithHost(s.url, s.title)}
+          <span class="badge badge-code">${escHtml(badge)}</span>
+        </li>`;
+      }).join('');
+
+      html += `<article class="story-entry">
+        <h3 class="story-title">
+          <span class="story-num">#${item.rank}</span>
+          <span class="story-headline">${escHtml(item.headline)}</span>
+        </h3>
+        <p class="story-summary">${escHtml(item.summary)}</p>
+        ${reasonHtml}
+        <div class="story-sources">
+          <span class="sources-label">Lähteet (${item.sources.length}):</span>
+          <ul class="source-list">${sourcesHtml}</ul>
+        </div>
+      </article>`;
+    }
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  function renderDropped(el, data) {
+    const dropped = data.dropped_stories || [];
+    const warnings = data.warnings || [];
+    if (dropped.length === 0 && warnings.length === 0) {
+      el.style.display = 'none';
+      return;
+    }
+    el.style.display = 'block';
+    let html = '';
+
+    if (dropped.length > 0) {
+      html += '<div class="dropped"><h3>Ei voitu sisällyttää</h3><ul class="dropped-list">';
+      for (const d of dropped) {
+        html += `<li>${formatLinkWithHost(d.url, d.title)}</li>`;
+      }
+      html += '</ul></div>';
+    }
+
+    if (warnings.length > 0) {
+      const countLabel = warnings.length === 1 ? '1 vika' : `${warnings.length} vikaa`;
+      html += `<details class="warnings"><summary>${countLabel}</summary><ul>`;
+      for (const w of warnings) {
+        html += `<li>${escHtml(w)}</li>`;
+      }
+      html += '</ul></details>';
+    }
+    el.innerHTML = html;
+  }
+
+  function hostFromUrl(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
+  }
+
+  function escHtml(s) {
+    if (!s) return '';
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+</script>
+
+<style is:global>
+  .back {
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+  }
+
+  header {
+    margin-bottom: 1.5rem;
+  }
+
+  .subtitle {
+    color: var(--fg-muted);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-top: 0.35rem;
+  }
+
+  .controls {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+  }
+
+  .controls label {
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+  }
+
+  .controls select,
+  .controls input {
+    display: block;
+    margin-top: 0.25rem;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.95rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: inherit;
+  }
+
+  .status {
+    color: var(--fg-muted);
+    padding: 2rem 0;
+    font-size: 0.95rem;
+  }
+
+  .notice {
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg);
+    border-left: 3px solid var(--border);
+  }
+
+  .notice-text {
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    line-height: 1.5;
+  }
+
+  .section {
+    margin-bottom: 2rem;
+  }
+
+  .section h2 {
+    font-size: 1.1rem;
+    margin-bottom: 1.25rem;
+    letter-spacing: -0.01em;
+  }
+
+  /* Flow / Step styles aligned with tietoja.astro */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .step {
+    border-left: 3px solid var(--border);
+    padding: 0.75rem 0 0.75rem 1.25rem;
+    position: relative;
+  }
+
+  .step:last-child {
+    border-left-color: transparent;
+  }
+
+  .step.llm {
+    border-left-color: var(--link);
+  }
+
+  .step-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+    flex-wrap: wrap;
+  }
+
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: var(--border);
+    color: var(--fg-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .step.llm .step-num {
+    background: var(--link);
+    color: var(--bg);
+  }
+
+  .step-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .step-metric {
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+  }
+
+  .badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+  }
+
+  .badge-llm {
+    background: var(--link);
+    color: var(--bg);
+  }
+
+  .badge-code {
+    background: var(--border);
+    color: var(--fg-muted);
+  }
+
+  .step-desc {
+    color: var(--fg-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    padding-left: 2rem;
+  }
+
+  /* One-dot-per-story visualization */
+  .dot-matrix {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    padding-left: 2rem;
+    margin-top: 0.5rem;
+    max-width: 100%;
+  }
+
+  .dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--link);
+    opacity: 0.85;
+    flex-shrink: 0;
+  }
+
+  /* Cluster list */
+  .cluster-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .cluster-item {
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .cluster-item:last-child {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cluster-item summary {
+    cursor: pointer;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .cluster-qty {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--fg-muted);
+    flex-shrink: 0;
+  }
+
+  .cluster-title {
+    color: var(--fg);
+  }
+
+  .cluster-body {
+    margin-top: 0.5rem;
+    padding-left: 1rem;
+  }
+
+  .cluster-reason {
+    font-size: 0.85rem;
+    color: var(--fg-subtle);
+    font-style: italic;
+    margin-bottom: 0.5rem;
+  }
+
+  .cluster-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .cluster-links li {
+    font-size: 0.85rem;
+    margin-bottom: 0.35rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  /* Story list */
+  .story-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .story-entry {
+    padding: 1.5rem 0;
+  }
+
+  .story-entry + .story-entry {
+    border-top: 1px solid var(--border);
+  }
+
+  .story-title {
+    font-size: 1.15rem;
+    line-height: 1.35;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+
+  .story-num {
+    color: var(--fg-subtle);
+    font-weight: 500;
+    margin-right: 0.25rem;
+  }
+
+  .story-summary {
+    color: var(--fg-muted);
+    font-size: 0.95rem;
+    line-height: 1.65;
+    margin-bottom: 0.75rem;
+  }
+
+  .story-reason {
+    font-size: 0.85rem;
+    color: var(--fg-subtle);
+    font-style: italic;
+    line-height: 1.5;
+    padding: 0.4rem 0 0.4rem 0.75rem;
+    border-left: 2px solid var(--border);
+    margin-bottom: 0.75rem;
+  }
+
+  .reason-label {
+    font-weight: 600;
+    font-style: normal;
+    color: var(--fg-muted);
+  }
+
+  .story-sources {
+    font-size: 0.85rem;
+    color: var(--fg-subtle);
+  }
+
+  .sources-label {
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    font-weight: 600;
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+
+  .source-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .source-list li {
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  /* Dropped & Warnings styles matching Warnings.astro */
+  .dropped {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .dropped h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--fg-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .dropped-list {
+    padding-left: 1.25rem;
+    font-size: 0.9rem;
+    color: var(--fg-subtle);
+  }
+
+  .dropped-list li {
+    margin-bottom: 0.35rem;
+  }
+
+  .warnings {
+    margin-top: 1.5rem;
+  }
+
+  .warnings summary {
+    font-size: 0.85rem;
+    color: var(--fg-subtle);
+    cursor: pointer;
+  }
+
+  .warnings ul {
+    margin-top: 0.5rem;
+    padding-left: 1.25rem;
+    font-size: 0.85rem;
+    color: var(--fg-subtle);
+  }
+
+  .warnings li {
+    margin-bottom: 0.35rem;
+  }
+</style>

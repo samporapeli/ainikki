@@ -3,82 +3,96 @@ sources:
   - key: hn
     type: hn
     pretty_name: Hacker News
+    badge: HN
     site_url: https://news.ycombinator.com/
 
   - key: yle-tiede
     type: rss
     pretty_name: Yle (Tiede)
+    badge: Yle
     site_url: https://yle.fi/t/18-212923/fi
     feed_url: https://yle.fi/rss/t/18-212923/fi
 
   - key: yle-internet
     type: rss
     pretty_name: Yle (Internet)
+    badge: Yle
     site_url: https://yle.fi/t/18-207812/fi
     feed_url: https://yle.fi/rss/t/18-207812/fi
 
   - key: yle-mot
     type: rss
     pretty_name: Yle (MOT)
+    badge: Yle
     site_url: https://yle.fi/t/18-186623/fi
     feed_url: https://yle.fi/rss/t/18-186623/fi
 
   - key: yle-talous
     type: rss
     pretty_name: Yle (Talous)
+    badge: Yle
     site_url: https://yle.fi/t/18-204933/fi
     feed_url: https://yle.fi/rss/t/18-204933/fi
 
   - key: yle-kotimaa
     type: rss
     pretty_name: Yle (Kotimaa)
+    badge: Yle
     site_url: https://yle.fi/t/18-34837/fi
     feed_url: https://yle.fi/rss/t/18-34837/fi
 
   - key: yle-ulkomaat
     type: rss
     pretty_name: Yle (Ulkomaat)
+    badge: Yle
     site_url: https://yle.fi/t/18-34953/fi
     feed_url: https://yle.fi/rss/t/18-34953/fi
 
   - key: yle-politiikka
     type: rss
     pretty_name: Yle (Politiikka)
+    badge: Yle
     site_url: https://yle.fi/t/18-220306/fi
     feed_url: https://yle.fi/rss/t/18-220306/fi
 
   - key: yle-kolumnit
     type: rss
     pretty_name: Yle (Kolumnit)
+    badge: Yle
     site_url: https://yle.fi/t/18-215844/fi
     feed_url: https://yle.fi/rss/t/18-215844/fi
 
   - key: evanhahn
     type: rss
     pretty_name: Evan Hahn
+    badge: Evan Hahn
     site_url: https://evanhahn.com/blog/
     feed_url: https://evanhahn.com/blog/index.xml
 
   - key: simonwillison
     type: rss
     pretty_name: Simon Willison
+    badge: Simon Willison
     site_url: https://simonwillison.net/entries/
     feed_url: https://simonwillison.net/atom/entries/
 
   - key: openai
     type: rss
     pretty_name: OpenAI
+    badge: OpenAI
     site_url: https://openai.com/
     feed_url: https://openai.com/news/rss.xml
 
   - key: arstechnica
     type: rss
     pretty_name: Ars Technica
+    badge: Ars Technica
     site_url: https://arstechnica.com/
     feed_url: https://arstechnica.com/feed/
 
   - key: arstechnica-ai
     type: rss
     pretty_name: Ars Technica (AI)
+    badge: Ars Technica
     site_url: https://arstechnica.com/
     feed_url: https://arstechnica.com/tag/ai/feed/

@@ -27,6 +27,7 @@ class RawItem(BaseModel):
     title: str
     url: HttpUrl
     source_type: SourceType
+    source_badge: str | None = None
     published_at: datetime | None = None
     raw_signal: dict[str, int | float | str] = Field(default_factory=dict)
     origin_id: str  # adapter-specific unique id (e.g. HN objectID), debug/tracing
@@ -65,6 +66,7 @@ class Source(BaseModel):
     url: HttpUrl
     title: str
     source_type: SourceType
+    source_badge: str | None = None
     published_at: datetime | None = None
     raw_signal: dict[str, int | float | str] = Field(default_factory=dict)
 
@@ -111,6 +113,7 @@ class Period(str, Enum):
 class GenerationMeta(BaseModel):
     models_used: dict[str, str]
     generated_at: datetime
+    duration_seconds: float | None = None
     pipeline_version: str
     persona: str
     rubric_version: str

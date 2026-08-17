@@ -1,4 +1,5 @@
 # Sources to use for the Teknologia topic (keys from config/sources.yaml).
+period: weekly
 sources:
   - hn
   - yle-tiede

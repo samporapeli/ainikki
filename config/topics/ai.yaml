@@ -1,4 +1,5 @@
 # Sources to use for the AI topic (keys from config/sources.yaml).
+period: daily
 sources:
   - hn
   - yle-tiede

@@ -133,6 +133,7 @@ class ComposeResult(NamedTuple):
 def _raw_item_to_source(raw_item: RawItem) -> Source:
     return Source(
         url=raw_item.url, title=raw_item.title, source_type=raw_item.source_type,
+        source_badge=raw_item.source_badge,
         published_at=raw_item.published_at, raw_signal=raw_item.raw_signal,
     )
 

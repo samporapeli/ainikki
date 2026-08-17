@@ -12,10 +12,12 @@ In production these are left as None and the code makes real HTTP calls.
 """
 
 import argparse
+import json
 import logging
 import sys
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
+from time import perf_counter
 
 import httpx
 import yaml
@@ -112,11 +114,15 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     model_overrides = model_overrides or {}
     out_dir = out_dir or (data_dir / "output")
     config_paths = ConfigPaths(config_dir, topic)
-    date_str = since.date().isoformat()
+    effective_display_date = display_date or since.date()
+    date_str = effective_display_date.isoformat()
     all_warnings: list[str] = []
     dropped_stories: list = []
+    t_pipeline_start = perf_counter()
+    step_durations: dict[str, float] = {}
 
     # 1. Collect
+    t0 = perf_counter()
     if raw_items_override is not None:
         raw_items = raw_items_override
         logger.info("collect: using raw_items_override (%d items) - test run", len(raw_items))
@@ -127,11 +133,12 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
         for src in sources_config:
             source_type = src.get("type", "hn")
             source_name = src.get("pretty_name", source_type)
+            source_badge = src.get("badge") or src.get("pretty_name") or source_type
             try:
                 if source_type == "hn":
                     items = fetch_hn(since, until, min_points=min_points)
                 elif source_type == "rss":
-                    items = fetch_and_parse_rss(src["feed_url"], since=since, until=until)
+                    items = fetch_and_parse_rss(src["feed_url"], since=since, until=until, source_badge=source_badge)
                 else:
                     logger.warning("collect: unknown source type '%s' - skipped", source_type)
                     continue
@@ -142,36 +149,44 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
                 logger.warning("collect (%s) failed: %s - continuing", source_name, e)
                 all_warnings.append(f"Keruu ({source_name}): {e}")
 
-    logger.info("collect: total %d raw items across all sources", len(raw_items))
+    step_durations["collect"] = round(perf_counter() - t0, 2)
+    logger.info("collect: total %d raw items across all sources (%.2fs)", len(raw_items), step_durations["collect"])
 
     # 2. Dedup
+    t0 = perf_counter()
     candidates = dedup_candidates(raw_items)
     save_candidates(topic, date_str, candidates, data_dir=data_dir / "dedup")
-    logger.info("dedup: %d -> %d candidates", len(raw_items), len(candidates))
+    step_durations["dedup"] = round(perf_counter() - t0, 2)
+    logger.info("dedup: %d -> %d candidates (%.2fs)", len(raw_items), len(candidates), step_durations["dedup"])
 
     models_config = load_models_config(config_paths.models)
     models_used: dict[str, str] = {}
     rubric = load_rubric(config_paths.rubric)
 
     # 3. Filter by topic relevance
+    t0 = perf_counter()
     llm_filter = _resolve_llm_call("filter_topic", models_config, config_paths, model_overrides,
                                     llm_client, models_used)
     topic_description = rubric.get("topic_description", topic)
     filter_result = filter_topic(candidates, topic_description, llm_filter)
     if filter_result.warning:
         all_warnings.append(filter_result.warning)
-    logger.info("filter_topic: %d -> %d candidates (%d dropped)",
-                len(candidates), filter_result.n_kept, filter_result.n_dropped)
+    step_durations["filter_topic"] = round(perf_counter() - t0, 2)
+    logger.info("filter_topic: %d -> %d candidates (%d dropped, %.2fs)",
+                len(candidates), filter_result.n_kept, filter_result.n_dropped, step_durations["filter_topic"])
 
     # 4. Cluster
+    t0 = perf_counter()
     llm_cluster = _resolve_llm_call("cluster", models_config, config_paths, model_overrides,
                                      llm_client, models_used)
     cluster_result = cluster_candidates(filter_result.candidates, llm_cluster)
     if cluster_result.warning:
         all_warnings.append(cluster_result.warning)
-    logger.info("cluster: %d -> %d clusters", len(filter_result.candidates), len(cluster_result.clusters))
+    step_durations["cluster"] = round(perf_counter() - t0, 2)
+    logger.info("cluster: %d -> %d clusters (%.2fs)", len(filter_result.candidates), len(cluster_result.clusters), step_durations["cluster"])
 
     # 5. Score (CRITICAL - no fallback, ScoreValidationError crashes the entire run)
+    t0 = perf_counter()
     llm_score = _resolve_llm_call("score", models_config, config_paths, model_overrides,
                                    llm_client, models_used)
     min_items = rubric["items_per_briefing"]["min"]
@@ -190,21 +205,24 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
                                 previous_stories=previous_stories)
     initial_pool = [sc for sc in scored.scored if sc.rank <= scored.cutoff_rank]
     backfill_pool = [sc for sc in scored.scored if sc.rank > scored.cutoff_rank]
-    logger.info("score: %d selected (cutoff %d, %d initial + %d backfill, rubric %s)",
+    step_durations["score"] = round(perf_counter() - t0, 2)
+    logger.info("score: %d selected (cutoff %d, %d initial + %d backfill, rubric %s, %.2fs)",
                 len(scored.scored), scored.cutoff_rank, len(initial_pool),
-                len(backfill_pool), rubric.get("version"))
+                len(backfill_pool), rubric.get("version"), step_durations["score"])
 
-    # 5. Enrich
+    # 6. Enrich & Compose
     owns_enrich_client = enrich_client is None
     ec = enrich_client or httpx.Client(timeout=15.0, follow_redirects=True)
     try:
+        t0_enrich = perf_counter()
         enrich_result = enrich_candidates(initial_pool, client=ec)
         all_warnings.extend(enrich_result.warnings)
         dropped_stories = enrich_result.dropped_stories
-        logger.info("enrich: %d -> %d items (content fetched successfully)",
-                    len(initial_pool), len(enrich_result.items))
+        step_durations["enrich"] = round(perf_counter() - t0_enrich, 2)
+        logger.info("enrich: %d -> %d items (content fetched successfully, %.2fs)",
+                    len(initial_pool), len(enrich_result.items), step_durations["enrich"])
 
-        # 6. Compose
+        t0_compose = perf_counter()
         llm_compose = _resolve_llm_call("compose", models_config, config_paths, model_overrides,
                                          llm_client, models_used)
         compose_result = compose_items(enrich_result.items, config_paths.persona,
@@ -212,7 +230,8 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
                                         topic=topic,
                                         golden_examples_dir=config_paths.golden_examples_dir)
         all_warnings.extend(compose_result.warnings)
-        logger.info("compose: %d items written", len(compose_result.items))
+        step_durations["compose"] = round(perf_counter() - t0_compose, 2)
+        logger.info("compose: %d items written (%.2fs)", len(compose_result.items), step_durations["compose"])
 
         # 6b. Backfill: if initial pool drops below minimum, try backfill pool
         if len(compose_result.items) < min_items and backfill_pool:
@@ -237,9 +256,13 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
             ec.close()
 
     # 7. Overview
+    t0 = perf_counter()
     llm_overview = _resolve_llm_call("overview", models_config, config_paths, model_overrides,
                                       llm_client, models_used)
     overview_result = generate_overview(compose_result.items, llm_overview, topic)
+    step_durations["overview"] = round(perf_counter() - t0, 2)
+
+    total_duration = round(perf_counter() - t_pipeline_start, 2)
 
     # 8. Validate (CRITICAL - EmptyBriefingError if nothing remains)
     briefing = assemble_briefing(
@@ -251,9 +274,82 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
         rubric_version=str(rubric.get("version", "unknown")),
         dropped_stories=dropped_stories,
         extra_warnings=all_warnings,
+        duration_seconds=total_duration,
     )
 
-    # 9. Write
+    # 9. Write pipeline debug data
+    pipeline_dir = data_dir / "pipeline"
+    pipeline_dir.mkdir(parents=True, exist_ok=True)
+    pipeline_file = pipeline_dir / f"{topic}_{period.value}_{date_str}.json"
+    pipeline_debug = {
+        "topic": topic,
+        "period": period.value,
+        "period_start": since.date().isoformat(),
+        "period_end": (until - timedelta(seconds=1)).date().isoformat(),
+        "total_duration_s": total_duration,
+        "step_durations_s": step_durations,
+        "steps": {
+            "collect": {
+                "total_raw": len(raw_items),
+            },
+            "dedup": {
+                "candidates": len(candidates),
+            },
+            "filter_topic": {
+                "n_kept": filter_result.n_kept,
+                "n_dropped": filter_result.n_dropped,
+            },
+            "cluster": {
+                "n_clusters": len(cluster_result.clusters),
+                "clusters": [
+                    {
+                        "items": [
+                            {"title": ri.title, "url": str(ri.url),
+                             "source_type": ri.source_type.value,
+                             "source_badge": ri.source_badge or (ri.source_type.value.upper() if ri.source_type.value != 'hackernews' else 'HN')}
+                            for ri in c.items
+                        ],
+                        "cluster_reason": c.cluster_reason,
+                    }
+                    for c in cluster_result.clusters
+                ],
+            },
+            "score": {
+                "cutoff_rank": scored.cutoff_rank,
+                "candidates": [
+                    {
+                        "title": sc.items[0].title,
+                        "url": str(sc.items[0].url),
+                        "rank": sc.rank,
+                        "selection_reason": sc.selection_reason,
+                        "n_sources": len(sc.items),
+                    }
+                    for sc in scored.scored
+                ],
+            },
+            "enrich": {
+                "n_success": len(enrich_result.items),
+                "n_failed": len(enrich_result.dropped_stories),
+                "dropped": [
+                    {"title": d.title, "url": d.url}
+                    for d in enrich_result.dropped_stories
+                ],
+            },
+            "compose": {
+                "n_written": len(compose_result.items),
+            },
+            "overview": {
+                "overview": overview_result.overview,
+                "digest_topic": overview_result.digest_topic,
+            },
+        },
+    }
+    pipeline_file.write_text(
+        json.dumps(pipeline_debug, ensure_ascii=False, indent=2)
+    )
+    logger.info("pipeline debug: written %s", pipeline_file)
+
+    # 10. Write
     path = write_briefing(briefing, output_dir=out_dir)
     logger.info("write: written %s (%d warnings)", path, len(briefing.warnings))
     return path

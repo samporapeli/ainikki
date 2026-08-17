@@ -19,6 +19,15 @@ npm install
 echo "Building..."
 npm run build
 
+echo "Copying data files..."
+mkdir -p dist/data/output dist/data/pipeline
+cp ../data/output/*.json dist/data/output/ 2>/dev/null || true
+cp ../data/pipeline/*.json dist/data/pipeline/ 2>/dev/null || true
+# Also copy to public/ for dev server access
+mkdir -p public/data/output public/data/pipeline
+cp ../data/output/*.json public/data/output/ 2>/dev/null || true
+cp ../data/pipeline/*.json public/data/pipeline/ 2>/dev/null || true
+
 echo "Deploying to $DEPLOY_TARGET..."
 rsync -avz --delete dist/ "$DEPLOY_TARGET"
 

@@ -17,9 +17,9 @@ steps:
     model: "deepseek/deepseek-v4-flash"     # cheap, structured output is sufficient
   compose:
     provider: openrouter
-    model: "anthropic/claude-sonnet-5"    # higher quality, fluent Finnish text
+    model: "google/gemini-3.7-flash"
     max_tokens: 2048
   overview:
     provider: openrouter
-    model: "google/gemini-2.5-flash"
+    model: "anthropic/claude-sonnet-5"
     max_tokens: 2048
