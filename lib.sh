@@ -84,10 +84,11 @@ d = json.load(open('$json_file'))
 print(d.get('digest_topic', ''))
 ")
     link="${SITE_BASE_URL}/${topic}/${display_date}/"
+    nl=$'\n'
     if [ -n "$digest_topic" ]; then
-        msg="${digest_topic}\n\n${overview}\n\n${link}"
+        msg="${digest_topic}${nl}${nl}${overview}${nl}${nl}${link}"
     else
-        msg="${overview}\n\n${link}"
+        msg="${overview}${nl}${nl}${link}"
     fi
 
     echo "== Sending Telegram notification =="
