@@ -14,11 +14,14 @@ const { warnings, droppedStories = [] } = Astro.props as {
   <section class="dropped">
     <h3>Ei voitu sisällyttää</h3>
     <ul>
-      {droppedStories.map(s => (
-        <li>
-          <a href={s.url} target="_blank" rel="noopener">{s.title} ↗</a>
-        </li>
-      ))}
+      {droppedStories.map(s => {
+        const hostname = new URL(s.url).hostname.replace(/^www\./, '');
+        return (
+          <li>
+            <a href={s.url} target="_blank" rel="noopener">{s.title} ({hostname}) ↗</a>
+          </li>
+        );
+      })}
     </ul>
   </section>
 )}
