@@ -8,13 +8,12 @@
 version: v1
 topic: teknologia
 topic_description: >
-  teknologia yleisesti — laitteisto (esim. uudet puhelimet, tietokoneet,
-  komponentit), ohjelmisto ja julkaisut, verkkoteknologiat, tietoturva,
-  avoimen lähdekoodin projektit, kehittäjätyökalut, ja isommat
-  AI/ML-julkaisut. Pelkkä niche-tutkimus ilman laajempaa
-  teknologiakontekstia tai markkinointipuhe ilman uutisarvoa ei kuulu
-  tähän. Uutisen on oltava tarpeeksi iso — kevyt päivitys tai
-  marginaalinen tuote ei riitä.
+  teknologia yleisesti — laitteisto (esim. tietokoneet, komponentit,
+  älylaitteet), ohjelmistot ja verkkopalvelut, mediatekniikka,
+  tietoturva, ja isommat tekoälyn vaikutukset teknologiaan. Pelkkä
+  niche-tutkimus ilman laajempaa teknologiakontekstia tai
+  markkinointipuhe ilman uutisarvoa ei kuulu tähän. Uutisen on oltava
+  tarpeeksi iso — kevyt päivitys tai marginaalinen tuote ei riitä.
 
 criteria:
   - name: "aihepiirin ydinolennaisuus"
@@ -58,7 +57,27 @@ criteria:
       (esim. kolme eri artikkelia samasta laitejulkistuksesta) ellei
       jokainen ole itsenäisesti merkittävä. Viikon mittaisessa
       koosteessa on erityisen tärkeää kattaa eri teknologian osa-alueita.
-    weight: medium
+    weight: high
+
+examples:
+  good:
+    - title: "Firefox jää viimeiseksi uBlock Origin -tukijaksi"
+      reason: "selainteknologiaa, laaja vaikutus käyttäjiin"
+    - title: "Uusi ARM-prosessori julkistettu"
+      reason: "laitteistouutinen, konkreettinen julkaisu"
+    - title: "Langaton latausteknologia läpimurto"
+      reason: "mediatekniikkaa, kuluttajavaikutus"
+    - title: "GPT-5 julkaistu"
+      reason: "iso AI-julkaisu, laaja vaikutus teknologiaan"
+  bad:
+    - title: "Yrityksen toimitusjohtaja vaihtuu"
+      reason: "yritysuutinen ilman teknologiakontekstia"
+    - title: "Osakemarkkinakatsaus"
+      reason: "talousuutinen, ei teknologiaa"
+    - title: "Poliittinen päätös verkkoympäristöstä"
+      reason: "politiikkaa, teknologia vain sivumainintana"
+    - title: "Niche-tutkimus ilman laajempaa kontekstia"
+      reason: "liian kapea, ei vaikutusta laajemmin"
 
 exclude:
   - "puhtaasti markkinointisisältö ilman uutisarvoa"

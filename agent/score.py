@@ -90,6 +90,20 @@ def filter_previous_clusters(clusters: list[ClusteredCandidate],
     return filtered
 
 
+def build_examples_text(examples: dict) -> str:
+    """Build examples section for the score prompt from rubric YAML data."""
+    good = examples.get("good", [])
+    bad = examples.get("bad", [])
+    parts = []
+    if good:
+        good_lines = "\n".join(f'   - "{ex["title"]}" -> {ex["reason"]}' for ex in good)
+        parts.append(f"   Hyva valinta:\n{good_lines}")
+    if bad:
+        bad_lines = "\n".join(f'   - "{ex["title"]}" -> {ex["reason"]}' for ex in bad)
+        parts.append(f"\n   Huono valinta:\n{bad_lines}")
+    return "\n".join(parts)
+
+
 def build_score_prompt(clusters: list[ClusteredCandidate], rubric: dict,
                        previous_stories: list[dict] | None = None) -> tuple[str, str]:
     criteria_lines = []
@@ -98,6 +112,9 @@ def build_score_prompt(clusters: list[ClusteredCandidate], rubric: dict,
     criteria_text = "\n".join(criteria_lines)
 
     exclude_lines = "\n".join(f"- {e}" for e in rubric.get("exclude", []))
+
+    examples = rubric.get("examples", {})
+    examples_text = build_examples_text(examples)
 
     previous_lines = ""
     if previous_stories:
@@ -127,18 +144,7 @@ samaan tarinaan. Muussa tapauksessa juttu jätetään pois (jo sisällytetty aie
 {exclude_lines}
 
    Esimerkkejä valinnoista:
-
-   Hyvä valinta:
-   - "GPT-5 julkaistu" → aihepiirin ydin, uutuusarvo, laaja vaikutus
-   - "Tutkijat kehittivät uuden koneoppimismenetelmän" → tutkimus, relevantti
-   - "AI:n vaikutus työelämään ja burnoutiin" → aiheeseen liittyvä keskustelu
-   - "Inflect-Micro-v2: TTS-malli julkaistu" → konkreettinen julkaisu
-
-   Huono valinta:
-   - "Python-lintteri Ruff päivitetty" → ei AI:ää, pelkkä kehitystyökalu
-   - "Uusi TypeScript-kääntäjä" → ohjelmointikieli, ei tekoälyä
-   - "Robottipysäköinti lentoasemalla" → robotiikka ilman AI/ML-yhteyttä
-   - "GrapheneOS puhelimen suojelu" → tietoturva, ei tekoälyä
+{examples_text}
 {previous_lines}
 
    Jokaiselle valitulle: anna rank (1 = tärkein), ja lyhyt selection_reason.

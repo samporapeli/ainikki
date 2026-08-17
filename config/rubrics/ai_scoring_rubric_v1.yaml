@@ -62,6 +62,26 @@ criteria:
       suurimman osan tästä jo aiemmin putkessa, tämä on lisäturva.
     weight: medium
 
+examples:
+  good:
+    - title: "GPT-5 julkaistu"
+      reason: "aihepiirin ydin, uutuusarvo, laaja vaikutus"
+    - title: "Tutkijat kehittivät uuden koneoppimismenetelmän"
+      reason: "tutkimus, relevantti"
+    - title: "AI:n vaikutus työelämään ja burnoutiin"
+      reason: "aiheeseen liittyvä keskustelu"
+    - title: "Inflect-Micro-v2: TTS-malli julkaistu"
+      reason: "konkreettinen julkaisu"
+  bad:
+    - title: "Python-lintteri Ruff päivitetty"
+      reason: "ei AI:ää, pelkkä kehitystyökalu"
+    - title: "Uusi TypeScript-kääntäjä"
+      reason: "ohjelmointikieli, ei tekoälyä"
+    - title: "Robottipysäköinti lentoasemalla"
+      reason: "robotiikka ilman AI/ML-yhteyttä"
+    - title: "GrapheneOS puhelimen suojelu"
+      reason: "tietoturva, ei tekoälyä"
+
 exclude:
   - "puhtaasti markkinointisisältö ilman uutisarvoa"
   - "duplikaatit jotka eivät tuo uutta näkökulmaa jo valittuun juttuun"
