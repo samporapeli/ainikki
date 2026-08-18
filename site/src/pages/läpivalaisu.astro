@@ -181,6 +181,27 @@ for (const file of readdirSync(topicsDir)) {
     return `<a href="${escHtml(url)}" target="_blank" rel="noopener">${displayText}</a>`;
   }
 
+  function formatDuration(seconds) {
+    if (typeof seconds !== 'number' || seconds < 0) return '';
+
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    const parts = [];
+    if (hours > 0) parts.push(`${hours} t`);
+    if (minutes > 0) {
+      parts.push(`${minutes} min`);
+      parts.push(`${Math.round(secs)} s`);
+    } else if (hours > 0) {
+      parts.push(`${Math.round(secs)} s`);
+    } else {
+      parts.push(secs >= 1 ? `${secs.toFixed(2)} s` : `${secs.toFixed(3)} s`);
+    }
+
+    return parts.join(' ');
+  }
+
   function renderFunnel(el, pipe, output, pipelineData) {
     const collectRaw = pipe.collect?.total_raw;
     const dedupCount = pipe.dedup?.candidates;
@@ -193,9 +214,10 @@ for (const file of readdirSync(topicsDir)) {
     const composeWritten = pipe.compose?.n_written || output.items?.length;
 
     const totalDur = pipelineData?.total_duration_s;
-    const durText = totalDur != null ? ` · Kesto ${totalDur} s` : '';
+    const durText = totalDur != null ? ` · Kesto ${formatDuration(totalDur)}` : '';
 
     const modelsUsed = output.meta?.models_used || {};
+    const stepDurations = pipelineData?.step_durations_s || {};
 
     const steps = [
       {
@@ -206,6 +228,7 @@ for (const file of readdirSync(topicsDir)) {
         countText: collectRaw != null ? `${collectRaw} raakauutista` : null,
         desc: 'Hakee uutisia määritellyistä lähteistä (Hacker News, RSS).',
         dots: collectRaw,
+        stepKey: 'collect',
       },
       {
         num: 2,
@@ -215,6 +238,7 @@ for (const file of readdirSync(topicsDir)) {
         countText: dedupCount != null ? `${dedupCount} uniikkia ehdokasta` : null,
         desc: 'Normalisoi URL-osoitteet ja yhdistää samat linkit toisiinsa.',
         dots: dedupCount,
+        stepKey: 'dedup',
       },
       {
         num: 3,
@@ -226,6 +250,7 @@ for (const file of readdirSync(topicsDir)) {
           ? `Kielimalli tarkisti uutiset ja pudotti ${filterDropped} aiheen ulkopuolista juttua.`
           : 'Kielimalli tarkistaa jokaisen ehdokkaan ja pudottaa aiheeseen kuulumattomat.',
         dots: filterKept,
+        stepKey: 'filter_topic',
       },
       {
         num: 4,
@@ -235,6 +260,7 @@ for (const file of readdirSync(topicsDir)) {
         countText: clusterCount != null ? `${clusterCount} uutisryhmää` : null,
         desc: 'Kielimalli tunnistaa samasta aiheesta kertovat jutut ja ryhmittelee ne yhteen.',
         dots: clusterCount,
+        stepKey: 'cluster',
       },
       {
         num: 5,
@@ -246,6 +272,7 @@ for (const file of readdirSync(topicsDir)) {
           ? `Kielimalli arvioi ${scoreCandidates} ehdokasta ja valitsi kärkijutut arviointikriteerien perusteella.`
           : 'Kielimalli valitsee ja järjestää uutiset arviointikriteerien perusteella.',
         dots: scoreCutoff || scoreCandidates,
+        stepKey: 'score',
       },
       {
         num: 6,
@@ -255,6 +282,7 @@ for (const file of readdirSync(topicsDir)) {
         countText: enrichSuccess != null ? `${enrichSuccess} noudettu` : null,
         desc: 'Lataa pisteytyksessä valittujen artikkeleiden sivut ja erottaa varsinaisen leipätekstin.',
         dots: enrichSuccess,
+        stepKey: 'enrich',
       },
       {
         num: 7,
@@ -264,6 +292,7 @@ for (const file of readdirSync(topicsDir)) {
         countText: composeWritten != null ? `${composeWritten} tiivistelmää` : null,
         desc: 'Kielimalli kirjoittaa jokaisesta uutisesta otsikon ja suomenkielisen tiivistelmän.',
         dots: composeWritten,
+        stepKey: 'compose',
       },
     ];
 
@@ -273,6 +302,8 @@ for (const file of readdirSync(topicsDir)) {
       const badgeClass = s.llm ? 'badge badge-llm' : 'badge badge-code';
       const badgeText = s.llm ? (s.model ? `Kielimalli · ${s.model}` : 'Kielimalli') : 'Koodi';
       const countHtml = s.countText ? `<span class="step-metric">· ${s.countText}</span>` : '';
+      const stepDur = stepDurations[s.stepKey];
+      const durationHtml = stepDur != null ? `<span class="step-metric">· ${formatDuration(stepDur)}</span>` : '';
       const dotsHtml = s.dots != null ? renderDots(s.dots) : '';
 
       html += `
@@ -281,7 +312,7 @@ for (const file of readdirSync(topicsDir)) {
             <span class="step-num">${s.num}</span>
             <span class="step-name">${s.name}</span>
             <span class="${badgeClass}">${badgeText}</span>
-            ${countHtml}
+            ${countHtml}${durationHtml}
           </div>
           <p class="step-desc">${s.desc}</p>
           ${dotsHtml}
