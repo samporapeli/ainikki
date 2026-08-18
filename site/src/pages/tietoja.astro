@@ -49,58 +49,53 @@ const allSources = [...sourceUsage.entries()]
 
 const topicCount = topics.length;
 
-const steps = [
-  {
-    name: 'Keruu',
-    llm: false,
-    description: 'Hakee uutisia määritellyistä lähteistä (Hacker News, uutissivustojen RSS-syötteet). Suodattaa pois jutut, jotka ovat saaneet vähän pisteitä.',
-  },
-  {
-    name: 'Duplikaattien poisto',
-    llm: false,
-    description: 'Normalisoi URL-osoitteet ja yhdistää samat linkit toisiinsa.',
-  },
-  {
-    name: 'Ryhmittely',
-    llm: true,
-    description: 'Kielimalli tunnistaa samasta asiasta kertovat jutut eri lähteistä ja ryhmittelee ne yhteen.',
-  },
-  {
-    name: 'Aiheen suodatus',
-    llm: true,
-    description: 'Kielimalli tarkistaa jokaisen ehdokkaan ja pudottaa pois ne, jotka eivät liity käsiteltävään aiheeseen.',
-  },
-  {
-    name: 'Pisteytys',
-    llm: true,
-    description: 'Kielimalli valitsee ja järjestää 3–10 uutista arviointikriteerien perusteella. Uutiset, joita on käsitelty viikon sisällä julkaistuissa koosteissa, jätetään pois.',
-  },
-  {
-    name: 'Rikastaminen',
-    llm: false,
-    description: 'Lataa pisteytyksessä valittujen artikkeleiden sivut ja erottaa niistä varsinaisen artikkelitekstin sivun rakenteesta (valikot, mainokset, evästeilmoitukset).',
-  },
-  {
-    name: 'Kirjoitus',
-    llm: true,
-    description: 'Kielimalli kirjoittaa jokaisesta uutisesta otsikon ja suomenkielisen tiivistelmän. Jos rikastaminen tai kirjoitus pudottaa liikaa juttuja, koostetta täydennetään pisteytyksen seuraavaksi parhailla ehdokkailla.',
-  },
-  {
-    name: 'Yleiskuva',
-    llm: true,
-    description: 'Kielimalli kirjoittaa lyhyen yhteenvedon päivän koosteesta.',
-  },
-  {
-    name: 'Validointi',
-    llm: false,
-    description: 'Kokoaa tulokset yhteen ja tarkistaa, että kooste on täydellinen ja julkaisukelpoinen.',
-  },
-  {
-    name: 'Tallennus',
-    llm: false,
-    description: 'Kirjoittaa JSON-tiedoston ja varmistaa sen eheyden lukemalla sen uudelleen.',
-  },
-];
+ const steps = [
+   {
+     name: 'Keruu',
+     llm: false,
+     description: 'Hakee uutisia määritellyistä lähteistä (Hacker News, uutissivustojen RSS-syötteet). Suodattaa pois jutut, jotka ovat saaneet vähän pisteitä.',
+   },
+   {
+     name: 'Duplikaattien poisto',
+     llm: false,
+     description: 'Normalisoi URL-osoitteet ja yhdistää samat linkit toisiinsa.',
+   },
+   {
+     name: 'Aiheen suodatus',
+     llm: true,
+     description: 'Kielimalli tarkistaa jokaisen ehdokkaan ja pudottaa pois ne, jotka eivät liity käsiteltävään aiheeseen.',
+   },
+   {
+     name: 'Ryhmittely',
+     llm: true,
+     description: 'Kielimalli tunnistaa samasta asiasta kertovat jutut eri lähteistä ja ryhmittelee ne yhteen.',
+   },
+   {
+     name: 'Pisteytys',
+     llm: true,
+     description: 'Kielimalli valitsee ja järjestää 3–10 uutista arviointikriteerien perusteella. Uutiset, joita on käsitelty viikon sisällä julkaistuissa koosteissa, jätetään pois.',
+   },
+   {
+     name: 'Rikastaminen',
+     llm: false,
+     description: 'Lataa pisteytyksessä valittujen artikkeleiden sivut ja erottaa niistä varsinaisen artikkelitekstin sivun rakenteesta (valikot, mainokset, evästeilmoitukset).',
+   },
+   {
+     name: 'Kirjoitus',
+     llm: true,
+     description: 'Kielimalli kirjoittaa jokaisesta uutisesta otsikon ja suomenkielisen tiivistelmän. Jos rikastaminen tai kirjoitus pudottaa liikaa juttuja, koostetta täydennetään pisteytyksen seuraavaksi parhailla ehdokkailla.',
+   },
+   {
+     name: 'Yleiskuva',
+     llm: true,
+     description: 'Kielimalli kirjoittaa lyhyen yhteenvedon päivän koosteesta.',
+   },
+   {
+     name: 'Validointi',
+     llm: false,
+     description: 'Kokoaa tulokset yhteen ja tarkistaa, että kooste on täydellinen ja julkaisukelpoinen.',
+   },
+ ];
 ---
 
 <Layout title="Tietoja — Ainikki" description="Miten Ainikki toimii: uutisten keruu, valinta ja koosteen tuottaminen.">

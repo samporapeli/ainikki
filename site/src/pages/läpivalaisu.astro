@@ -71,9 +71,7 @@ for (const file of readdirSync(topicsDir)) {
     const date = p.get('date') || '';
     topicSel.value = topic;
     if (date) dateInput.value = date;
-    const today = new Date().toISOString().split('T')[0];
-    dateInput.max = today;
-    if (!dateInput.value) dateInput.value = today;
+    if (!dateInput.value) dateInput.value = new Date().toISOString().split('T')[0];
     if (topic && date) loadPipeline();
   })();
 
@@ -293,6 +291,16 @@ for (const file of readdirSync(topicsDir)) {
         desc: 'Kielimalli kirjoittaa jokaisesta uutisesta otsikon ja suomenkielisen tiivistelmän.',
         dots: composeWritten,
         stepKey: 'compose',
+      },
+      {
+        num: 8,
+        name: 'Yleiskuva',
+        llm: true,
+        model: modelsUsed['overview'] ? modelsUsed['overview'].split('/').pop() : null,
+        countText: null,
+        desc: 'Kielimalli kirjoittaa lyhyen yhteenvedon päivän koosteesta.',
+        dots: null,
+        stepKey: 'overview',
       },
     ];
 
