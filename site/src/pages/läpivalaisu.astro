@@ -43,7 +43,6 @@ for (const file of readdirSync(topicsDir)) {
     <div id="notice" class="notice" style="display:none"></div>
     <hr />
     <section id="funnel" class="section"></section>
-    <section id="llm-stats" class="section"></section>
     <hr />
     <section id="clusters" class="section"></section>
     <hr />
@@ -138,7 +137,6 @@ for (const file of readdirSync(topicsDir)) {
       const pipe = pipelineData?.steps || {};
       renderBacklink(backlink, outputData, topic, date);
       renderFunnel(document.getElementById('funnel'), pipe, outputData, pipelineData);
-      renderLlmStats(document.getElementById('llm-stats'), pipelineData);
       renderClusters(document.getElementById('clusters'), pipe);
       renderStories(document.getElementById('stories'), outputData);
       renderDropped(document.getElementById('dropped'), outputData);
@@ -192,14 +190,19 @@ for (const file of readdirSync(topicsDir)) {
     if (hours > 0) parts.push(`${hours} t`);
     if (minutes > 0) {
       parts.push(`${minutes} min`);
-      parts.push(`${Math.round(secs)} s`);
+      parts.push(`${secs.toFixed(2).replace(/\./g, ',')} s`);
     } else if (hours > 0) {
-      parts.push(`${Math.round(secs)} s`);
+      parts.push(`${secs.toFixed(2).replace(/\./g, ',')} s`);
     } else {
-      parts.push(secs >= 1 ? `${secs.toFixed(2)} s` : `${secs.toFixed(3)} s`);
+      parts.push(secs >= 1 ? `${secs.toFixed(2).replace(/\./g, ',')} s` : `${secs.toFixed(3).replace(/\./g, ',')} s`);
     }
 
     return parts.join(' ');
+  }
+
+  function formatDecimal(value, decimals) {
+    if (typeof value !== 'number' || value == null) return '';
+    return value.toFixed(decimals).replace(/\./g, ',');
   }
 
   function renderLlmStats(el, pipelineData) {
@@ -227,9 +230,9 @@ for (const file of readdirSync(topicsDir)) {
       return `<tr>
         <td class="stat-step">${escHtml(key)}</td>
         <td class="stat-num">${s.calls || 0} kutsua</td>
-        <td class="stat-num">${promptTokens} syötettä</td>
-        <td class="stat-num">${completionTokens} tuotosta</td>
-        <td class="stat-cost">${(s.total_cost || 0).toFixed(6)} $</td>
+        <td class="stat-num">${promptTokens} tokenia</td>
+        <td class="stat-num">${completionTokens} tokenia</td>
+        <td class="stat-cost">${formatDecimal(s.total_cost || 0, 6)} $</td>
       </tr>`;
     }).join('');
 
@@ -247,7 +250,7 @@ for (const file of readdirSync(topicsDir)) {
         <td class="stat-num">${totalCalls}</td>
         <td class="stat-num">${totalPromptTokens}</td>
         <td class="stat-num">${totalCompletionTokens}</td>
-        <td class="stat-cost">${totalCost.toFixed(6)} $</td>
+        <td class="stat-cost">${formatDecimal(totalCost, 6)} $</td>
       </tr></tfoot>
     </table>`;
     el.innerHTML = html;
@@ -265,10 +268,31 @@ for (const file of readdirSync(topicsDir)) {
     const composeWritten = pipe.compose?.n_written || output.items?.length;
 
     const totalDur = pipelineData?.total_duration_s;
-    const durText = totalDur != null ? ` · Kesto ${formatDuration(totalDur)}` : '';
 
     const modelsUsed = output.meta?.models_used || {};
     const stepDurations = pipelineData?.step_durations_s || {};
+    const llmStats = pipelineData?.llm_stats || {};
+
+    // Summary totals
+    let totalCalls = 0;
+    let totalPromptTokens = 0;
+    let totalCompletionTokens = 0;
+    let totalCost = 0;
+    for (const key of Object.keys(llmStats)) {
+      const s = llmStats[key];
+      totalCalls += s.calls || 0;
+      totalPromptTokens += s.total_prompt_tokens || 0;
+      totalCompletionTokens += s.total_completion_tokens || 0;
+      totalCost += s.total_cost || 0;
+    }
+    const summaryHtml = totalCalls > 0 || totalDur != null ? `<div class="funnel-summary">
+      <ul>
+        ${totalDur != null ? `<li><strong>${formatDuration(totalDur)}</strong></li>` : ''}
+        <li><strong>${totalCalls}</strong> LLM-${totalCalls === 1 ? 'kutsu' : 'kutsua'}</li>
+        <li><strong>${totalPromptTokens + totalCompletionTokens}</strong> tokenia (${totalPromptTokens} sisään, ${totalCompletionTokens} ulos)</li>
+        <li><strong>${formatDecimal(totalCost, 6)} $</strong></li>
+      </ul>
+    </div>` : '';
 
     const steps = [
       {
@@ -355,16 +379,43 @@ for (const file of readdirSync(topicsDir)) {
         dots: null,
         stepKey: 'overview',
       },
+      {
+        num: 9,
+        name: 'Validointi',
+        llm: false,
+        model: null,
+        countText: null,
+        desc: 'Varmistaa, että kooste on rakenteeltaan kelvollinen ennen julkaisua.',
+        dots: null,
+        stepKey: 'validate',
+      },
     ];
 
-    let html = `<h2>Prosessi${durText}</h2><div class="flow">`;
+    let html = `<h2>Prosessi</h2>${summaryHtml}<div class="flow">`;
     for (const s of steps) {
       const llmClass = s.llm ? 'llm' : 'code';
       const badgeClass = s.llm ? 'badge badge-llm' : 'badge badge-code';
       const badgeText = s.llm ? (s.model ? `Kielimalli · ${s.model}` : 'Kielimalli') : 'Koodi';
-      const countHtml = s.countText ? `<span class="step-metric">· ${s.countText}</span>` : '';
       const stepDur = stepDurations[s.stepKey];
-      const durationHtml = stepDur != null ? `<span class="step-metric">· ${formatDuration(stepDur)}</span>` : '';
+
+      // Build common stats list (count + duration for all steps, LLM stats for LLM steps)
+      const statsItems = [];
+      if (s.countText) statsItems.push(`<li>${s.countText}</li>`);
+      if (stepDur != null) statsItems.push(`<li>${formatDuration(stepDur)}</li>`);
+      if (s.llm && llmStats[s.stepKey]) {
+        const st = llmStats[s.stepKey];
+        const calls = st.calls || 0;
+        const promptTokens = st.total_prompt_tokens || 0;
+        const completionTokens = st.total_completion_tokens || 0;
+        const cost = st.total_cost || 0;
+        statsItems.push(`<li>${calls} LLM-${calls === 1 ? 'kutsu' : 'kutsua'}</li>`);
+        statsItems.push(`<li>${promptTokens} tokenia sisään, ${completionTokens} ulos</li>`);
+        statsItems.push(`<li>${formatDecimal(cost, 6)} $</li>`);
+      }
+      const statsHtml = statsItems.length > 0
+        ? `<ul class="step-stats">${statsItems.join('')}</ul>`
+        : '';
+
       const dotsHtml = s.dots != null ? renderDots(s.dots) : '';
 
       html += `
@@ -373,9 +424,9 @@ for (const file of readdirSync(topicsDir)) {
             <span class="step-num">${s.num}</span>
             <span class="step-name">${s.name}</span>
             <span class="${badgeClass}">${badgeText}</span>
-            ${countHtml}${durationHtml}
           </div>
           <p class="step-desc">${s.desc}</p>
+          ${statsHtml}
           ${dotsHtml}
         </div>`;
     }
@@ -645,6 +696,33 @@ for (const file of readdirSync(topicsDir)) {
     padding-left: 2rem;
   }
 
+  .step-stats {
+    margin: 0.25rem 0 0 0;
+    padding: 0 0 0 2rem;
+    list-style: disc;
+    list-style-position: inside;
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+  }
+
+  .funnel-summary {
+    margin-bottom: 1rem;
+  }
+
+  .funnel-summary ul {
+    margin: 0;
+    padding: 0 0 0 2rem;
+    list-style: disc;
+    list-style-position: inside;
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+  }
+
+  .funnel-summary li strong {
+    color: var(--fg);
+    font-weight: 600;
+  }
+
   /* One-dot-per-story visualization */
   .dot-matrix {
     display: flex;
@@ -847,55 +925,5 @@ for (const file of readdirSync(topicsDir)) {
 
   .warnings li {
     margin-bottom: 0.35rem;
-  }
-
-  /* LLM stats table */
-  .llm-stats-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-  }
-
-  .llm-stats-table th,
-  .llm-stats-table td {
-    padding: 0.5rem 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .llm-stats-table th {
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--fg-muted);
-    font-weight: 600;
-  }
-
-  .llm-stats-table td {
-    color: var(--fg-subtle);
-  }
-
-  .llm-stats-table .stat-step {
-    font-weight: 500;
-    color: var(--fg);
-  }
-
-  .llm-stats-table .stat-num {
-    font-variant-numeric: tabular-nums;
-  }
-
-  .llm-stats-table .stat-cost {
-    font-variant-numeric: tabular-nums;
-    color: var(--fg-muted);
-  }
-
-  .llm-stats-table tfoot td {
-    font-weight: 600;
-    color: var(--fg);
-    border-bottom: 2px solid var(--border);
-  }
-
-  .llm-stats-table .stat-total {
-    color: var(--fg);
   }
 </style>

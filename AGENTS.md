@@ -25,6 +25,7 @@
 
 - **Finnish**: site pages, LLM prompts, config files (rubrics, personas, guardrails, golden examples), and any text the LLM writes (summaries, headlines, overviews)
 - **English**: code, code comments, README, ROADMAP, AGENTS.md, commit messages, test descriptions
+- Finnish decimal comma convention: use `,` as decimal separator in all Finnish-facing output (e.g. `21,28 s`, `0,000142 $`). Use `.` only in code/JSON.
 
 ## Refactoring
 
