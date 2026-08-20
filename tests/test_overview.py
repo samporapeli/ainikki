@@ -1,4 +1,5 @@
 import json
+from typing import Tuple
 
 from agent.overview import build_overview_prompt, generate_overview
 from agent.schema import NewsItem, Source, SourceType
@@ -29,9 +30,9 @@ def test_generate_overview_happy_path():
     items = [_make_news_item("Juttu A", "Kuvaus A.", rank=1),
              _make_news_item("Juttu B", "Kuvaus B.", rank=2)]
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         return json.dumps({"overview": "Päivän isoin aihe oli uusi mallijulkaisu.",
-                           "digest_topic": "Uusi mallijulkaisu puhuttaa"})
+                           "digest_topic": "Uusi mallijulkaisu puhuttaa"}), {"prompt_tokens": 50, "completion_tokens": 30, "total_tokens": 80, "cost": 0.0001}
 
     result = generate_overview(items, mock_llm, "testi-aihe")
     assert result.overview == "Päivän isoin aihe oli uusi mallijulkaisu."
@@ -44,7 +45,7 @@ def test_generate_overview_fallback_on_malformed_response():
              _make_news_item("Juttu B", "Kuvaus B.", rank=2),
              _make_news_item("Juttu C", "Kuvaus C.", rank=3)]
 
-    result = generate_overview(items, lambda s, u: "ei json:ia ollenkaan", "testi-aihe")
+    result = generate_overview(items, lambda s, u: ("ei json:ia ollenkaan", {}), "testi-aihe")
 
     assert result.warning is not None
     assert "fallback" in result.warning
@@ -57,10 +58,10 @@ def test_generate_overview_fallback_on_malformed_response():
 def test_generate_overview_empty_items_skips_llm_call():
     call_count = {"n": 0}
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         call_count["n"] += 1
         return json.dumps({"overview": "ei pitäisi tulla tänne",
-                           "digest_topic": "ei pitäisi"})
+                           "digest_topic": "ei pitäisi"}), {}
 
     result = generate_overview([], mock_llm, "testi-aihe")
 
@@ -77,7 +78,7 @@ def test_fallback_respects_rank_order_not_list_order():
         _make_news_item("Ensimmäinen", "...", rank=1),
         _make_news_item("Toinen", "...", rank=2),
     ]
-    result = generate_overview(items, lambda s, u: "rikki", "testi-aihe")
+    result = generate_overview(items, lambda s, u: ("rikki", {}), "testi-aihe")
     idx_first = result.overview.index("Ensimmäinen")
     idx_second = result.overview.index("Toinen")
     idx_third = result.overview.index("Kolmas")
@@ -88,10 +89,10 @@ def test_code_fenced_json_is_parsed():
     """Verifies that model responses wrapped in code fences are cleaned up."""
     items = [_make_news_item("Juttu A", "Kuvaus A.", rank=1)]
 
-    def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         inner = json.dumps({"overview": "Koodiblokki-yleiskatsaus.",
                             "digest_topic": "Koodiblokin aihe"})
-        return f"```json\n{inner}\n```"
+        return f"```json\n{inner}\n```", {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15, "cost": 0.00001}
 
     result = generate_overview(items, mock_llm_code_fence, "testi-aihe")
     assert result.overview == "Koodiblokki-yleiskatsaus."

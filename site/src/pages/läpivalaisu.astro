@@ -43,6 +43,7 @@ for (const file of readdirSync(topicsDir)) {
     <div id="notice" class="notice" style="display:none"></div>
     <hr />
     <section id="funnel" class="section"></section>
+    <section id="llm-stats" class="section"></section>
     <hr />
     <section id="clusters" class="section"></section>
     <hr />
@@ -137,6 +138,7 @@ for (const file of readdirSync(topicsDir)) {
       const pipe = pipelineData?.steps || {};
       renderBacklink(backlink, outputData, topic, date);
       renderFunnel(document.getElementById('funnel'), pipe, outputData, pipelineData);
+      renderLlmStats(document.getElementById('llm-stats'), pipelineData);
       renderClusters(document.getElementById('clusters'), pipe);
       renderStories(document.getElementById('stories'), outputData);
       renderDropped(document.getElementById('dropped'), outputData);
@@ -198,6 +200,57 @@ for (const file of readdirSync(topicsDir)) {
     }
 
     return parts.join(' ');
+  }
+
+  function renderLlmStats(el, pipelineData) {
+    const stats = pipelineData?.llm_stats;
+    if (!stats || Object.keys(stats).length === 0) {
+      el.style.display = 'none';
+      return;
+    }
+    el.style.display = 'block';
+
+    const stepKeys = Object.keys(stats);
+    let totalCalls = 0;
+    let totalPromptTokens = 0;
+    let totalCompletionTokens = 0;
+    let totalCost = 0;
+
+    const rows = stepKeys.map(key => {
+      const s = stats[key];
+      const promptTokens = s.total_prompt_tokens || 0;
+      const completionTokens = s.total_completion_tokens || 0;
+      totalCalls += s.calls || 0;
+      totalPromptTokens += promptTokens;
+      totalCompletionTokens += completionTokens;
+      totalCost += s.total_cost || 0;
+      return `<tr>
+        <td class="stat-step">${escHtml(key)}</td>
+        <td class="stat-num">${s.calls || 0} kutsua</td>
+        <td class="stat-num">${promptTokens} syötettä</td>
+        <td class="stat-num">${completionTokens} tuotosta</td>
+        <td class="stat-cost">${(s.total_cost || 0).toFixed(6)} $</td>
+      </tr>`;
+    }).join('');
+
+    let html = `<h2>Kielimallin käyttö</h2><table class="llm-stats-table">
+      <thead><tr>
+        <th>Vaihe</th>
+        <th>Kutsut</th>
+        <th>Syöte</th>
+        <th>Tuotos</th>
+        <th>Kustannus</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr>
+        <td class="stat-total">Yhteensä</td>
+        <td class="stat-num">${totalCalls}</td>
+        <td class="stat-num">${totalPromptTokens}</td>
+        <td class="stat-num">${totalCompletionTokens}</td>
+        <td class="stat-cost">${totalCost.toFixed(6)} $</td>
+      </tr></tfoot>
+    </table>`;
+    el.innerHTML = html;
   }
 
   function renderFunnel(el, pipe, output, pipelineData) {
@@ -794,5 +847,55 @@ for (const file of readdirSync(topicsDir)) {
 
   .warnings li {
     margin-bottom: 0.35rem;
+  }
+
+  /* LLM stats table */
+  .llm-stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .llm-stats-table th,
+  .llm-stats-table td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .llm-stats-table th {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--fg-muted);
+    font-weight: 600;
+  }
+
+  .llm-stats-table td {
+    color: var(--fg-subtle);
+  }
+
+  .llm-stats-table .stat-step {
+    font-weight: 500;
+    color: var(--fg);
+  }
+
+  .llm-stats-table .stat-num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .llm-stats-table .stat-cost {
+    font-variant-numeric: tabular-nums;
+    color: var(--fg-muted);
+  }
+
+  .llm-stats-table tfoot td {
+    font-weight: 600;
+    color: var(--fg);
+    border-bottom: 2px solid var(--border);
+  }
+
+  .llm-stats-table .stat-total {
+    color: var(--fg);
   }
 </style>

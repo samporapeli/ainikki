@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Tuple
 
 from agent.cluster import cluster_candidates, build_cluster_prompt
 from agent.dedup import dedup_candidates
@@ -30,7 +31,7 @@ def _build_test_candidates() -> list[Candidate]:
     return dedup_candidates(hn_items + [techcrunch_item])
 
 
-def _mock_llm_group_anthropic_stories(system_prompt: str, user_prompt: str) -> str:
+def _mock_llm_group_anthropic_stories(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
     """Simulates model response: finds the Anthropic and TechCrunch lines
     in the prompt and groups them, rest become singletons."""
     lines = user_prompt.splitlines()[1:]  # skip "Candidates:" header line
@@ -44,7 +45,7 @@ def _mock_llm_group_anthropic_stories(system_prompt: str, user_prompt: str) -> s
     for idx in remaining:
         clusters.append({"candidate_indices": [idx], "primary_index": 0, "reason": None})
 
-    return json.dumps({"clusters": clusters})
+    return json.dumps({"clusters": clusters}), {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150, "cost": 0.0001}
 
 
 def test_cross_url_clustering():
@@ -72,7 +73,7 @@ def test_singletons_preserved():
 
 def test_fallback_on_malformed_json():
     candidates = _build_test_candidates()
-    result = cluster_candidates(candidates, lambda s, u: "tämä ei ole JSON:ia ollenkaan")
+    result = cluster_candidates(candidates, lambda s, u: ("tämä ei ole JSON:ia ollenkaan", {}))
     assert len(result.clusters) == len(candidates), "fallback should have the same number of groups as candidates"
     assert all(c.cluster_reason and "fallback" in c.cluster_reason for c in result.clusters)
     assert result.warning is not None, "fallback must NOT be silent - warning must be returned"
@@ -83,10 +84,10 @@ def test_recovery_on_incomplete_coverage():
     """Model forgot some candidates — recovered as singletons, no warning."""
     candidates = _build_test_candidates()
 
-    def partial_response(system_prompt: str, user_prompt: str) -> str:
+    def partial_response(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         # only first 5 candidates mentioned out of 9
         clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(5)]
-        return json.dumps({"clusters": clusters})
+        return json.dumps({"clusters": clusters}), {"prompt_tokens": 50, "completion_tokens": 25, "total_tokens": 75, "cost": 0.00005}
 
     result = cluster_candidates(candidates, partial_response)
     assert len(result.clusters) == len(candidates)
@@ -110,11 +111,11 @@ def test_code_fenced_json_is_parsed():
     """Verifies that model responses wrapped in code fences are cleaned up."""
     candidates = _build_test_candidates()
 
-    def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None}
                     for i in range(len(candidates))]
         inner = json.dumps({"clusters": clusters})
-        return f"```json\n{inner}\n```"
+        return f"```json\n{inner}\n```", {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15, "cost": 0.00001}
 
     result = cluster_candidates(candidates, mock_llm_code_fence)
     assert result.warning is None

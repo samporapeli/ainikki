@@ -46,16 +46,21 @@ def test_openai_compatible_request_and_parse():
         captured["url"] = str(request.url)
         captured["body"] = json.loads(request.content)
         return httpx.Response(200, json={
-            "choices": [{"message": {"content": "moi maailma"}}]
+            "choices": [{"message": {"content": "moi maailma"}}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15, "cost": 0.0001},
         })
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
-    result = _post_openai_compatible(
+    result, usage = _post_openai_compatible(
         "https://openrouter.ai/api/v1", "fake-key", "openai/gpt-4o-mini",
         "system-ohje", "käyttäjän kysymys", client,
     )
 
     assert result == "moi maailma"
+    assert usage["prompt_tokens"] == 10
+    assert usage["completion_tokens"] == 5
+    assert usage["total_tokens"] == 15
+    assert usage["cost"] == 0.0001
     assert captured["url"] == "https://openrouter.ai/api/v1/chat/completions"
     assert captured["body"]["model"] == "openai/gpt-4o-mini"
     assert captured["body"]["messages"][0]["role"] == "system"
@@ -69,11 +74,12 @@ def test_openai_compatible_no_json_format_when_disabled():
     def handler(request: httpx.Request) -> httpx.Response:
         captured["body"] = json.loads(request.content)
         return httpx.Response(200, json={
-            "choices": [{"message": {"content": "vapaa teksti"}}]
+            "choices": [{"message": {"content": "vapaa teksti"}}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 3, "total_tokens": 8, "cost": 0.00005},
         })
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
-    result = _post_openai_compatible(
+    result, usage = _post_openai_compatible(
         "https://openrouter.ai/api/v1", "fake-key", "openai/gpt-4o-mini",
         "system-ohje", "käyttäjän kysymys", client,
         expect_json=False,
@@ -81,6 +87,7 @@ def test_openai_compatible_no_json_format_when_disabled():
 
     assert result == "vapaa teksti"
     assert "response_format" not in captured["body"]
+    assert usage["total_tokens"] == 8
 
 
 def test_make_llm_call_end_to_end_with_cluster():
@@ -95,7 +102,10 @@ def test_make_llm_call_end_to_end_with_cluster():
         # don't cluster anything together in this test - all become singletons
         clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(8)]
         content = json.dumps({"clusters": clusters})
-        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": content}}],
+            "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150, "cost": 0.0002},
+        })
 
     mock_client = httpx.Client(transport=httpx.MockTransport(handler))
     llm_call = make_llm_call("cluster", config_path=FIXTURE_CONFIG, client=mock_client)

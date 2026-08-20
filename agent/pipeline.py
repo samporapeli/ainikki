@@ -91,16 +91,41 @@ def _load_sources_config(config_paths: ConfigPaths) -> list[dict]:
 
 
 def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
-                       overrides: dict[str, tuple[str | None, str | None]],
-                       client: httpx.Client | None, models_used_out: dict[str, str]):
+                      overrides: dict[str, tuple[str | None, str | None]],
+                      client: httpx.Client | None, models_used_out: dict[str, str],
+                      llm_stats_out: dict[str, dict]):
     """Builds an LlmCall function for a step AND records which model was actually
-    used into models_used_out dict (for GenerationMeta traceability)."""
+    used into models_used_out dict (for GenerationMeta traceability).
+    
+    Also accumulates LLM usage stats into llm_stats_out dict.
+    """
     provider_override, model_override = overrides.get(step, (None, None))
     cfg = resolve_step_config(step, models_config, model_override, provider_override)
     models_used_out[step] = f"{cfg.provider}/{cfg.model}"
-    return make_llm_call(step, config_path=config_paths.models,
-                          override_model=model_override, override_provider=provider_override,
-                          client=client)
+    
+    llm_fn = make_llm_call(step, config_path=config_paths.models,
+                           override_model=model_override, override_provider=provider_override,
+                           client=client)
+    
+    # Wrap the LLM call to accumulate stats
+    step_stats = {"calls": 0, "total_prompt_tokens": 0, "total_completion_tokens": 0,
+                  "total_tokens": 0, "total_cost": 0.0}
+    
+    def _tracked_call(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
+        content, usage = llm_fn(system_prompt, user_prompt)
+        prompt_tokens = usage.get("prompt_tokens", 0) or 0
+        completion_tokens = usage.get("completion_tokens", 0) or 0
+        total_tokens = usage.get("total_tokens", 0) or 0
+        cost = usage.get("cost", 0) or 0
+        step_stats["calls"] += 1
+        step_stats["total_prompt_tokens"] += prompt_tokens
+        step_stats["total_completion_tokens"] += completion_tokens
+        step_stats["total_tokens"] += total_tokens
+        step_stats["total_cost"] += cost
+        return content, usage
+    
+    llm_stats_out[step] = step_stats
+    return _tracked_call
 
 
 def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
@@ -161,12 +186,13 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
 
     models_config = load_models_config(config_paths.models)
     models_used: dict[str, str] = {}
+    llm_stats: dict[str, dict] = {}
     rubric = load_rubric(config_paths.rubric)
 
     # 3. Filter by topic relevance
     t0 = perf_counter()
     llm_filter = _resolve_llm_call("filter_topic", models_config, config_paths, model_overrides,
-                                    llm_client, models_used)
+                                    llm_client, models_used, llm_stats)
     topic_description = rubric.get("topic_description", topic)
     filter_result = filter_topic(candidates, topic_description, llm_filter)
     if filter_result.warning:
@@ -178,7 +204,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     # 4. Cluster
     t0 = perf_counter()
     llm_cluster = _resolve_llm_call("cluster", models_config, config_paths, model_overrides,
-                                     llm_client, models_used)
+                                     llm_client, models_used, llm_stats)
     cluster_result = cluster_candidates(filter_result.candidates, llm_cluster)
     if cluster_result.warning:
         all_warnings.append(cluster_result.warning)
@@ -188,7 +214,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     # 5. Score (CRITICAL - no fallback, ScoreValidationError crashes the entire run)
     t0 = perf_counter()
     llm_score = _resolve_llm_call("score", models_config, config_paths, model_overrides,
-                                   llm_client, models_used)
+                                   llm_client, models_used, llm_stats)
     min_items = rubric["items_per_briefing"]["min"]
     previous_stories = load_previous_stories(topic, since.date(), output_dir=out_dir)
     clusters_before = len(cluster_result.clusters)
@@ -224,7 +250,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
 
         t0_compose = perf_counter()
         llm_compose = _resolve_llm_call("compose", models_config, config_paths, model_overrides,
-                                         llm_client, models_used)
+                                         llm_client, models_used, llm_stats)
         compose_result = compose_items(enrich_result.items, config_paths.persona,
                                         config_paths.guardrails, llm_compose,
                                         topic=topic,
@@ -258,7 +284,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     # 7. Overview
     t0 = perf_counter()
     llm_overview = _resolve_llm_call("overview", models_config, config_paths, model_overrides,
-                                      llm_client, models_used)
+                                      llm_client, models_used, llm_stats)
     overview_result = generate_overview(compose_result.items, llm_overview, topic)
     step_durations["overview"] = round(perf_counter() - t0, 2)
 
@@ -275,6 +301,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
         dropped_stories=dropped_stories,
         extra_warnings=all_warnings,
         duration_seconds=total_duration,
+        llm_stats=llm_stats,
     )
 
     # 9. Write pipeline debug data
@@ -288,6 +315,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
         "period_end": (until - timedelta(seconds=1)).date().isoformat(),
         "total_duration_s": total_duration,
         "step_durations_s": step_durations,
+        "llm_stats": llm_stats,
         "steps": {
             "collect": {
                 "total_raw": len(raw_items),

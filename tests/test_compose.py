@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Tuple
 
 from agent.compose import (
     build_compose_system_prompt, compose_items,
@@ -48,12 +49,12 @@ def test_compose_items_happy_path():
         _make_enriched("Tutkimuspaperi ilmestyi", "Tutkijat osoittivat että...", rank=2),
     ]
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         if "Uusi malli" in user_prompt:
             return json.dumps({"headline": "Yhtiö julkaisi uuden mallin",
-                                "summary": "Malli tuo parannuksia aiempaan verrattuna."})
+                                "summary": "Malli tuo parannuksia aiempaan verrattuna."}), {"prompt_tokens": 50, "completion_tokens": 30, "total_tokens": 80, "cost": 0.0001}
         return json.dumps({"headline": "Uusi tutkimus haastaa aiemman käsityksen",
-                            "summary": "Tutkijat löysivät yllättävän tuloksen."})
+                            "summary": "Tutkijat löysivät yllättävän tuloksen."}), {"prompt_tokens": 50, "completion_tokens": 30, "total_tokens": 80, "cost": 0.0001}
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
@@ -79,10 +80,10 @@ def test_partial_failure_drops_only_bad_item():
         _make_enriched("Rikkinäinen vastaus", "Sisältö...", rank=2),
     ]
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         if "Toimiva" in user_prompt:
-            return json.dumps({"headline": "Toimiva otsikko", "summary": "Toimiva yhteenveto."})
-        return "tämä ei ole JSON:ia"
+            return json.dumps({"headline": "Toimiva otsikko", "summary": "Toimiva yhteenveto."}), {}
+        return "tämä ei ole JSON:ia", {}
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
@@ -97,8 +98,8 @@ def test_partial_failure_drops_only_bad_item():
 def test_empty_headline_is_rejected():
     items = [_make_enriched("Juttu", "Sisältö...", rank=1)]
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
-        return json.dumps({"headline": "   ", "summary": "Jotain tekstiä."})
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
+        return json.dumps({"headline": "   ", "summary": "Jotain tekstiä."}), {}
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
@@ -112,9 +113,9 @@ def test_code_fenced_json_is_parsed():
     """Verifies that model responses wrapped in code fences are cleaned up."""
     items = [_make_enriched("Artikkeli", "Sisältö...", rank=1)]
 
-    def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         inner = json.dumps({"headline": "Koodiblokkiotsikko", "summary": "Koodiblokkikuvailu."})
-        return f"```json\n{inner}\n```"
+        return f"```json\n{inner}\n```", {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15, "cost": 0.00001}
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm_code_fence,
                             topic="test",
@@ -128,12 +129,12 @@ def test_compose_retries_on_empty_response():
     items = [_make_enriched("Juttu", "Sisältö...", rank=1)]
     call_count = 0
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         nonlocal call_count
         call_count += 1
         if call_count == 1:
-            return ""
-        return json.dumps({"headline": "Toistettu otsikko", "summary": "Toistettu yhteenveto."})
+            return "", {}
+        return json.dumps({"headline": "Toistettu otsikko", "summary": "Toistettu yhteenveto."}), {}
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
@@ -148,10 +149,10 @@ def test_compose_gives_up_after_retry():
     items = [_make_enriched("Juttu", "Sisältö...", rank=1)]
     call_count = 0
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         nonlocal call_count
         call_count += 1
-        return ""
+        return "", {}
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
@@ -168,12 +169,12 @@ def test_compose_retries_on_empty_code_fence():
     items = [_make_enriched("Juttu", "Sisältö...", rank=1)]
     call_count = 0
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         nonlocal call_count
         call_count += 1
         if call_count == 1:
-            return "```json\n\n```"
-        return json.dumps({"headline": "Toistettu otsikko", "summary": "Toistettu yhteenveto."})
+            return "```json\n\n```", {}
+        return json.dumps({"headline": "Toistettu otsikko", "summary": "Toistettu yhteenveto."}), {}
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",

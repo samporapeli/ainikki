@@ -119,6 +119,9 @@ class GenerationMeta(BaseModel):
     rubric_version: str
     guardrails_version: str
     golden_examples_version: str
+    llm_stats: dict[str, dict] = Field(default_factory=dict)
+    # Per-step LLM usage stats: {step_name: {calls, total_prompt_tokens,
+    # total_completion_tokens, total_tokens, total_cost}}
 
 
 class Briefing(BaseModel):

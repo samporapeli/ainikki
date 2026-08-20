@@ -26,8 +26,10 @@ logger = logging.getLogger(__name__)
 
 
 class LlmCall(Protocol):
-    def __call__(self, system_prompt: str, user_prompt: str) -> str:
-        """Returns the model's raw response as text (expects JSON)."""
+    def __call__(self, system_prompt: str, user_prompt: str) -> tuple[str, dict]:
+        """Returns (model response text, usage dict).
+        Usage dict has keys: prompt_tokens, completion_tokens, total_tokens, cost.
+        """
         ...
 
 
@@ -150,7 +152,7 @@ def cluster_candidates(candidates: list[Candidate], llm_call: LlmCall) -> Cluste
         return ClusterResult(clusters=[], warning=None)
 
     system_prompt, user_prompt = build_cluster_prompt(candidates)
-    raw_response = llm_call(system_prompt, user_prompt)
+    raw_response, _usage = llm_call(system_prompt, user_prompt)
 
     try:
         parsed = json.loads(strip_code_fences(raw_response))

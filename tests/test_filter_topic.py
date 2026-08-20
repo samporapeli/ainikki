@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timezone
+from typing import Tuple
 
 from agent.filter_topic import filter_topic, build_filter_prompt
 from agent.schema import Candidate, RawItem, SourceType
@@ -25,12 +26,12 @@ def test_filters_out_non_ai():
         _make_candidate("Robottipysäköinti lentoasemalla"),
     ]
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         return json.dumps({"results": [
             {"index": 0, "keep": True},
             {"index": 1, "keep": False},
             {"index": 2, "keep": False},
-        ]})
+        ]}), {"prompt_tokens": 50, "completion_tokens": 25, "total_tokens": 75, "cost": 0.00005}
 
     result = filter_topic(candidates, "tekoäly ja koneoppiminen", mock_llm)
     assert result.n_kept == 1
@@ -46,11 +47,11 @@ def test_keeps_all_when_all_relevant():
         _make_candidate("Claude 5 arvosteltu"),
     ]
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         return json.dumps({"results": [
             {"index": 0, "keep": True},
             {"index": 1, "keep": True},
-        ]})
+        ]}), {"prompt_tokens": 50, "completion_tokens": 25, "total_tokens": 75, "cost": 0.00005}
 
     result = filter_topic(candidates, "tekoäly", mock_llm)
     assert result.n_kept == 2
@@ -65,11 +66,11 @@ def test_fallback_when_all_dropped():
         _make_candidate("Claude 5 arvosteltu"),
     ]
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         return json.dumps({"results": [
             {"index": 0, "keep": False},
             {"index": 1, "keep": False},
-        ]})
+        ]}), {"prompt_tokens": 50, "completion_tokens": 25, "total_tokens": 75, "cost": 0.00005}
 
     result = filter_topic(candidates, "tekoäly", mock_llm)
     assert result.n_kept == 2
@@ -80,14 +81,14 @@ def test_fallback_when_all_dropped():
 
 def test_fallback_on_malformed_json():
     candidates = [_make_candidate("GPT-5 julkaistu")]
-    result = filter_topic(candidates, "tekoäly", lambda s, u: "ei ole JSON:ia")
+    result = filter_topic(candidates, "tekoäly", lambda s, u: ("ei ole JSON:ia", {}))
     assert result.n_kept == 1
     assert result.warning is not None
     assert "degraded" in result.warning.lower()
 
 
 def test_empty_input():
-    result = filter_topic([], "tekoäly", lambda s, u: "")
+    result = filter_topic([], "tekoäly", lambda s, u: ("", {}))
     assert result.n_kept == 0
     assert result.warning is None
 
@@ -102,9 +103,9 @@ def test_prompt_stays_lightweight():
 def test_code_fenced_json_is_parsed():
     candidates = [_make_candidate("GPT-5 julkaistu")]
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         inner = json.dumps({"results": [{"index": 0, "keep": True}]})
-        return f"```json\n{inner}\n```"
+        return f"```json\n{inner}\n```", {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15, "cost": 0.00001}
 
     result = filter_topic(candidates, "tekoäly", mock_llm)
     assert result.n_kept == 1

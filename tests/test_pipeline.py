@@ -61,8 +61,12 @@ def _make_llm_handler(score_min=3, score_max=10):
             raise AssertionError(f"unrecognized system prompt: {system_prompt[:100]}")
 
         if is_anthropic:
-            return httpx.Response(200, json={"content": [{"type": "text", "text": content}]})
-        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
+            return httpx.Response(200, json={"content": [{"type": "text", "text": content}]},
+                                   headers={"x-request-id": "test"})
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": content}}],
+            "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150, "cost": 0.0002},
+        })
 
     return handler
 
@@ -125,8 +129,12 @@ def test_pipeline_raises_on_critical_score_failure(tmp_path):
             content = "{}"
 
         if is_anthropic:
-            return httpx.Response(200, json={"content": [{"type": "text", "text": content}]})
-        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
+            return httpx.Response(200, json={"content": [{"type": "text", "text": content}]},
+                                   headers={"x-request-id": "test"})
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": content}}],
+            "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150, "cost": 0.0002},
+        })
 
     llm_client = httpx.Client(transport=httpx.MockTransport(broken_score_handler))
     since = datetime(2026, 7, 16, tzinfo=timezone.utc)
@@ -153,7 +161,10 @@ def test_pipeline_raises_on_empty_collect(tmp_path):
     until = since + timedelta(days=1)
 
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps({"clusters": []})}}]})
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": json.dumps({"clusters": []})}}],
+            "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150, "cost": 0.0002},
+        })
 
     llm_client = httpx.Client(transport=httpx.MockTransport(handler))
 

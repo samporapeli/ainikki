@@ -74,7 +74,7 @@ def filter_topic(candidates: list[Candidate],
         return FilterResult(candidates=[], n_kept=0, n_dropped=0, warning=None)
 
     system_prompt, user_prompt = build_filter_prompt(candidates, topic_description)
-    raw_response = llm_call(system_prompt, user_prompt)
+    raw_response, _usage = llm_call(system_prompt, user_prompt)
 
     try:
         parsed = json.loads(strip_code_fences(raw_response))

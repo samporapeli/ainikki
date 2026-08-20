@@ -211,8 +211,8 @@ def _validate_response(response: ScoreResponse, n_candidates: int, min_items: in
 
 
 def score_clusters(clusters: list[ClusteredCandidate], rubric_path: Path,
-                    llm_call: LlmCall,
-                    previous_stories: list[dict] | None = None) -> ScoreResult:
+                   llm_call: LlmCall,
+                   previous_stories: list[dict] | None = None) -> ScoreResult:
     if not clusters:
         return ScoreResult(scored=[], cutoff_rank=0)
 
@@ -221,7 +221,7 @@ def score_clusters(clusters: list[ClusteredCandidate], rubric_path: Path,
     max_items = rubric["items_per_briefing"]["max"]
 
     system_prompt, user_prompt = build_score_prompt(clusters, rubric, previous_stories)
-    raw_response = llm_call(system_prompt, user_prompt)
+    raw_response, _usage = llm_call(system_prompt, user_prompt)
 
     try:
         parsed = json.loads(strip_code_fences(raw_response))

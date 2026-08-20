@@ -20,12 +20,13 @@ class EmptyBriefingError(Exception):
 
 
 def assemble_briefing(topic: str, period: Period, period_start: date, period_end: date,
-                       overview_result: OverviewResult, compose_result: ComposeResult,
-                       models_used: dict[str, str], pipeline_version: str,
-                       rubric_version: str, display_date: date | None = None,
-                       dropped_stories: list[DroppedStory] | None = None,
-                       extra_warnings: list[str] | None = None,
-                       duration_seconds: float | None = None) -> Briefing:
+                      overview_result: OverviewResult, compose_result: ComposeResult,
+                      models_used: dict[str, str], pipeline_version: str,
+                      rubric_version: str, display_date: date | None = None,
+                      dropped_stories: list[DroppedStory] | None = None,
+                      extra_warnings: list[str] | None = None,
+                      duration_seconds: float | None = None,
+                      llm_stats: dict[str, dict] | None = None) -> Briefing:
     if not compose_result.items:
         raise EmptyBriefingError(
             f"No validated items remaining for topic '{topic}' "
@@ -45,6 +46,7 @@ def assemble_briefing(topic: str, period: Period, period_start: date, period_end
         rubric_version=rubric_version,
         guardrails_version=compose_result.guardrails_version,
         golden_examples_version=compose_result.golden_examples_version,
+        llm_stats=llm_stats or {},
     )
 
     effective_dd = display_date or period_start

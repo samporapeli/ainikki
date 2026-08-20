@@ -103,7 +103,7 @@ def generate_overview(items: list[NewsItem], llm_call: LlmCall,
                                digest_topic="", warning=None)
 
     system_prompt, user_prompt = build_overview_prompt(items, topic)
-    raw_response = llm_call(system_prompt, user_prompt)
+    raw_response, _usage = llm_call(system_prompt, user_prompt)
 
     try:
         parsed = json.loads(strip_code_fences(raw_response))

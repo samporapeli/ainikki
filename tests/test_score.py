@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import Tuple
 
 import pytest
 
@@ -38,14 +39,14 @@ def test_build_score_prompt_includes_rubric_content():
 def test_score_clusters_happy_path():
     clusters = _build_test_clusters()
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         # select 4 candidates, rank order reversed to test sorting
         return json.dumps({"selected": [
             {"candidate_index": 3, "rank": 4, "selection_reason": "kiinnostava tutkimustulos"},
             {"candidate_index": 1, "rank": 3, "selection_reason": "kolmas"},
             {"candidate_index": 2, "rank": 2, "selection_reason": "toinen"},
             {"candidate_index": 0, "rank": 1, "selection_reason": "laaja vaikutus, uusi mallijulkaisu"},
-        ], "cutoff_rank": 2})
+        ], "cutoff_rank": 2}), {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150, "cost": 0.0002}
 
     result = score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
 
@@ -61,17 +62,17 @@ def test_score_clusters_happy_path():
 def test_raises_on_malformed_json():
     clusters = _build_test_clusters()
     with pytest.raises(ScoreValidationError, match="JSON"):
-        score_clusters(clusters, FIXTURE_RUBRIC, lambda s, u: "ei json:ia")
+        score_clusters(clusters, FIXTURE_RUBRIC, lambda s, u: ("ei json:ia", {}))
 
 
 def test_raises_on_count_outside_rubric_bounds():
     """Test rubric has min=2, max=3 (pool_max=9) — try selecting only 1 (too few)."""
     clusters = _build_test_clusters()
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         return json.dumps({"selected": [
             {"candidate_index": 0, "rank": 1, "selection_reason": "ainoa valinta"},
-        ], "cutoff_rank": 1})
+        ], "cutoff_rank": 1}), {"prompt_tokens": 50, "completion_tokens": 25, "total_tokens": 75, "cost": 0.00005}
 
     with pytest.raises(ScoreValidationError, match="outside bounds"):
         score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
@@ -80,13 +81,13 @@ def test_raises_on_count_outside_rubric_bounds():
 def test_deduplicates_candidate_indices():
     clusters = _build_test_clusters()
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         return json.dumps({"selected": [
             {"candidate_index": 0, "rank": 1, "selection_reason": "a"},
             {"candidate_index": 0, "rank": 2, "selection_reason": "b"},
             {"candidate_index": 1, "rank": 3, "selection_reason": "c"},
             {"candidate_index": 2, "rank": 4, "selection_reason": "d"},
-        ], "cutoff_rank": 2})
+        ], "cutoff_rank": 2}), {"prompt_tokens": 50, "completion_tokens": 25, "total_tokens": 75, "cost": 0.00005}
 
     result = score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
     assert len(result.scored) == 3
@@ -98,13 +99,13 @@ def test_deduplicates_candidate_indices():
 def test_normalizes_rank_sequence():
     clusters = _build_test_clusters()
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         return json.dumps({"selected": [
             {"candidate_index": 0, "rank": 1, "selection_reason": "a"},
             {"candidate_index": 1, "rank": 1, "selection_reason": "b"},
             {"candidate_index": 2, "rank": 3, "selection_reason": "c"},
             {"candidate_index": 3, "rank": 4, "selection_reason": "d"},
-        ], "cutoff_rank": 2})
+        ], "cutoff_rank": 2}), {"prompt_tokens": 50, "completion_tokens": 25, "total_tokens": 75, "cost": 0.00005}
 
     result = score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
     assert len(result.scored) == 4
@@ -115,11 +116,11 @@ def test_normalizes_rank_sequence():
 def test_normalizes_cutoff_rank_too_high():
     clusters = _build_test_clusters()
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         return json.dumps({"selected": [
             {"candidate_index": 0, "rank": 1, "selection_reason": "a"},
             {"candidate_index": 1, "rank": 2, "selection_reason": "b"},
-        ], "cutoff_rank": 5})
+        ], "cutoff_rank": 5}), {"prompt_tokens": 50, "completion_tokens": 25, "total_tokens": 75, "cost": 0.00005}
 
     result = score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
     assert result.cutoff_rank == 2
@@ -130,12 +131,12 @@ def test_proceeds_with_zero_backfill():
     """Backfill pool can be empty — pipeline proceeds anyway."""
     clusters = _build_test_clusters()
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         return json.dumps({"selected": [
             {"candidate_index": 0, "rank": 1, "selection_reason": "a"},
             {"candidate_index": 1, "rank": 2, "selection_reason": "b"},
             {"candidate_index": 2, "rank": 3, "selection_reason": "c"},
-        ], "cutoff_rank": 3})
+        ], "cutoff_rank": 3}), {"prompt_tokens": 50, "completion_tokens": 25, "total_tokens": 75, "cost": 0.00005}
 
     result = score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
     assert len(result.scored) == 3
@@ -159,13 +160,13 @@ def test_rejects_irrelevant_candidates():
     are rejected by relevance (mock LLM selects only a subset)."""
     clusters = _build_test_clusters()
 
-    def mock_llm(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         return json.dumps({"selected": [
             {"candidate_index": 0, "rank": 2, "selection_reason": "AI-aiheinen"},
             {"candidate_index": 1, "rank": 1, "selection_reason": "AI-aiheinen"},
             {"candidate_index": 2, "rank": 3, "selection_reason": "AI-aiheinen"},
             {"candidate_index": 3, "rank": 4, "selection_reason": "AI-aiheinen"},
-        ], "cutoff_rank": 2})
+        ], "cutoff_rank": 2}), {"prompt_tokens": 50, "completion_tokens": 25, "total_tokens": 75, "cost": 0.00005}
 
     result = score_clusters(clusters, FIXTURE_RUBRIC, mock_llm)
     assert len(result.scored) == 4
@@ -178,14 +179,14 @@ def test_code_fenced_json_is_parsed():
     """Verifies that model responses wrapped in code fences are cleaned up."""
     clusters = _build_test_clusters()
 
-    def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> str:
+    def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         inner = json.dumps({"selected": [
             {"candidate_index": 0, "rank": 1, "selection_reason": "tärkein"},
             {"candidate_index": 1, "rank": 2, "selection_reason": "toinen"},
             {"candidate_index": 2, "rank": 3, "selection_reason": "kolmas"},
             {"candidate_index": 3, "rank": 4, "selection_reason": "neljäs"},
         ], "cutoff_rank": 2})
-        return f"```json\n{inner}\n```"
+        return f"```json\n{inner}\n```", {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15, "cost": 0.00001}
 
     result = score_clusters(clusters, FIXTURE_RUBRIC, mock_llm_code_fence)
     assert len(result.scored) == 4

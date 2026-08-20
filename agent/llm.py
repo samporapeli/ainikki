@@ -63,14 +63,17 @@ def resolve_step_config(step: str, config: dict,
 
 
 def _post_openai_compatible(base_url: str, api_key: str | None, model: str,
-                             system_prompt: str, user_prompt: str,
-                             client: httpx.Client,
-                             expect_json: bool = True) -> str:
+                              system_prompt: str, user_prompt: str,
+                              client: httpx.Client,
+                              expect_json: bool = True) -> tuple[str, dict]:
     """Sends a chat completion request to an OpenAI-compatible endpoint.
 
     Retries on 429 with exponential backoff (_MAX_RETRIES attempts).
     If expect_json=True, adds response_format: {"type": "json_object"}
     to the request, forcing the model to return valid JSON.
+
+    Returns (content, usage) where usage is a dict with keys:
+    prompt_tokens, completion_tokens, total_tokens, cost.
     """
     payload = {
         "model": model,
@@ -89,7 +92,9 @@ def _post_openai_compatible(base_url: str, api_key: str | None, model: str,
         if resp.status_code != 429:
             resp.raise_for_status()
             data = resp.json()
-            return data["choices"][0]["message"]["content"]
+            content = data["choices"][0]["message"]["content"]
+            usage = data.get("usage") or {}
+            return content, usage
         if attempt == _MAX_RETRIES:
             resp.raise_for_status()
         delay = _RETRY_BASE_DELAY * (2 ** attempt)
@@ -107,10 +112,14 @@ def _post_openai_compatible(base_url: str, api_key: str | None, model: str,
 
 
 def make_llm_call(step: str, config_path: Path = Path("config/models.yaml"),
-                   override_model: str | None = None, override_provider: str | None = None,
-                   client: httpx.Client | None = None):
+                  override_model: str | None = None, override_provider: str | None = None,
+                  client: httpx.Client | None = None):
     """Returns a function implementing the LlmCall interface (cluster.py,
     later score/compose).
+
+    The LlmCall signature is (system_prompt, user_prompt) -> (content, usage)
+    where usage is a dict with prompt_tokens, completion_tokens, total_tokens,
+    and cost fields from OpenRouter's response.
 
     The client parameter is for testability — inject an httpx.MockTransport-based
     client in tests instead of making real HTTP calls.
@@ -118,7 +127,7 @@ def make_llm_call(step: str, config_path: Path = Path("config/models.yaml"),
     config = load_models_config(config_path)
     step_cfg = resolve_step_config(step, config, override_model, override_provider)
 
-    def _call(system_prompt: str, user_prompt: str) -> str:
+    def _call(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         owns_client = client is None
         c = client or httpx.Client(timeout=60.0)
         try:
