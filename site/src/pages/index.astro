@@ -44,8 +44,11 @@ if (fs.existsSync(dataDir)) {
           const info = TOPIC_META[t] ?? { name: t.toUpperCase(), period: '', telegram: '', telegramUrl: '' };
           return (
             <a href={`${import.meta.env.BASE_URL}/${t}/`} class="topic-link">
-              <span class="topic-name">{info.name}</span>
-              <span class="topic-period">{info.period}</span>
+              <div class="link-content">
+                <span class="topic-name">{info.name}</span>
+                <span class="topic-period">{info.period}</span>
+              </div>
+              <span class="chevron">›</span>
             </a>
           );
         })}
@@ -92,7 +95,7 @@ if (fs.existsSync(dataDir)) {
 
   .topic-link {
     display: flex;
-    flex-direction: column;
+    align-items: center;
     padding: 1rem 0;
     border-bottom: 1px solid var(--border);
     text-decoration: none;
@@ -105,6 +108,20 @@ if (fs.existsSync(dataDir)) {
 
   .topic-link:hover {
     text-decoration: none;
+  }
+
+  .link-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chevron {
+    flex-shrink: 0;
+    margin-left: 1rem;
+    font-size: 1.5rem;
+    color: var(--fg-subtle);
   }
 
   .topic-name {

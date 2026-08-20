@@ -61,9 +61,12 @@ const info = TOPIC_META[topic] ?? { name: topic.toUpperCase(), period: '', teleg
       const pretty = b.display_date_fi || fiDate(dd);
       return (
         <a href={`${dd}/`} class="entry">
-          <span class="date">{pretty}</span>
-          {b.digest_topic && <span class="topic-line">{b.digest_topic}</span>}
-          <p class="overview">{b.overview}</p>
+          <div class="entry-content">
+            <span class="date">{pretty}</span>
+            {b.digest_topic && <span class="topic-line">{b.digest_topic}</span>}
+            <p class="overview">{b.overview}</p>
+          </div>
+          <span class="chevron">›</span>
         </a>
       );
     })}
@@ -96,7 +99,8 @@ const info = TOPIC_META[topic] ?? { name: topic.toUpperCase(), period: '', teleg
   }
 
   .entry {
-    display: block;
+    display: flex;
+    align-items: center;
     padding: 1.25rem 0;
     border-bottom: 1px solid var(--border);
     text-decoration: none;
@@ -109,6 +113,18 @@ const info = TOPIC_META[topic] ?? { name: topic.toUpperCase(), period: '', teleg
 
   .entry:hover {
     text-decoration: none;
+  }
+
+  .entry-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .chevron {
+    flex-shrink: 0;
+    margin-left: 1rem;
+    font-size: 1.5rem;
+    color: var(--fg-subtle);
   }
 
   .date {
