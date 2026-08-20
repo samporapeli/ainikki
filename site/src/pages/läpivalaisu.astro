@@ -190,7 +190,7 @@ for (const file of readdirSync(topicsDir)) {
     if (hours > 0) parts.push(`${hours} t`);
     if (minutes > 0) {
       parts.push(`${minutes} min`);
-      parts.push(`${secs.toFixed(2).replace(/\./g, ',')} s`);
+      parts.push(`${Math.round(secs)} s`);
     } else if (hours > 0) {
       parts.push(`${secs.toFixed(2).replace(/\./g, ',')} s`);
     } else {
