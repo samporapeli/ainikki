@@ -43,7 +43,7 @@ const info = TOPIC_META[topic] ?? { name: topic.toUpperCase(), period: '', teleg
 
 <Layout title={`${info.name} — Ainikki`}>
   <nav class="back">
-    <a href="../">← Ainikki</a>
+    <a href="../">Ainikki</a>
   </nav>
 
   <header>
@@ -76,7 +76,12 @@ const info = TOPIC_META[topic] ?? { name: topic.toUpperCase(), period: '', teleg
 <style>
   .back {
     margin-bottom: 2rem;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+  }
+
+  .back a {
+    color: var(--fg-muted);
   }
 
   header {
