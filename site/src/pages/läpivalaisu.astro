@@ -48,6 +48,8 @@ for (const file of readdirSync(topicsDir)) {
     <hr />
     <section id="stories" class="section"></section>
     <section id="dropped" class="section"></section>
+    <hr />
+    <section id="prompts" class="section"></section>
   </div>
 </Layout>
 
@@ -140,6 +142,7 @@ for (const file of readdirSync(topicsDir)) {
       renderClusters(document.getElementById('clusters'), pipe);
       renderStories(document.getElementById('stories'), outputData);
       renderDropped(document.getElementById('dropped'), outputData);
+      renderLlmPrompts(document.getElementById('prompts'), pipelineData);
     } catch (e) {
       status.textContent = 'Virhe: ' + e.message;
     }
@@ -527,6 +530,65 @@ for (const file of readdirSync(topicsDir)) {
       }
       html += '</ul></details>';
     }
+    el.innerHTML = html;
+  }
+
+  function renderLlmPrompts(el, pipelineData) {
+    const prompts = pipelineData?.llm_prompts;
+    if (!prompts || typeof prompts !== 'object' || Object.keys(prompts).length === 0) {
+      el.style.display = 'none';
+      return;
+    }
+    el.style.display = 'block';
+
+    const stepKeys = Object.keys(prompts);
+    let html = '<h2>Kielimallin syöte ja vastaus</h2>';
+
+    for (const step of stepKeys) {
+      const calls = prompts[step];
+      if (!calls || calls.length === 0) continue;
+      const model = pipelineData.llm_stats?.[step];
+      const totalCalls = model?.calls || calls.length;
+      const totalTokens = (model?.total_prompt_tokens || 0) + (model?.total_completion_tokens || 0);
+
+      html += `<details class="prompt-step"><summary><strong>${escHtml(step)}</strong> — ${calls.length} kutsua, ${totalTokens} tokenia</summary>`;
+
+      for (let i = 0; i < calls.length; i++) {
+        const call = calls[i];
+        const callLabel = calls.length > 1 ? ` <span class="prompt-call-label">(${i + 1}/${calls.length})</span>` : '';
+        html += `<div class="prompt-call">`;
+
+        // System prompt
+        const sysLen = call.system_prompt?.length || 0;
+        html += `<details class="prompt-block">
+          <summary class="prompt-summary">Näytä ohje (system prompt) <span class="prompt-size">${sysLen} merkkiä</span></summary>
+          <pre class="prompt-text">${escHtml(call.system_prompt || '')}</pre>
+        </details>`;
+
+        // User prompt
+        const userLen = call.user_prompt?.length || 0;
+        const userPreview = userLen > 300 ? call.user_prompt.substring(0, 300) + '...' : '';
+        const userExpanded = userLen > 300 ? 'style="display:none"' : '';
+        html += `<details class="prompt-block">
+          <summary class="prompt-summary">Näytä kysymys (user prompt) <span class="prompt-size">${userLen} merkkiä</span></summary>
+          <pre class="prompt-text prompt-truncated" id="user-${step}-${i}">${escHtml(userPreview)}</pre>
+          ${userLen > 300 ? `<button class="prompt-expand" onclick="this.previousElementSibling.style.display='block';this.style.display='none'">Näytä koko sisältö</button>` : ''}
+          <pre class="prompt-text prompt-full" id="user-full-${step}-${i}" ${userExpanded}>${escHtml(call.user_prompt || '')}</pre>
+        </details>`;
+
+        // Raw response
+        const respLen = call.raw_response?.length || 0;
+        html += `<details class="prompt-block">
+          <summary class="prompt-summary">Näytä raaka vastaus <span class="prompt-size">${respLen} merkkiä</span></summary>
+          <pre class="prompt-text">${escHtml(call.raw_response || '')}</pre>
+        </details>`;
+
+        html += `</div>`;
+      }
+
+      html += `</details>`;
+    }
+
     el.innerHTML = html;
   }
 
@@ -925,5 +987,94 @@ for (const file of readdirSync(topicsDir)) {
 
   .warnings li {
     margin-bottom: 0.35rem;
+  }
+
+  /* Prompt display styles */
+  .prompt-step {
+    margin-bottom: 1rem;
+  }
+
+  .prompt-step summary {
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--fg);
+  }
+
+  .prompt-call {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .prompt-call:last-child {
+    border-bottom: none;
+  }
+
+  .prompt-call-label {
+    font-weight: 400;
+    color: var(--fg-muted);
+    font-size: 0.85rem;
+  }
+
+  .prompt-block {
+    padding: 0.5rem 0 0.5rem 0.75rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .prompt-summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--link);
+    font-weight: 500;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .prompt-summary:hover {
+    text-decoration: underline;
+  }
+
+  .prompt-size {
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    font-weight: 400;
+  }
+
+  .prompt-text {
+    margin: 0.5rem 0 0 0;
+    padding: 0.75rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .prompt-expand {
+    display: inline-block;
+    margin: 0.25rem 0 0.5rem 0;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    color: var(--link);
+    background: none;
+    border: 1px solid var(--link);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .prompt-expand:hover {
+    background: var(--link);
+    color: var(--bg);
+  }
+
+  .prompt-full {
+    display: none;
   }
 </style>

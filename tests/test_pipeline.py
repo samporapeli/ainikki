@@ -175,3 +175,59 @@ def test_pipeline_raises_on_empty_collect(tmp_path):
             raw_items_override=[], llm_client=llm_client,
         )
 
+
+def test_pipeline_captures_llm_prompts(tmp_path):
+    """Pipeline debug JSON should contain llm_prompts with system_prompt,
+    user_prompt, and raw_response for each LLM call."""
+    tmp_out = tmp_path / "out"
+    tmp_data = tmp_path / "data"
+    raw_items = _load_test_raw_items()
+    llm_client = httpx.Client(transport=httpx.MockTransport(_make_llm_handler()))
+    enrich_client = httpx.Client(transport=httpx.MockTransport(_enrich_handler))
+
+    since = datetime(2026, 7, 16, tzinfo=timezone.utc)
+    until = since + timedelta(days=1)
+
+    run_pipeline(
+        topic="ai", period=Period.daily, since=since, until=until,
+        config_dir=Path("config"), data_dir=tmp_data, out_dir=tmp_out,
+        raw_items_override=raw_items, llm_client=llm_client, enrich_client=enrich_client,
+    )
+
+    # Pipeline debug file
+    pipeline_file = tmp_data / "pipeline" / "ai_daily_2026-07-16.json"
+    assert pipeline_file.exists()
+    debug = json.loads(pipeline_file.read_text())
+
+    prompts = debug.get("llm_prompts")
+    assert prompts is not None
+    assert isinstance(prompts, dict)
+
+    # All 5 LLM steps should have entries
+    expected_steps = {"filter_topic", "cluster", "score", "compose", "overview"}
+    assert set(prompts.keys()) == expected_steps
+
+    # Single-call steps should have exactly 1 entry
+    for step in ["filter_topic", "cluster", "score", "overview"]:
+        calls = prompts[step]
+        assert len(calls) == 1, f"{step} should have 1 call, got {len(calls)}"
+        call = calls[0]
+        assert "system_prompt" in call
+        assert "user_prompt" in call
+        assert "raw_response" in call
+        assert isinstance(call["system_prompt"], str) and len(call["system_prompt"]) > 0
+        assert isinstance(call["user_prompt"], str) and len(call["user_prompt"]) > 0
+        assert isinstance(call["raw_response"], str) and len(call["raw_response"]) > 0
+
+    # Compose should have N entries (one per item, 3 items from test)
+    compose_calls = prompts["compose"]
+    assert len(compose_calls) == 3, f"compose should have 3 calls, got {len(compose_calls)}"
+    for i, call in enumerate(compose_calls):
+        assert "system_prompt" in call
+        assert "user_prompt" in call
+        assert "raw_response" in call
+        # raw_response should match what the mock returns
+        expected = json.dumps({"headline": "Testiotsikko juttu",
+                               "summary": "Testiyhteenveto joka kuvaa juttua lyhyesti."})
+        assert call["raw_response"] == expected, f"compose call {i} raw_response mismatch"
+
