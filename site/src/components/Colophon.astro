@@ -1,15 +1,13 @@
 ---
-// Kielimallit vaiheittain - tarkoituksella sivun alalaidassa ja piilossa
-// oletuksena, ei otsikon alla. Ainikki on tekijä, malli on työkalu; tämä
-// näyttää työkalut sille joka on niistä kiinnostunut, ei kaikille
-// oletuksena. Sanasto vastaa /tietoja/-sivun vaihenimiä.
 interface Props {
   modelsUsed: Record<string, string>;
+  llmStats: Record<string, Record<string, number>>;
+  lapivalaisuUrl?: string;
 }
 
-const { modelsUsed } = Astro.props;
+const { modelsUsed, llmStats = {}, lapivalaisuUrl } = Astro.props;
 
-const LABELS: Record<string, string> = {
+const LLM_LABELS: Record<string, string> = {
   cluster: "Ryhmittely",
   score: "Pisteytys",
   compose: "Kirjoitus",
@@ -17,21 +15,99 @@ const LABELS: Record<string, string> = {
   filter_topic: "Aiheen suodatus",
 };
 
-const ORDER = ["cluster", "filter_topic", "score", "compose", "overview"];
+const LLM_ORDER = ["filter_topic", "cluster", "score", "compose", "overview"];
 
-const steps = ORDER
+const stepRows = LLM_ORDER
   .filter(step => modelsUsed[step])
-  .map(step => [LABELS[step], modelsUsed[step].split("/").pop()] as [string, string]);
+  .map(step => {
+    const modelRaw = modelsUsed[step];
+    const modelShort = modelRaw.split("/").pop() || modelRaw;
+    const stats = llmStats[step];
+    const hasStats = stats != null;
+    const calls = stats?.calls ?? 0;
+    const promptTokens = stats?.total_prompt_tokens ?? 0;
+    const completionTokens = stats?.total_completion_tokens ?? 0;
+    const cost = stats?.total_cost ?? 0;
+    return { step, label: LLM_LABELS[step] || step, model: modelShort, hasStats, calls, promptTokens, completionTokens, cost };
+  });
+
+let totalCalls = 0;
+let totalPromptTokens = 0;
+let totalCompletionTokens = 0;
+let totalCost = 0;
+for (const r of stepRows) {
+  totalCalls += r.calls;
+  totalPromptTokens += r.promptTokens;
+  totalCompletionTokens += r.completionTokens;
+  totalCost += r.cost;
+}
+
+const totalTokens = totalPromptTokens + totalCompletionTokens;
+
+function fmtDecimal(value: number, decimals: number): string {
+  return value.toFixed(decimals).replace(".", ",");
+}
+
+const hasAnyStats = stepRows.some(r => r.hasStats);
 ---
 
-{steps.length > 0 && (
+{stepRows.length > 0 && (
   <details class="colophon">
-    <summary>Kielimallit</summary>
-    <ul>
-      {steps.map(([label, model]) => (
-        <li>{label} — {model}</li>
-      ))}
-    </ul>
+    <summary>
+      <strong>Kielimallit</strong>
+      {hasAnyStats && (
+        <span class="summary-stats">
+           · {totalCalls} kutsu{totalCalls !== 1 ? "a" : ""} · {totalTokens} tokenia · {fmtDecimal(totalCost, 6)} $
+        </span>
+      )}
+    </summary>
+
+    <div class="colophon-body">
+      <table class="colophon-table">
+        <thead>
+          <tr>
+            <th>Vaihe</th>
+            <th>Malli</th>
+            <th class="num">Kutsut</th>
+            <th class="num">Syöte</th>
+            <th class="num">Tuotos</th>
+            <th class="num">Kustannus</th>
+          </tr>
+        </thead>
+        <tbody>
+          {stepRows.map(r => (
+            <tr>
+              <td>{r.label}</td>
+              <td class="model">{r.model}</td>
+              <td class="num">{r.hasStats ? r.calls : "—"}</td>
+              <td class="num">{r.hasStats ? r.promptTokens : "—"}</td>
+              <td class="num">{r.hasStats ? r.completionTokens : "—"}</td>
+              <td class="num">{r.hasStats ? `${fmtDecimal(r.cost, 6)} $` : "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+        {hasAnyStats && (
+        <tfoot>
+          <tr>
+            <td>Yhteensä</td>
+            <td></td>
+            <td class="num">{totalCalls}</td>
+            <td class="num">{totalPromptTokens}</td>
+            <td class="num">{totalCompletionTokens}</td>
+            <td class="num">{fmtDecimal(totalCost, 6)} $</td>
+          </tr>
+        </tfoot>
+        )}
+      </table>
+
+      {lapivalaisuUrl && (
+        <p class="lapivalaisu-link">
+          <a href={lapivalaisuUrl}>
+            Tutki tarkemmin läpivalaisussa
+          </a>
+        </p>
+      )}
+    </div>
   </details>
 )}
 
@@ -46,14 +122,58 @@ const steps = ORDER
     cursor: pointer;
   }
 
-  .colophon ul {
-    margin-top: 0.5rem;
-    padding-left: 1.25rem;
-    font-size: 0.85rem;
+  .summary-stats {
+    font-weight: 400;
+    font-size: 0.8rem;
     color: var(--fg-subtle);
   }
 
-  .colophon li {
-    margin-bottom: 0.35rem;
+  .colophon-body {
+    margin-top: 0.75rem;
+  }
+
+  .colophon-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    color: var(--fg-muted);
+  }
+
+  .colophon-table th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--fg);
+    padding: 0.35rem 0.5rem 0.35rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .colophon-table th.num,
+  .colophon-table td.num {
+    text-align: right;
+    padding-left: 0.5rem;
+    padding-right: 0;
+    white-space: nowrap;
+  }
+
+  .colophon-table td {
+    padding: 0.3rem 0.5rem 0.3rem 0;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  .colophon-table td.model {
+    font-family: monospace;
+    font-size: 0.75rem;
+  }
+
+  .colophon-table tfoot td {
+    font-weight: 600;
+    color: var(--fg);
+    border-bottom: none;
+  }
+
+  .lapivalaisu-link {
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
   }
 </style>

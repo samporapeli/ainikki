@@ -90,6 +90,31 @@ def test_openai_compatible_no_json_format_when_disabled():
     assert usage["total_tokens"] == 8
 
 
+def test_openai_compatible_no_cost_field():
+    """Providers like OpenAI and Ollama don't return cost in usage."""
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": "ei kustannusta"}}],
+            "usage": {"prompt_tokens": 20, "completion_tokens": 10, "total_tokens": 30},
+        })
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    result, usage = _post_openai_compatible(
+        "https://openrouter.ai/api/v1", "fake-key", "openai/gpt-4o-mini",
+        "system-ohje", "käyttäjän kysymys", client,
+    )
+
+    assert result == "ei kustannusta"
+    assert usage["prompt_tokens"] == 20
+    assert usage["completion_tokens"] == 10
+    assert usage["total_tokens"] == 30
+    assert usage.get("cost") is None
+    assert captured["url"] == "https://openrouter.ai/api/v1/chat/completions"
+
+
 def test_make_llm_call_end_to_end_with_cluster():
     """End-to-end chain: config -> make_llm_call -> cluster_candidates,
     with mock transport returning a valid cluster response using real HN fixture data.

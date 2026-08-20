@@ -229,13 +229,14 @@ for (const file of readdirSync(topicsDir)) {
       totalCalls += s.calls || 0;
       totalPromptTokens += promptTokens;
       totalCompletionTokens += completionTokens;
-      totalCost += s.total_cost || 0;
+      if (s.total_cost !== 0) totalCost += s.total_cost;
+      const costCell = s.total_cost !== 0 ? `${formatDecimal(s.total_cost, 6)} $` : '—';
       return `<tr>
         <td class="stat-step">${escHtml(key)}</td>
         <td class="stat-num">${s.calls || 0} kutsua</td>
         <td class="stat-num">${promptTokens} tokenia</td>
         <td class="stat-num">${completionTokens} tokenia</td>
-        <td class="stat-cost">${formatDecimal(s.total_cost || 0, 6)} $</td>
+        <td class="stat-cost">${costCell}</td>
       </tr>`;
     }).join('');
 
@@ -253,7 +254,7 @@ for (const file of readdirSync(topicsDir)) {
         <td class="stat-num">${totalCalls}</td>
         <td class="stat-num">${totalPromptTokens}</td>
         <td class="stat-num">${totalCompletionTokens}</td>
-        <td class="stat-cost">${formatDecimal(totalCost, 6)} $</td>
+        <td class="stat-cost">${totalCost !== 0 ? formatDecimal(totalCost, 6) + ' $' : '—'}</td>
       </tr></tfoot>
     </table>`;
     el.innerHTML = html;
@@ -286,14 +287,15 @@ for (const file of readdirSync(topicsDir)) {
       totalCalls += s.calls || 0;
       totalPromptTokens += s.total_prompt_tokens || 0;
       totalCompletionTokens += s.total_completion_tokens || 0;
-      totalCost += s.total_cost || 0;
+      totalCost += (s.total_cost !== 0 ? s.total_cost : 0);
     }
-    const summaryHtml = totalCalls > 0 || totalDur != null ? `<div class="funnel-summary">
+    const hasLlmStats = totalCalls > 0;
+    const summaryHtml = hasLlmStats || totalDur != null ? `<div class="funnel-summary">
       <ul>
         ${totalDur != null ? `<li><strong>${formatDuration(totalDur)}</strong></li>` : ''}
-        <li><strong>${totalCalls}</strong> LLM-${totalCalls === 1 ? 'kutsu' : 'kutsua'}</li>
-        <li><strong>${totalPromptTokens + totalCompletionTokens}</strong> tokenia (${totalPromptTokens} sisään, ${totalCompletionTokens} ulos)</li>
-        <li><strong>${formatDecimal(totalCost, 6)} $</strong></li>
+        ${hasLlmStats ? `<li><strong>${totalCalls}</strong> LLM-${totalCalls === 1 ? 'kutsu' : 'kutsua'}</li>` : ''}
+        ${hasLlmStats ? `<li><strong>${totalPromptTokens + totalCompletionTokens}</strong> tokenia (${totalPromptTokens} sisään, ${totalCompletionTokens} ulos)</li>` : ''}
+        ${hasLlmStats ? `<li><strong>${totalCost !== 0 ? formatDecimal(totalCost, 6) + ' $' : '—'}</strong></li>` : ''}
       </ul>
     </div>` : '';
 
@@ -410,10 +412,11 @@ for (const file of readdirSync(topicsDir)) {
         const calls = st.calls || 0;
         const promptTokens = st.total_prompt_tokens || 0;
         const completionTokens = st.total_completion_tokens || 0;
-        const cost = st.total_cost || 0;
         statsItems.push(`<li>${calls} LLM-${calls === 1 ? 'kutsu' : 'kutsua'}</li>`);
         statsItems.push(`<li>${promptTokens} tokenia sisään, ${completionTokens} ulos</li>`);
-        statsItems.push(`<li>${formatDecimal(cost, 6)} $</li>`);
+        if (st.total_cost !== 0) {
+          statsItems.push(`<li>${formatDecimal(st.total_cost, 6)} $</li>`);
+        }
       }
       const statsHtml = statsItems.length > 0
         ? `<ul class="step-stats">${statsItems.join('')}</ul>`
