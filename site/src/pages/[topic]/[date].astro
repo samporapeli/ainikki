@@ -18,15 +18,44 @@ export function getStaticPaths() {
   }
 
   const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json'));
-
-  return files.map(file => {
+  const briefings = files.map(file => {
     const data = JSON.parse(fs.readFileSync(path.join(dataDir, file), 'utf-8'));
     const dd = data.display_date || data.period_start;
-    return {
-      params: { topic: data.topic, date: dd },
-      props: { briefing: data },
-    };
+    return { ...data, _dd: dd };
   });
+
+  // Group by topic, sort descending by display_date
+  const byTopic = new Map<string, any[]>();
+  for (const b of briefings) {
+    const list = byTopic.get(b.topic) || [];
+    list.push(b);
+    byTopic.set(b.topic, list);
+  }
+
+  for (const [, list] of byTopic) {
+    list.sort((a, b) => (b.display_date || b.period_start).localeCompare(a.display_date || a.period_start));
+  }
+
+  // Assign next/prev within each topic group
+  // In descending order: prev = older (index+1), next = newer (index-1)
+  for (const [, list] of byTopic) {
+    for (let i = 0; i < list.length; i++) {
+      list[i]._prev = i + 1 < list.length ? list[i + 1] : null;
+      list[i]._next = i - 1 >= 0 ? list[i - 1] : null;
+    }
+  }
+
+  const result = [];
+  for (const [, list] of byTopic) {
+    for (const b of list) {
+      result.push({
+        params: { topic: b.topic, date: b._dd },
+        props: { briefing: b },
+      });
+    }
+  }
+
+  return result;
 }
 
 const { briefing } = Astro.props;
@@ -43,12 +72,26 @@ const TIETOJA_URL = `${import.meta.env.BASE_URL}/tietoja/`;
 const period = briefing.period || "daily";
 const pipelinePath = path.resolve(`../data/pipeline/${topic}_${period}_${dateStr}.json`);
 const hasPipelineDebug = fs.existsSync(pipelinePath);
+
+function navUrl(b: any): string | null {
+  if (!b) return null;
+  const dd = b.display_date || b.period_start;
+  return `${import.meta.env.BASE_URL}/${b.topic}/${dd}/`;
+}
+
+const prevBriefing = briefing._prev || null;
+const nextBriefing = briefing._next || null;
 ---
 
 <Layout title={`${topicUpper} — ${prettyDate}`} description={briefing.overview}
         ogTitle={ogTitle} ogDescription={briefing.overview} ogUrl={ogUrl}>
   <nav class="back">
-    <a href="../">← {topicUpper}</a>
+    <a href="../">{topicUpper}</a>
+  </nav>
+
+  <nav class="page-nav page-nav--top">
+    <span class="page-nav__prev">{prevBriefing && <a href={navUrl(prevBriefing)}>← Edellinen</a>}</span>
+    <span class="page-nav__next">{nextBriefing && <a href={navUrl(nextBriefing)}>Seuraava →</a>}</span>
   </nav>
 
   <header>
@@ -82,12 +125,45 @@ const hasPipelineDebug = fs.existsSync(pipelinePath);
     />
     <Warnings warnings={briefing.warnings} />
   </div>
+
+  <nav class="page-nav page-nav--bottom">
+    <span class="page-nav__prev">{prevBriefing && <a href={navUrl(prevBriefing)}>← Edellinen</a>}</span>
+    <span class="page-nav__next">{nextBriefing && <a href={navUrl(nextBriefing)}>Seuraava →</a>}</span>
+  </nav>
 </Layout>
 
 <style>
   .back {
     margin-bottom: 2rem;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+  }
+
+  .back a {
+    color: var(--fg-muted);
+  }
+
+  .page-nav {
+    display: flex;
+    font-size: 0.85rem;
+  }
+
+  .page-nav--top {
+    margin-bottom: 2rem;
+  }
+
+  .page-nav__prev {
+    flex: 1;
+    text-align: left;
+  }
+
+  .page-nav__next {
+    flex: 1;
+    text-align: right;
+  }
+
+  .page-nav--bottom {
+    margin-top: 2.5rem;
   }
 
   header {
