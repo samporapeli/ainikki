@@ -575,7 +575,7 @@ for (const file of readdirSync(topicsDir)) {
         html += `<details class="prompt-block">
           <summary class="prompt-summary">Näytä kysymys (user prompt) <span class="prompt-size">${userLen} merkkiä</span></summary>
           <pre class="prompt-text prompt-truncated" id="user-${step}-${i}">${escHtml(userPreview)}</pre>
-          ${userLen > 300 ? `<button class="prompt-expand" onclick="this.previousElementSibling.style.display='block';this.style.display='none'">Näytä koko sisältö</button>` : ''}
+          ${userLen > 300 ? `<button class="prompt-expand" onclick="this.nextElementSibling.style.display='block';this.previousElementSibling.style.display='none';this.style.display='none'">Näytä koko sisältö</button>` : ''}
           <pre class="prompt-text prompt-full" id="user-full-${step}-${i}" ${userExpanded}>${escHtml(call.user_prompt || '')}</pre>
         </details>`;
 
