@@ -110,8 +110,14 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
                            client=client)
 
     # Wrap the LLM call to accumulate stats
-    step_stats = {"calls": 0, "total_prompt_tokens": 0, "total_completion_tokens": 0,
-                  "total_tokens": 0, "total_cost": None} (feat: enrich digestion colophon with per-step LLM stats and läpivalaisu link)
+    # step_stats tracks number of calls and token usage for each LLM step.
+    step_stats = {
+        "calls": 0,
+        "total_prompt_tokens": 0,
+        "total_completion_tokens": 0,
+        "total_tokens": 0,
+        "total_cost": None,
+    }  # feat: enrich digestion colophon with per-step LLM stats and läpivalaisu link
     def _tracked_call(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         content, usage = llm_fn(system_prompt, user_prompt)
         prompt_tokens = usage.get("prompt_tokens", 0) or 0
@@ -123,14 +129,13 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
         step_stats["total_completion_tokens"] += completion_tokens
         step_stats["total_tokens"] += total_tokens
         if cost is not None:
-            step_stats["total_cost"] = (step_stats["total_cost"] or 0) + cost (feat: enrich digestion colophon with per-step LLM stats and läpivalaisu link)
+            step_stats["total_cost"] = (step_stats["total_cost"] or 0) + cost  # feat: enrich digestion colophon with per-step LLM stats and läpivalaisu link
         if llm_prompts_out is not None:
             llm_prompts_out[step].append({
                 "system_prompt": system_prompt,
                 "user_prompt": user_prompt,
                 "raw_response": content,
             })
-
         return content, usage
 
     llm_stats_out[step] = step_stats
