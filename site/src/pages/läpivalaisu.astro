@@ -68,11 +68,11 @@ for (const file of readdirSync(topicsDir)) {
   (function init() {
     const p = new URLSearchParams(window.location.search);
     const topic = p.get('topic') || 'ai';
-    const date = p.get('date') || '';
+    const urlDate = p.get('date') || '';
     topicSel.value = topic;
-    if (date) dateInput.value = date;
+    if (urlDate) dateInput.value = urlDate;
     if (!dateInput.value) dateInput.value = new Date().toISOString().split('T')[0];
-    if (topic && date) loadPipeline();
+    if (topic && dateInput.value) loadPipeline();
   })();
 
   function onInputChange() {
