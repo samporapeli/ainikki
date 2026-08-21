@@ -81,7 +81,7 @@ def test_fallback_on_malformed_json():
 
 
 def test_recovery_on_incomplete_coverage():
-    """Model forgot some candidates — recovered as singletons, no warning."""
+    """Model forgot some candidates — recovered as singletons with a warning."""
     candidates = _build_test_candidates()
 
     def partial_response(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
@@ -91,11 +91,27 @@ def test_recovery_on_incomplete_coverage():
 
     result = cluster_candidates(candidates, partial_response)
     assert len(result.clusters) == len(candidates)
-    assert result.warning is None
+    assert result.warning is not None
     covered = [c for c in result.clusters if c.cluster_reason != "fallback: not covered by model response"]
     missing = [c for c in result.clusters if c.cluster_reason == "fallback: not covered by model response"]
     assert len(covered) == 5
     assert len(missing) == 4
+
+
+def test_recovery_preserves_primary_order():
+    candidates = _build_test_candidates()
+
+    def partial_response(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
+        clusters = [{"candidate_indices": [0, 1], "primary_index": 1,
+                     "reason": "sama tapahtuma"}]
+        clusters.extend({"candidate_indices": [i], "primary_index": 0, "reason": None}
+                        for i in range(2, len(candidates) - 1))
+        return json.dumps({"clusters": clusters}), {}
+
+    result = cluster_candidates(candidates, partial_response)
+
+    assert result.clusters[0].items[0] == candidates[1].items[0]
+    assert result.warning is not None
 
 
 def test_prompt_stays_lightweight():
@@ -120,4 +136,3 @@ def test_code_fenced_json_is_parsed():
     result = cluster_candidates(candidates, mock_llm_code_fence)
     assert result.warning is None
     assert len(result.clusters) == len(candidates)
-

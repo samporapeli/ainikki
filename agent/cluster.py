@@ -56,18 +56,23 @@ class ClusterResponse(BaseModel):
 
 
 SYSTEM_PROMPT = """Olet uutisanalyytikko. Saat listan uutisehdokkaita otsikoineen.
-Tehtäväsi: ryhmittele ehdokkaat jotka käsittelevät SAMAA tarinaa/tapahtumaa yhteen,
-vaikka ne olisivat eri lähteistä eri URL:eilla. ÄLÄ yhdistä ehdokkaita jotka vain
-käsittelevät samaa aihepiiriä (esim. kaksi eri mallijulkaisua ei ole sama tarina).
+Ryhmittele yhteen vain ehdokkaat, jotka käsittelevät samaa konkreettista
+uutistapahtumaa: samaa julkaisua, lanseerausta, ilmoitusta, päätöstä, tutkimusta,
+välikohtausta tai muuta yksilöitävää tapahtumaa, vaikka lähteet ja URL:t eroavat.
 
-Jokaisen ehdokkaan pitää kuulua täsmälleen yhteen ryhmään, myös ne joilla ei ole paria
-(ne muodostavat oman yhden-ehdokkaan ryhmänsä).
+ÄLÄ ryhmittele yhteisen teeman perusteella. Sama yritys, tuote, teknologia,
+aihepiiri, käyttötapaus tai yleinen vaikutus ei riitä. Esimerkiksi kaksi eri
+mallijulkaisua, kaksi eri agenttityökalua tai kaksi tekoälyn vaikutuksia käsittelevää
+artikkelia ovat erillisiä uutisia, elleivät ne käsittele täsmälleen samaa tapahtumaa.
+Epävarmassa tapauksessa tee erilliset yhden ehdokkaan ryhmät. Singletonit ovat
+toivottuja ja täysin hyväksyttyjä, jos yhteistä konkreettista tapahtumaa ei löydy.
 
-Valitse jokaiselle ryhmälle ehdotettu päälähde (primary_index): suosi alkuperäistä
-julkaisijaa (esim. yhtiön oma blogi) aggregaattorin/keskustelulangan sijaan.
+Jokaisen ehdokkaan pitää kuulua täsmälleen yhteen ryhmään.
+Valitse jokaiselle ryhmälle päälähde (primary_index): suosi alkuperäistä julkaisijaa
+ja suoraa lähdettä aggregaattorin, keskustelulangan tai myöhemmän kommentaarin sijaan.
 
 Vastaa VAIN JSON-muodossa, ei muuta tekstiä:
-{"clusters": [{"candidate_indices": [0, 3], "primary_index": 0, "reason": "molemmat käsittelevät samaa julkaisua"}, ...]}"""
+{"clusters": [{"candidate_indices": [0, 3], "primary_index": 0, "reason": "sama julkaisu"}, ...]}"""
 
 
 def build_cluster_prompt(candidates: list[Candidate]) -> tuple[str, str]:
@@ -75,7 +80,11 @@ def build_cluster_prompt(candidates: list[Candidate]) -> tuple[str, str]:
     for i, c in enumerate(candidates):
         primary = c.primary
         signal_str = ", ".join(f"{k}={v}" for k, v in primary.raw_signal.items())
-        lines.append(f"[{i}] {primary.title} (lähde: {primary.source_type.value}, {signal_str})")
+        published = primary.published_at.isoformat() if primary.published_at else "tuntematon"
+        lines.append(
+            f"[{i}] {primary.title} (URL: {primary.url}, lähde: {primary.source_type.value}, "
+            f"julkaistu: {published}, {signal_str})"
+        )
     user_prompt = "Ehdokkaat:\n" + "\n".join(lines)
     return SYSTEM_PROMPT, user_prompt
 
@@ -115,9 +124,12 @@ def _recover_missing(response: ClusterResponse, n_candidates: int,
             continue
         for i in clean_indices:
             seen.add(i)
-        primary = min(cluster.primary_index, len(clean_indices) - 1)
+        primary = min(max(cluster.primary_index, 0), len(clean_indices) - 1)
+        ordered_indices = [clean_indices[primary]] + [
+            idx for j, idx in enumerate(clean_indices) if j != primary
+        ]
         valid_clusters.append(ClusteredCandidate(
-            items=[item for idx in clean_indices for item in candidates[idx].items],
+            items=[item for idx in ordered_indices for item in candidates[idx].items],
             cluster_reason=cluster.reason,
         ))
 
@@ -130,7 +142,9 @@ def _recover_missing(response: ClusterResponse, n_candidates: int,
 
     if missing:
         logger.info("cluster: recovered %d missing indices as singletons", len(missing))
-    return ClusterResult(clusters=valid_clusters, warning=None)
+    warning = "Clustering response was incomplete; uncovered candidates became singletons"
+    logger.warning(warning)
+    return ClusterResult(clusters=valid_clusters, warning=warning)
 
 
 def _fallback_singletons(candidates: list[Candidate], reason: str) -> ClusterResult:

@@ -8,7 +8,8 @@ default_provider: openrouter
 steps:
   cluster:
     provider: openrouter
-    model: "openai/gpt-4o-mini"     # cheap, the task is mostly classification
+    model: "openai/gpt-4o-mini"
+    temperature: 0
   filter_topic:
     provider: openrouter
     model: "openai/gpt-4o-mini"     # cheap, binary relevance check

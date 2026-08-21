@@ -17,7 +17,7 @@
 
 ## Code style
 
-- Python 3.13, pytest - tests `def test_*()` + `pytest` or `python -m pytest`
+- Python 3.13, pytest - use `venv/bin/python -m pytest` to run tests
 - No unnecessary dependencies: httpx, pydantic, pyyaml, trafilatura, pytest - all already in `requirements.txt`
 - No emojis or unnecessary decorations in code
 

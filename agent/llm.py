@@ -37,6 +37,7 @@ class StepModelConfig:
     provider: str
     model: str
     max_tokens: int = 1024
+    temperature: float = 0.2
 
 
 def load_models_config(path: Path = Path("config/models.yaml")) -> dict:
@@ -59,13 +60,15 @@ def resolve_step_config(step: str, config: dict,
         raise ValueError(f"No model defined for step '{step}' and no override given")
 
     return StepModelConfig(provider=provider, model=model,
-                           max_tokens=step_cfg.get("max_tokens", 1024))
+                           max_tokens=step_cfg.get("max_tokens", 1024),
+                           temperature=step_cfg.get("temperature", 0.2))
 
 
 def _post_openai_compatible(base_url: str, api_key: str | None, model: str,
                               system_prompt: str, user_prompt: str,
                               client: httpx.Client,
-                              expect_json: bool = True) -> tuple[str, dict]:
+                              expect_json: bool = True,
+                              temperature: float = 0.2) -> tuple[str, dict]:
     """Sends a chat completion request to an OpenAI-compatible endpoint.
 
     Retries on 429 with exponential backoff (_MAX_RETRIES attempts).
@@ -81,7 +84,7 @@ def _post_openai_compatible(base_url: str, api_key: str | None, model: str,
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        "temperature": 0.2,
+        "temperature": temperature,
     }
     if expect_json:
         payload["response_format"] = {"type": "json_object"}
@@ -133,7 +136,7 @@ def make_llm_call(step: str, config_path: Path = Path("config/models.yaml"),
         try:
             api_key = os.environ.get(OPENROUTER_API_KEY_ENV)
             return _post_openai_compatible(OPENROUTER_BASE_URL, api_key, step_cfg.model,
-                                           system_prompt, user_prompt, c)
+                                           system_prompt, user_prompt, c, temperature=step_cfg.temperature)
         finally:
             if owns_client:
                 c.close()
