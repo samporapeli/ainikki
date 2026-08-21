@@ -48,8 +48,6 @@ for (const file of readdirSync(topicsDir)) {
     <hr />
     <section id="stories" class="section"></section>
     <section id="dropped" class="section"></section>
-    <hr />
-    <section id="prompts" class="section"></section>
   </div>
 </Layout>
 
@@ -142,7 +140,6 @@ for (const file of readdirSync(topicsDir)) {
       renderClusters(document.getElementById('clusters'), pipe);
       renderStories(document.getElementById('stories'), outputData);
       renderDropped(document.getElementById('dropped'), outputData);
-      renderLlmPrompts(document.getElementById('prompts'), pipelineData);
     } catch (e) {
       status.textContent = 'Virhe: ' + e.message;
     }
@@ -276,6 +273,7 @@ for (const file of readdirSync(topicsDir)) {
     const modelsUsed = output.meta?.models_used || {};
     const stepDurations = pipelineData?.step_durations_s || {};
     const llmStats = pipelineData?.llm_stats || {};
+    const llmPrompts = pipelineData?.llm_prompts || {};
 
     // Summary totals
     let totalCalls = 0;
@@ -424,6 +422,46 @@ for (const file of readdirSync(topicsDir)) {
 
       const dotsHtml = s.dots != null ? renderDots(s.dots) : '';
 
+      // Embed prompt blocks directly into the step card
+      const prompts = llmPrompts[s.stepKey];
+      let promptsHtml = '';
+      if (s.llm && prompts && prompts.length > 0) {
+        const model = llmStats[s.stepKey] || {};
+        const totalTokens = (model.total_prompt_tokens || 0) + (model.total_completion_tokens || 0);
+        promptsHtml = `<details class="prompt-step" style="margin-top:0.75rem">
+          <summary><strong>Kielimallin syöte ja vastaus</strong> — ${prompts.length} ${prompts.length === 1 ? 'kutsu' : 'kutsua'}, ${totalTokens} tokenia</summary>`;
+        for (let i = 0; i < prompts.length; i++) {
+          const call = prompts[i];
+          const callHtml = prompts.length > 1 ? `Kutsu ${i + 1}/${prompts.length}` : `Kutsu ${i + 1}`;
+          promptsHtml += `<div class="prompt-call"><h3>${callHtml}</h3>`;
+
+          const sysLen = call.system_prompt?.length || 0;
+          promptsHtml += `<details class="prompt-block">
+            <summary class="prompt-summary">System prompt <span class="prompt-size">${sysLen} merkkiä</span></summary>
+            <pre class="prompt-text">${escHtml(call.system_prompt || '')}</pre>
+          </details>`;
+
+          const userLen = call.user_prompt?.length || 0;
+          const userPreview = userLen > 300 ? call.user_prompt.substring(0, 300) + '...' : '';
+          const userExpanded = userLen > 300 ? 'style="display:none"' : '';
+          promptsHtml += `<details class="prompt-block">
+            <summary class="prompt-summary">User prompt <span class="prompt-size">${userLen} merkkiä</span></summary>
+            <pre class="prompt-text prompt-truncated" id="user-${s.stepKey}-${i}">${escHtml(userPreview)}</pre>
+            ${userLen > 300 ? `<button class="prompt-expand" onclick="this.nextElementSibling.style.display='block';this.previousElementSibling.style.display='none';this.style.display='none'">Näytä koko sisältö</button>` : ''}
+            <pre class="prompt-text prompt-full" id="user-full-${s.stepKey}-${i}" ${userExpanded}>${escHtml(call.user_prompt || '')}</pre>
+          </details>`;
+
+          const respLen = call.raw_response?.length || 0;
+          promptsHtml += `<details class="prompt-block">
+            <summary class="prompt-summary">Vastaus <span class="prompt-size">${respLen} merkkiä</span></summary>
+            <pre class="prompt-text">${escHtml(call.raw_response || '')}</pre>
+          </details>`;
+
+          promptsHtml += `</div>`;
+        }
+        promptsHtml += `</details>`;
+      }
+
       html += `
         <div class="step ${llmClass}">
           <div class="step-head">
@@ -434,6 +472,7 @@ for (const file of readdirSync(topicsDir)) {
           <p class="step-desc">${s.desc}</p>
           ${statsHtml}
           ${dotsHtml}
+          ${promptsHtml}
         </div>`;
     }
     html += '</div>';
@@ -533,65 +572,6 @@ for (const file of readdirSync(topicsDir)) {
       }
       html += '</ul></details>';
     }
-    el.innerHTML = html;
-  }
-
-  function renderLlmPrompts(el, pipelineData) {
-    const prompts = pipelineData?.llm_prompts;
-    if (!prompts || typeof prompts !== 'object' || Object.keys(prompts).length === 0) {
-      el.style.display = 'none';
-      return;
-    }
-    el.style.display = 'block';
-
-    const stepKeys = Object.keys(prompts);
-    let html = '<h2>Kielimallin syöte ja vastaus</h2>';
-
-    for (const step of stepKeys) {
-      const calls = prompts[step];
-      if (!calls || calls.length === 0) continue;
-      const model = pipelineData.llm_stats?.[step];
-      const totalCalls = model?.calls || calls.length;
-      const totalTokens = (model?.total_prompt_tokens || 0) + (model?.total_completion_tokens || 0);
-
-      html += `<details class="prompt-step"><summary><strong>${escHtml(step)}</strong> — ${calls.length} kutsua, ${totalTokens} tokenia</summary>`;
-
-      for (let i = 0; i < calls.length; i++) {
-        const call = calls[i];
-        const callLabel = calls.length > 1 ? ` <span class="prompt-call-label">(${i + 1}/${calls.length})</span>` : '';
-        html += `<div class="prompt-call">`;
-
-        // System prompt
-        const sysLen = call.system_prompt?.length || 0;
-        html += `<details class="prompt-block">
-          <summary class="prompt-summary">Näytä ohje (system prompt) <span class="prompt-size">${sysLen} merkkiä</span></summary>
-          <pre class="prompt-text">${escHtml(call.system_prompt || '')}</pre>
-        </details>`;
-
-        // User prompt
-        const userLen = call.user_prompt?.length || 0;
-        const userPreview = userLen > 300 ? call.user_prompt.substring(0, 300) + '...' : '';
-        const userExpanded = userLen > 300 ? 'style="display:none"' : '';
-        html += `<details class="prompt-block">
-          <summary class="prompt-summary">Näytä kysymys (user prompt) <span class="prompt-size">${userLen} merkkiä</span></summary>
-          <pre class="prompt-text prompt-truncated" id="user-${step}-${i}">${escHtml(userPreview)}</pre>
-          ${userLen > 300 ? `<button class="prompt-expand" onclick="this.nextElementSibling.style.display='block';this.previousElementSibling.style.display='none';this.style.display='none'">Näytä koko sisältö</button>` : ''}
-          <pre class="prompt-text prompt-full" id="user-full-${step}-${i}" ${userExpanded}>${escHtml(call.user_prompt || '')}</pre>
-        </details>`;
-
-        // Raw response
-        const respLen = call.raw_response?.length || 0;
-        html += `<details class="prompt-block">
-          <summary class="prompt-summary">Näytä raaka vastaus <span class="prompt-size">${respLen} merkkiä</span></summary>
-          <pre class="prompt-text">${escHtml(call.raw_response || '')}</pre>
-        </details>`;
-
-        html += `</div>`;
-      }
-
-      html += `</details>`;
-    }
-
     el.innerHTML = html;
   }
 
@@ -1029,13 +1009,6 @@ for (const file of readdirSync(topicsDir)) {
     font-size: 0.85rem;
     color: var(--link);
     font-weight: 500;
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-  }
-
-  .prompt-summary:hover {
-    text-decoration: underline;
   }
 
   .prompt-size {
