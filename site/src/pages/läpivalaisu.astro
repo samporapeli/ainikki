@@ -3,15 +3,21 @@ import Layout from '../layouts/Layout.astro';
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { load } from 'js-yaml';
+import { isSiteTopic } from '../lib/site-data';
 
 const topicsDir = path.resolve('../config/topics');
 const topicPeriods: Record<string, string> = {};
 for (const file of readdirSync(topicsDir)) {
   if (!file.endsWith('.yaml')) continue;
   const key = file.replace('.yaml', '');
+  if (!isSiteTopic(key)) continue;
   const cfg = load(readFileSync(path.join(topicsDir, file), 'utf-8')) as { period?: string };
   topicPeriods[key] = cfg.period ?? 'weekly';
 }
+const topicLabels: Record<string, string> = {
+  ai: 'AI',
+  teknologia: 'Teknologia',
+};
 ---
 
 <Layout title="Läpivalaisu — Ainikki"
@@ -28,8 +34,9 @@ for (const file of readdirSync(topicsDir)) {
   <div class="controls">
     <label>Aihe
       <select id="topic-select">
-        <option value="ai">AI</option>
-        <option value="teknologia">Teknologia</option>
+        {Object.keys(topicPeriods).sort().map(topic => (
+          <option value={topic}>{topicLabels[topic] ?? topic.toUpperCase()}</option>
+        ))}
       </select>
     </label>
     <label>Päivämäärä
@@ -135,7 +142,7 @@ for (const file of readdirSync(topicsDir)) {
       renderBacklink(backlink, outputData, topic, date);
       renderFunnel(document.getElementById('funnel'), pipe, outputData, pipelineData);
       renderClusters(document.getElementById('clusters'), pipe);
-      renderStories(document.getElementById('stories'), outputData);
+      renderStories(document.getElementById('stories'), outputData, pipelineData);
       renderDropped(document.getElementById('dropped'), outputData);
     } catch (e) {
       status.textContent = 'Virhe: ' + e.message;
@@ -511,7 +518,7 @@ for (const file of readdirSync(topicsDir)) {
     el.innerHTML = html;
   }
 
-  function renderStories(el, data) {
+  function renderStories(el, data, pipelineData) {
     const items = data.items?.slice().sort((a, b) => a.rank - b.rank) || [];
     let html = '<h2>Koosteen artikkelit</h2><div class="story-list">';
     for (const item of items) {
@@ -542,6 +549,36 @@ for (const file of readdirSync(topicsDir)) {
         </div>
       </article>`;
     }
+
+    const includedUrls = new Set(items.flatMap(item =>
+      (item.sources || []).map(source => String(source.url))
+    ));
+    const cutoff = pipelineData?.steps?.score?.cutoff_rank;
+    const scoredCandidates = pipelineData?.steps?.score?.candidates || [];
+    const notIncluded = typeof cutoff === 'number'
+      ? scoredCandidates
+        .filter(candidate => candidate.rank > cutoff && !includedUrls.has(String(candidate.url)))
+        .sort((a, b) => a.rank - b.rank)
+      : [];
+
+    if (notIncluded.length > 0) {
+      html += `<div class="story-divider"><span>Pisteytyksessä valitut, mutta koosteen ulkopuolelle jääneet</span></div>`;
+      html += '<div class="scored-rest">';
+      for (const candidate of notIncluded) {
+        const reasonHtml = candidate.selection_reason
+          ? `<div class="story-reason"><span class="reason-label">Valinnan peruste:</span> ${escHtml(candidate.selection_reason)}</div>`
+          : '';
+        html += `<article class="scored-entry">
+          <h3 class="story-title">
+            <span class="story-num">#${candidate.rank}</span>
+            <span class="story-headline">${formatLinkWithHost(candidate.url, candidate.title)}</span>
+          </h3>
+          ${reasonHtml}
+        </article>`;
+      }
+      html += '</div>';
+    }
+
     html += '</div>';
     el.innerHTML = html;
   }
@@ -896,6 +933,34 @@ for (const file of readdirSync(topicsDir)) {
     padding: 0.4rem 0 0.4rem 0.75rem;
     border-left: 2px solid var(--border);
     margin-bottom: 0.75rem;
+  }
+
+  .story-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1rem 0 0;
+    color: var(--fg-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .story-divider::before,
+  .story-divider::after {
+    content: '';
+    height: 1px;
+    flex: 1;
+    background: var(--border);
+  }
+
+  .scored-entry {
+    padding: 0.9rem 0;
+  }
+
+  .scored-entry + .scored-entry {
+    border-top: 1px solid var(--border);
   }
 
   .reason-label {
