@@ -151,7 +151,7 @@ def test_prompt_builds_with_real_production_rubric():
     system_prompt, user_prompt = build_score_prompt(clusters, rubric)
     assert "aihepiirin ydinolennaisuus" in system_prompt
     assert "aihepiirien monipuolisuus" in system_prompt
-    assert "vähintään 30" in system_prompt  # 3 * max(10)
+    assert "vähintään 24" in system_prompt  # 3 * max(8)
     assert "cutoff_rank" in system_prompt
 
 
@@ -391,4 +391,3 @@ def test_filter_previous_clusters_empty_previous():
 
     result = filter_previous_clusters(clusters, [])
     assert len(result) == 1
-

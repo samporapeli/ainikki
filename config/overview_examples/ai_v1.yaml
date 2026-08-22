@@ -1,0 +1,23 @@
+version: v1
+examples:
+  - style: asiallinen
+    source: "AGENTS.md yleistyy koodausagenttien yhteisenä tiedostomuotona"
+    digest_topic: "AGENTS.md yhtenäistää koodausagentit"
+  - style: asiallinen
+    source: "Ox Alpha, OpenAI:n valtapohdinta ja GPU-optimointi"
+    digest_topic: "Ox Alpha, OpenAI:n valtapohdinta ja GPU-optimointi"
+  - style: asiallinen
+    source: "Anthropicin Claude-mallien vesileimaus ja prompt-päivitykset"
+    digest_topic: "Anthropicin Claude-mallien vesileimaus ja prompt-päivitykset"
+  - style: asiallinen
+    source: "Ehdotus: Norjan valtion pitäisi ostaa OpenAI"
+    digest_topic: "Ehdotus: Norja ostaisi OpenAI:n"
+  - style: asiallinen
+    source: "Amazon tuhoaa harvinaisia kirjoja koulutusdataksi"
+    digest_topic: "Amazon purkaa harvinaisia kirjoja koulutusdataksi"
+  - style: napakka poikkeus
+    source: "Meta solmii sopimuksia Newsmaxin kanssa AI-koulutukseen"
+    digest_topic: "Zuckerbergin tekoäly opiskelee nyt lähteistä, joita ei kannattaisi siteerata edes ryhmätyössä"
+  - style: napakka poikkeus
+    source: "YouTuben AI-tunnistin merkitsi Kurzgesagtin käsintehdyn videon tekoälyroskaksi"
+    digest_topic: "Algoritmi totesi: jos on liian nätti ollakseen totta, se on varmaan robotin tekemä"

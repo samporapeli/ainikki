@@ -8,8 +8,8 @@ score_clusters() raises a ScoreValidationError instead of producing an
 arbitrary/wrong selection.
 
 Context is kept small as in the cluster step: the prompt only receives
-the title, source type, combined signal, and source count per clustered
-candidate — not full article content.
+the title and the number of distinct URLs per candidate — not full article
+content or popularity signals.
 """
 
 import json
@@ -163,15 +163,7 @@ Vastaa VAIN JSON-muodossa, ei muuta tekstiä:
     lines = []
     for i, cluster in enumerate(clusters):
         primary = cluster.items[0]
-        total_signal = sum(
-            v for item in cluster.items for v in item.raw_signal.values()
-            if isinstance(v, (int, float))
-        )
-        lines.append(
-            f"[{i}] {primary.title} "
-            f"(lähde: {primary.source_type.value}, yhdistetty signaali: {total_signal}, "
-            f"riippumattomia lähteitä: {len(cluster.items)})"
-        )
+        lines.append(f"[{i}] {primary.title}")
     user_prompt = "Ehdokkaat:\n" + "\n".join(lines)
 
     return system_prompt, user_prompt
@@ -236,6 +228,7 @@ def score_clusters(clusters: list[ClusteredCandidate], rubric_path: Path,
         ScoredCandidate(
             items=clusters[s.candidate_index].items,
             cluster_reason=clusters[s.candidate_index].cluster_reason,
+            n_urls=clusters[s.candidate_index].n_urls,
             rank=s.rank,
             selection_reason=s.selection_reason,
         )

@@ -1,0 +1,11 @@
+version: v1
+examples:
+  - style: asiallinen
+    source: "Qwen3.8, Gemini 3.7 Flash ja itseään parantavat tekoälyagentit"
+    digest_topic: "Qwen3.8, Gemini 3.7 Flash ja itseään parantavat tekoälyagentit"
+  - style: asiallinen
+    source: "Firefox jää ainoaksi suureksi selaimeksi joka tukee uBlock Originia"
+    digest_topic: "Firefox puolustaa uBlock Originia"
+  - style: asiallinen
+    source: "DeepMindin WeatherNext-malli ennustaa hurrikaaneja karkealla resoluutiolla"
+    digest_topic: "WeatherNext hakee hurrikaaniennusteisiin lisäaikaa"

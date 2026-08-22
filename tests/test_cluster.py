@@ -40,10 +40,10 @@ def _mock_llm_group_anthropic_stories(system_prompt: str, user_prompt: str) -> t
     all_indices = set(range(len(lines)))
     remaining = all_indices - {anthropic_idx, techcrunch_idx}
 
-    clusters = [{"candidate_indices": [anthropic_idx, techcrunch_idx], "primary_index": 0,
+    clusters = [{"candidate_indices": [anthropic_idx, techcrunch_idx], "primary_position": 0,
                  "reason": "molemmat käsittelevät Fable/Mythos-julkaisua"}]
     for idx in remaining:
-        clusters.append({"candidate_indices": [idx], "primary_index": 0, "reason": None})
+        clusters.append({"candidate_indices": [idx], "primary_position": 0, "reason": None})
 
     return json.dumps({"clusters": clusters}), {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150, "cost": 0.0001}
 
@@ -86,32 +86,41 @@ def test_recovery_on_incomplete_coverage():
 
     def partial_response(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         # only first 5 candidates mentioned out of 9
-        clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(5)]
+        clusters = [{"candidate_indices": [i], "primary_position": 0, "reason": None} for i in range(5)]
         return json.dumps({"clusters": clusters}), {"prompt_tokens": 50, "completion_tokens": 25, "total_tokens": 75, "cost": 0.00005}
 
     result = cluster_candidates(candidates, partial_response)
     assert len(result.clusters) == len(candidates)
-    assert result.warning is not None
+    assert result.warning is None
     covered = [c for c in result.clusters if c.cluster_reason != "fallback: not covered by model response"]
     missing = [c for c in result.clusters if c.cluster_reason == "fallback: not covered by model response"]
     assert len(covered) == 5
     assert len(missing) == 4
 
 
-def test_recovery_preserves_primary_order():
+def test_recovery_rejects_unsupported_merge():
     candidates = _build_test_candidates()
 
     def partial_response(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
-        clusters = [{"candidate_indices": [0, 1], "primary_index": 1,
+        clusters = [{"candidate_indices": [0, 1], "primary_position": 1,
                      "reason": "sama tapahtuma"}]
-        clusters.extend({"candidate_indices": [i], "primary_index": 0, "reason": None}
+        clusters.extend({"candidate_indices": [i], "primary_position": 0, "reason": None}
                         for i in range(2, len(candidates) - 1))
         return json.dumps({"clusters": clusters}), {}
 
     result = cluster_candidates(candidates, partial_response)
 
-    assert result.clusters[0].items[0] == candidates[1].items[0]
-    assert result.warning is not None
+    assert not any(len(cluster.items) > 1 for cluster in result.clusters[:2])
+    assert result.warning is None
+
+
+def test_empty_cluster_response_creates_singletons_without_warning():
+    candidates = _build_test_candidates()
+
+    result = cluster_candidates(candidates, lambda s, u: (json.dumps({"clusters": []}), {}))
+
+    assert len(result.clusters) == len(candidates)
+    assert result.warning is None
 
 
 def test_prompt_stays_lightweight():
@@ -128,7 +137,7 @@ def test_code_fenced_json_is_parsed():
     candidates = _build_test_candidates()
 
     def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
-        clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None}
+        clusters = [{"candidate_indices": [i], "primary_position": 0, "reason": None}
                     for i in range(len(candidates))]
         inner = json.dumps({"clusters": clusters})
         return f"```json\n{inner}\n```", {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15, "cost": 0.00001}

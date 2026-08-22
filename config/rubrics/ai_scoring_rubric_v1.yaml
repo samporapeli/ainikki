@@ -8,11 +8,29 @@
 version: v1
 topic: ai
 topic_description: >
-  tekoäly, koneoppiminen, syväoppiminen, LLM, neuroverkot, GPT,
-  Claude, Gemini, ja muu tekoälyyn liittyvä tutkimus, työkalut,
-  julkaisut ja keskustelu. Myös tekoälyn soveltaminen ja vaikutus
-  eri aloihin on aiheeseen kuuluva, jos tekoäly on jutun pääaihe
-  eikä vain sivumaininta.
+  tekoäly, sen tutkimus, kehitys ja teknologia sekä siihen liittyvät
+  työkalut, julkaisut ja keskustelu. Tekoäly voi olla jutun pääaihe tai merkittävä
+  mahdollistaja, kohde, ilmiö, sovellus tai vaikutuksen lähde.
+  Aiheeseen kuuluvat myös tekoälyn yhteiskunnallisesti merkittävät
+  käyttökohteet ja tarinat, vaikka tekoäly olisi jutussa väline eikä
+  jutun ainoa aihe. Pelkkä lyhyt sivumaininta tai tekoälytyökalu ilman
+  muuta olennaista yhteyttä aiheeseen ei riitä.
+
+  Esimerkkejä:
+  - PIDÄ: "Vanhempi rakensi tekoälyagentilla karttapalvelun perheiden arjen
+    avuksi" (Tekoäly on jutun merkittävä mahdollistaja.)
+  - PIDÄ: "Nuoret aikuiset kertovat välttelevänsä tekoälyä" (Tekoälyn
+    välttäminen on itsessään tekoälyä koskeva yhteiskunnallinen ilmiö.)
+  - PIDÄ: "New open-weight language model runs on smaller devices"
+    (Uuden mallin ominaisuudet ja käyttöönotto ovat jutun aihe.)
+  - PIDÄ: "AI reshapes software teams, but developers retain responsibility
+    for quality" (Tekoälyn vaikutus ohjelmistokehitykseen on jutun keskeinen
+    aihe.)
+  - PIDÄ: "Agentic coding tool plans, implements and tests changes across a
+    whole codebase" (Tekoälytyökalun vaikutus ohjelmistokehitykseen on jutun
+    keskeinen aihe.)
+  - JÄTÄ POIS: "Varhainen somen käyttö voi heikentää koulumenestystä"
+    (Jutussa ei käsitellä tekoälyä, vaikka aihe liittyykin teknologiaan.)
 
 # Criteria the model applies when scoring candidates.
 # Write these as concretely as possible - the more specific
@@ -87,5 +105,5 @@ exclude:
   - "duplikaatit jotka eivät tuo uutta näkökulmaa jo valittuun juttuun"
 
 items_per_briefing:
-  min: 3
-  max: 10
+  min: 4
+  max: 8

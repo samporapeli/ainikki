@@ -31,8 +31,8 @@ def test_generate_overview_happy_path():
              _make_news_item("Juttu B", "Kuvaus B.", rank=2)]
 
     def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
-        return json.dumps({"overview": "Päivän isoin aihe oli uusi mallijulkaisu.",
-                           "digest_topic": "Uusi mallijulkaisu puhuttaa"}), {"prompt_tokens": 50, "completion_tokens": 30, "total_tokens": 80, "cost": 0.0001}
+        return json.dumps({"yleiskatsaus": "Päivän isoin aihe oli uusi mallijulkaisu.",
+                           "tiivistelmäotsikko": "Uusi mallijulkaisu puhuttaa"}), {"prompt_tokens": 50, "completion_tokens": 30, "total_tokens": 80, "cost": 0.0001}
 
     result = generate_overview(items, mock_llm, "testi-aihe")
     assert result.overview == "Päivän isoin aihe oli uusi mallijulkaisu."
@@ -60,8 +60,8 @@ def test_generate_overview_empty_items_skips_llm_call():
 
     def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         call_count["n"] += 1
-        return json.dumps({"overview": "ei pitäisi tulla tänne",
-                           "digest_topic": "ei pitäisi"}), {}
+        return json.dumps({"yleiskatsaus": "ei pitäisi tulla tänne",
+                           "tiivistelmäotsikko": "ei pitäisi"}), {}
 
     result = generate_overview([], mock_llm, "testi-aihe")
 
@@ -90,12 +90,11 @@ def test_code_fenced_json_is_parsed():
     items = [_make_news_item("Juttu A", "Kuvaus A.", rank=1)]
 
     def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
-        inner = json.dumps({"overview": "Koodiblokki-yleiskatsaus.",
-                            "digest_topic": "Koodiblokin aihe"})
+        inner = json.dumps({"yleiskatsaus": "Koodiblokki-yleiskatsaus.",
+                            "tiivistelmäotsikko": "Koodiblokin aihe"})
         return f"```json\n{inner}\n```", {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15, "cost": 0.00001}
 
     result = generate_overview(items, mock_llm_code_fence, "testi-aihe")
     assert result.overview == "Koodiblokki-yleiskatsaus."
     assert result.digest_topic == "Koodiblokin aihe"
     assert result.warning is None
-

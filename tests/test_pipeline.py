@@ -40,8 +40,8 @@ def _make_llm_handler(score_min=3, score_max=10):
         candidate_lines = [line for line in user_content.splitlines() if line.strip().startswith("[")]
         n = len(candidate_lines)
 
-        if "uutisanalyytikko" in system_prompt:
-            clusters = [{"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(n)]
+        if '"clusters":' in system_prompt and '"candidate_indices"' in system_prompt:
+            clusters = [{"candidate_indices": [i], "primary_position": 0, "reason": None} for i in range(n)]
             content = json.dumps({"clusters": clusters})
         elif "ehdokaslistaa" in system_prompt:
             k = max(score_min, min(n, score_max))
@@ -49,7 +49,7 @@ def _make_llm_handler(score_min=3, score_max=10):
                         for i in range(k)]
             cutoff = score_min
             content = json.dumps({"selected": selected, "cutoff_rank": cutoff})
-        elif "aiheeseen liittyvä" in system_prompt:
+        elif '"results":' in system_prompt and '"keep"' in system_prompt:
             content = json.dumps({"results": [{"index": i, "keep": True} for i in range(n)]})
         elif "Kohdeyleisö:" in system_prompt:
             content = json.dumps({"headline": "Testiotsikko juttu",
@@ -123,7 +123,7 @@ def test_pipeline_raises_on_critical_score_failure(tmp_path):
             user_content = body["messages"][0]["content"] if is_anthropic else body["messages"][1]["content"]
             n = len([line for line in user_content.splitlines() if line.strip().startswith("[")])
             content = json.dumps({"clusters": [
-                {"candidate_indices": [i], "primary_index": 0, "reason": None} for i in range(n)
+                {"candidate_indices": [i], "primary_position": 0, "reason": None} for i in range(n)
             ]})
         else:
             content = "{}"
@@ -230,4 +230,3 @@ def test_pipeline_captures_llm_prompts(tmp_path):
         expected = json.dumps({"headline": "Testiotsikko juttu",
                                "summary": "Testiyhteenveto joka kuvaa juttua lyhyesti."})
         assert call["raw_response"] == expected, f"compose call {i} raw_response mismatch"
-
