@@ -88,6 +88,36 @@ def test_enrich_candidates_mixed_outcomes():
     assert any(d.title == "Palvelin kaatuu" for d in result.dropped_stories)
 
 
+def test_enrich_falls_back_to_secondary_source():
+    primary = _make_scored("Ensisijainen lähde", "https://blocked.example.com/article", rank=1).items[0]
+    secondary = _make_scored("Toissijainen lähde", "https://fallback.example.com/article", rank=1).items[0]
+    scored = [ScoredCandidate(items=[primary, secondary], cluster_reason=None,
+                               rank=1, selection_reason="testivalinta")]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "blocked.example.com":
+            if request.url.path == "/robots.txt":
+                return httpx.Response(200, text=ROBOTS_DISALLOW_ALL)
+            return httpx.Response(200, text=CLEAN_HTML)
+        if request.url.host == "fallback.example.com":
+            if request.url.path == "/robots.txt":
+                return httpx.Response(200, text=ROBOTS_ALLOW_ALL)
+            return httpx.Response(200, text=CLEAN_HTML)
+        raise AssertionError(f"unexpected host: {request.url.host}")
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    result = enrich_candidates(scored, client=client)
+
+    assert len(result.items) == 1
+    enriched = result.items[0]
+    assert enriched.items[0].title == "Ensisijainen lähde"
+    assert enriched.content_source is not None
+    assert enriched.content_source.title == "Toissijainen lähde"
+    assert "Mythos 5" in enriched.content
+    assert len(result.dropped_stories) == 0
+    assert any("Toissijainen lähde" in warning for warning in result.warnings)
+
+
 def test_enrich_preserves_scoring_fields():
     """Verifies that rank/selection_reason/cluster_reason are not lost during the enrich phase."""
     scored = [_make_scored("Artikkeli", "https://good2.example.com/article", rank=1)]
@@ -175,4 +205,3 @@ def test_robots_cache_per_domain():
 
     assert len(result.items) == 2
     assert robots_fetch_count["n"] == 1, f"robots.txt should be fetched only once, was fetched {robots_fetch_count['n']} times"
-

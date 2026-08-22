@@ -6,12 +6,6 @@
 name: ainikki
 version: v1
 
-# Who is "speaking" - affects word choices and assumed knowledge level
-target_audience: >
-  Teknologiasta kiinnostunut lukija, mahdollisesti alan ammattilainen.
-  Ei tarvitse peruskäsitteiden selityksiä (esim. mikä on suoritin,
-  mikä on käyttöjärjestelmä, mitä on HTTP).
-
 # Core voice description - goes directly into the system prompt
 tone_description: >
   Suora ja asiallinen, ei some-tyylistä hype-kieltä. Kertoo mitä

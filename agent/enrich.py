@@ -99,36 +99,51 @@ def enrich_candidates(scored: list[ScoredCandidate], client: httpx.Client,
 
     for sc in scored:
         primary = sc.items[0]
-        url_str = str(primary.url)
-
-        if not _is_allowed_by_robots(url_str, client, robots_cache):
-            msg = f"Rikastaminen estetty robots.txt:llä '{primary.title}' ({primary.url}) - pudotettu koosteesta"
-            logger.warning(msg)
-            warnings.append(msg)
-            dropped_stories.append(DroppedStory(title=primary.title, url=url_str))
-            continue
-
         content = None
-        try:
-            html = fetch_html_raw(url_str, client=client)
-            content = extract_article_text(html, url=url_str, max_chars=max_chars)
-        except httpx.HTTPError as e:
-            content = None
-            error_note = str(e)
-        else:
-            error_note = "content could not be extracted (paywall/blank page?)" if content is None else None
+        content_source = None
+        failures: list[str] = []
 
-        if content is None:
-            msg = f"Rikastaminen epäonnistui '{primary.title}' ({primary.url}): {error_note} - pudotettu koosteesta"
+        for source in sc.items:
+            url_str = str(source.url)
+            if not _is_allowed_by_robots(url_str, client, robots_cache):
+                failures.append(f"'{source.title}' estetty robots.txt:llä")
+                continue
+
+            try:
+                html = fetch_html_raw(url_str, client=client)
+                content = extract_article_text(html, url=url_str, max_chars=max_chars)
+            except httpx.HTTPError as e:
+                failures.append(f"'{source.title}': {e}")
+                continue
+
+            if content is None:
+                failures.append(f"'{source.title}': sisältöä ei voitu poimia")
+                continue
+
+            content_source = source
+            break
+
+        if content is None or content_source is None:
+            msg = f"Rikastaminen epäonnistui '{primary.title}' ({primary.url})"
+            if failures:
+                msg += ": " + "; ".join(failures)
+            msg += " - pudotettu koosteesta"
             logger.warning(msg)
             warnings.append(msg)
-            dropped_stories.append(DroppedStory(title=primary.title, url=url_str))
+            dropped_stories.append(DroppedStory(title=primary.title, url=str(primary.url)))
             continue
+
+        if content_source is not primary:
+            msg = (f"Rikastaminen epäonnistui ensisijaisesta lähteestä '{primary.title}'; "
+                   f"käytetään lähdettä '{content_source.title}'")
+            logger.warning(msg)
+            warnings.append(msg)
 
         kept.append(EnrichedCandidate(
             items=sc.items, cluster_reason=sc.cluster_reason,
+            n_urls=sc.n_urls,
             rank=sc.rank, selection_reason=sc.selection_reason,
-            content=content,
+            content=content, content_source=content_source,
         ))
 
     return EnrichResult(items=kept, dropped_stories=dropped_stories, warnings=warnings)

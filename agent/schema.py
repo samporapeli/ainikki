@@ -57,6 +57,7 @@ class ClusteredCandidate(BaseModel):
     """
     items: list[RawItem]
     cluster_reason: str | None = None  # short model rationale for clustering, debug/transparency
+    n_urls: int = 1  # number of distinct URLs represented in this story
 
 
 # --- Post-clustering / final form ------------------------------------------
@@ -76,16 +77,18 @@ class ScoredCandidate(BaseModel):
     Only selected candidates reach this form — rejected ones do not proceed."""
     items: list[RawItem]
     cluster_reason: str | None = None
+    n_urls: int = 1
     rank: int
     selection_reason: str
 
 
 class EnrichedCandidate(ScoredCandidate):
-    """ScoredCandidate + cleaned article content from the primary source.
-    Only the primary source (items[0]) is enriched in v1 — secondary sources
-    stay at metadata level since compose uses only the primary in v1.
+    """ScoredCandidate + cleaned article content from a usable source.
+    The model-selected primary is tried first; content_source records a
+    fallback source when the primary cannot be fetched or extracted.
     """
     content: str | None = None  # None = fetch/extraction failed for this item
+    content_source: RawItem | None = None
 
 
 class DroppedStory(BaseModel):

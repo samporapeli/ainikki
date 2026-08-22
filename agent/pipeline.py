@@ -49,11 +49,21 @@ class ConfigPaths:
         self.topic_name = topic
         self.models = config_dir / "models.yaml"
         self.topics_dir = config_dir / "topics"
+        self.topic_config = self.topics_dir / f"{topic}.yaml"
         path = config_dir / "personas" / f"{topic}_v1.yaml"
         self.persona = path if path.exists() else config_dir / "personas" / "ainikki_v1.yaml"
         self.guardrails = config_dir / "guardrails" / "guardrails_v1.yaml"
         self.golden_examples_dir = config_dir / "golden_examples"
-        self.rubric = config_dir / "rubrics" / f"{topic}_scoring_rubric_v1.yaml"
+        topic_overview_examples = config_dir / "overview_examples" / f"{topic}_v1.yaml"
+        self.overview_examples = (
+            topic_overview_examples if topic_overview_examples.exists()
+            else config_dir / "overview_examples" / "ai_v1.yaml"
+        )
+        topic_rubric = config_dir / "rubrics" / f"{topic}_scoring_rubric_v1.yaml"
+        self.rubric = (
+            topic_rubric if topic_rubric.exists()
+            else config_dir / "rubrics" / "ai_scoring_rubric_v1.yaml"
+        )
         self.sources = config_dir / "sources.yaml"
 
 
@@ -109,15 +119,13 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
                            override_model=model_override, override_provider=provider_override,
                            client=client)
 
-    # Wrap the LLM call to accumulate stats
-    # step_stats tracks number of calls and token usage for each LLM step.
     step_stats = {
         "calls": 0,
         "total_prompt_tokens": 0,
         "total_completion_tokens": 0,
         "total_tokens": 0,
         "total_cost": None,
-    }  # feat: enrich digestion colophon with per-step LLM stats and läpivalaisu link
+    }
     def _tracked_call(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         content, usage = llm_fn(system_prompt, user_prompt)
         prompt_tokens = usage.get("prompt_tokens", 0) or 0
@@ -129,7 +137,7 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
         step_stats["total_completion_tokens"] += completion_tokens
         step_stats["total_tokens"] += total_tokens
         if cost is not None:
-            step_stats["total_cost"] = (step_stats["total_cost"] or 0) + cost  # feat: enrich digestion colophon with per-step LLM stats and läpivalaisu link
+            step_stats["total_cost"] = (step_stats["total_cost"] or 0) + cost
         if llm_prompts_out is not None:
             llm_prompts_out[step].append({
                 "system_prompt": system_prompt,
@@ -157,6 +165,14 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     model_overrides = model_overrides or {}
     out_dir = out_dir or (data_dir / "output")
     config_paths = ConfigPaths(config_dir, topic)
+    if not config_paths.topic_config.exists():
+        raise ValueError(f"Topic configuration not found: {config_paths.topic_config}")
+    topic_config = yaml.safe_load(config_paths.topic_config.read_text())
+    if not isinstance(topic_config, dict) or not topic_config.get("target_audience"):
+        raise ValueError(
+            f"Topic configuration must define target_audience: {config_paths.topic_config}"
+        )
+    target_audience = topic_config["target_audience"]
     effective_display_date = display_date or since.date()
     date_str = effective_display_date.isoformat()
     all_warnings: list[str] = []
@@ -273,6 +289,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
         compose_result = compose_items(enrich_result.items, config_paths.persona,
                                         config_paths.guardrails, llm_compose,
                                         topic=topic,
+                                        target_audience=target_audience,
                                         golden_examples_dir=config_paths.golden_examples_dir)
         all_warnings.extend(compose_result.warnings)
         step_durations["compose"] = round(perf_counter() - t0_compose, 2)
@@ -293,6 +310,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
                 batch_compose = compose_items(batch.items, config_paths.persona,
                                                config_paths.guardrails, llm_compose,
                                                topic=topic,
+                                               target_audience=target_audience,
                                                golden_examples_dir=config_paths.golden_examples_dir)
                 all_warnings.extend(batch_compose.warnings)
                 compose_result.items.extend(batch_compose.items)
@@ -304,7 +322,8 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     t0 = perf_counter()
     llm_overview = _resolve_llm_call("overview", models_config, config_paths, model_overrides,
                                       llm_client, models_used, llm_stats, llm_prompts)
-    overview_result = generate_overview(compose_result.items, llm_overview, topic)
+    overview_result = generate_overview(compose_result.items, llm_overview, topic,
+                                         examples_path=config_paths.overview_examples)
     step_durations["overview"] = round(perf_counter() - t0, 2)
 
     total_duration = round(perf_counter() - t_pipeline_start, 2)
@@ -370,7 +389,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
                         "url": str(sc.items[0].url),
                         "rank": sc.rank,
                         "selection_reason": sc.selection_reason,
-                        "n_sources": len(sc.items),
+                        "n_urls": sc.n_urls,
                     }
                     for sc in scored.scored
                 ],

@@ -52,11 +52,11 @@ def _make_llm_handler(score_min=3, score_max=10):
         elif '"results":' in system_prompt and '"keep"' in system_prompt:
             content = json.dumps({"results": [{"index": i, "keep": True} for i in range(n)]})
         elif "Kohdeyleisö:" in system_prompt:
-            content = json.dumps({"headline": "Testiotsikko juttu",
-                                   "summary": "Testiyhteenveto joka kuvaa juttua lyhyesti."})
+            content = json.dumps({"otsikko": "Testiotsikko juttu",
+                                   "tiivistelmä": "Testiyhteenveto joka kuvaa juttua lyhyesti."})
         elif "Tiivistelmäotsikko" in system_prompt:
-            content = json.dumps({"overview": "Päivän aiheet liittyivät tekoälyyn ja sen kehitykseen.",
-                                   "digest_topic": "Tekoäly ja sen kehitys"})
+            content = json.dumps({"yleiskatsaus": "Päivän aiheet liittyivät tekoälyyn ja sen kehitykseen.",
+                                   "tiivistelmäotsikko": "Tekoäly ja sen kehitys"})
         else:
             raise AssertionError(f"unrecognized system prompt: {system_prompt[:100]}")
 
@@ -96,7 +96,7 @@ def test_full_pipeline_happy_path(tmp_path):
 
     assert briefing.topic == "ai"
     assert briefing.period == Period.daily
-    assert len(briefing.items) == 3
+    assert len(briefing.items) == 4
     assert briefing.overview != ""
     assert briefing.meta.persona == "ainikki-v1"
     assert briefing.meta.rubric_version == "v1"
@@ -219,14 +219,14 @@ def test_pipeline_captures_llm_prompts(tmp_path):
         assert isinstance(call["user_prompt"], str) and len(call["user_prompt"]) > 0
         assert isinstance(call["raw_response"], str) and len(call["raw_response"]) > 0
 
-    # Compose should have N entries (one per item, 3 items from test)
+    # Compose should have N entries (one per item, 4 items from test)
     compose_calls = prompts["compose"]
-    assert len(compose_calls) == 3, f"compose should have 3 calls, got {len(compose_calls)}"
+    assert len(compose_calls) == 4, f"compose should have 4 calls, got {len(compose_calls)}"
     for i, call in enumerate(compose_calls):
         assert "system_prompt" in call
         assert "user_prompt" in call
         assert "raw_response" in call
         # raw_response should match what the mock returns
-        expected = json.dumps({"headline": "Testiotsikko juttu",
-                               "summary": "Testiyhteenveto joka kuvaa juttua lyhyesti."})
+        expected = json.dumps({"otsikko": "Testiotsikko juttu",
+                               "tiivistelmä": "Testiyhteenveto joka kuvaa juttua lyhyesti."})
         assert call["raw_response"] == expected, f"compose call {i} raw_response mismatch"

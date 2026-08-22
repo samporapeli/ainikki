@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 import yaml
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from agent.json_utils import strip_code_fences
 from agent.schema import EnrichedCandidate, NewsItem, RawItem, Source
@@ -28,13 +28,15 @@ from agent.cluster import LlmCall
 
 logger = logging.getLogger(__name__)
 
+MAX_HEADLINE_CHARS = 256
+MAX_SUMMARY_CHARS = 4096
+
 
 # --- Configuration loading ----------------------------------------------
 
 class Persona(BaseModel):
     name: str
     version: str
-    target_audience: str
     tone_description: str
     voice_traits: list[str]
     avoid: list[str]
@@ -75,7 +77,8 @@ class GuardrailsConfig(BaseModel):
 # --- Prompt construction -------------------------------------------------
 
 def build_compose_system_prompt(persona: Persona, golden_examples: GoldenExamplesConfig,
-                                 guardrails: GuardrailsConfig, topic: str) -> str:
+                                 guardrails: GuardrailsConfig, topic: str,
+                                 target_audience: str) -> str:
     voice = "\n".join(f"- {t}" for t in persona.voice_traits)
     avoid = "\n".join(f"- {a}" for a in persona.avoid)
     rules = "\n".join(f"- {r}" for r in guardrails.rules)
@@ -83,7 +86,7 @@ def build_compose_system_prompt(persona: Persona, golden_examples: GoldenExample
 
     return f"""Kirjoitat {topic}-aiheiselle uutiskoosteelle tekstiä persoonan "{persona.name}" äänellä.
 
-Kohdeyleisö: {persona.target_audience}
+Kohdeyleisö: {target_audience}
 
 Sävy: {persona.tone_description}
 
@@ -99,17 +102,21 @@ Säännöt (pätevät aina, riippumatta äänestä):
 Esimerkkejä aiemmista julkaisuistasi (pidä sama ääni):
 {examples}
 
-Tehtäväsi: kirjoita annetulle uutiselle suomenkielinen headline (max 12 sanaa)
-ja summary (2-4 lausetta) yllä kuvatulla äänellä ja säännöillä. Käytä VAIN
-annettua sisältöä, älä lisää tietoa jota ei ole siinä.
+Tehtävä:
+- otsikko: suomenkielinen otsikko, enintään 12 sanaa
+- tiivistelmä: suomenkielinen tiivistelmä, 2–4 virkettä
+
+Käytä vain annettua sisältöä. Älä lisää tietoa, jota lähde ei mainitse.
+Tekninen enimmäispituus on otsikolle {MAX_HEADLINE_CHARS} merkkiä ja
+tiivistelmälle {MAX_SUMMARY_CHARS} merkkiä.
 
 Vastaa VAIN JSON-muodossa, ei muuta tekstiä:
-{{"headline": "...", "summary": "..."}}"""
+{{"otsikko": "...", "tiivistelmä": "..."}}"""
 
 
 def build_compose_user_prompt(item: EnrichedCandidate) -> str:
-    primary = item.items[0]
-    return f"""Alkuperäinen otsikko: {primary.title}
+    content_source = item.content_source or item.items[0]
+    return f"""Alkuperäinen otsikko: {content_source.title}
 
 Sisältö:
 {item.content}"""
@@ -118,8 +125,8 @@ Sisältö:
 # --- Execution ----------------------------------------------------------
 
 class ComposeResponse(BaseModel):
-    headline: str
-    summary: str
+    headline: str = Field(validation_alias="otsikko")
+    summary: str = Field(validation_alias="tiivistelmä")
 
 
 class ComposeResult(NamedTuple):
@@ -128,6 +135,26 @@ class ComposeResult(NamedTuple):
     persona_id: str
     guardrails_version: str
     golden_examples_version: str
+
+
+def _parse_compose_response(raw_response: str) -> ComposeResponse:
+    cleaned = strip_code_fences(raw_response).strip()
+    if not cleaned:
+        raise ValueError("empty response")
+    parsed = json.loads(cleaned)
+    response = ComposeResponse(**parsed)
+    if not response.headline.strip() or not response.summary.strip():
+        raise ValueError("headline or summary is empty")
+    return response
+
+
+def _validate_output_lengths(response: ComposeResponse) -> str | None:
+    errors = []
+    if len(response.headline) > MAX_HEADLINE_CHARS:
+        errors.append(f"headline ylittää {MAX_HEADLINE_CHARS} merkin rajan")
+    if len(response.summary) > MAX_SUMMARY_CHARS:
+        errors.append(f"summary ylittää {MAX_SUMMARY_CHARS} merkin rajan")
+    return "; ".join(errors) if errors else None
 
 
 def _raw_item_to_source(raw_item: RawItem) -> Source:
@@ -141,37 +168,54 @@ def _raw_item_to_source(raw_item: RawItem) -> Source:
 def compose_items(enriched: list[EnrichedCandidate], persona_path: Path,
                    guardrails_path: Path, llm_call: LlmCall,
                    topic: str = "",
+                   target_audience: str = "",
                    golden_examples_dir: Path = Path("config/golden_examples")) -> ComposeResult:
     persona = Persona.load(persona_path)
     golden_examples = GoldenExamplesConfig.load(golden_examples_dir / persona.golden_examples_ref)
     guardrails = GuardrailsConfig.load(guardrails_path)
 
-    system_prompt = build_compose_system_prompt(persona, golden_examples, guardrails, topic)
+    system_prompt = build_compose_system_prompt(persona, golden_examples, guardrails, topic,
+                                                 target_audience)
 
     news_items: list[NewsItem] = []
     warnings: list[str] = []
 
     for item in enriched:
-        primary_title = item.items[0].title
+        content_source = item.content_source or item.items[0]
+        primary_title = content_source.title
         user_prompt = build_compose_user_prompt(item)
         raw_response, _usage = llm_call(system_prompt, user_prompt)
 
-        cleaned = strip_code_fences(raw_response).strip()
-        if not cleaned:
+        if not strip_code_fences(raw_response).strip():
             logger.warning("compose: empty response for '%s', retrying once", primary_title)
             raw_response, _usage = llm_call(system_prompt, user_prompt)
-            cleaned = strip_code_fences(raw_response).strip()
 
         try:
-            parsed = json.loads(cleaned)
-            response = ComposeResponse(**parsed)
-            if not response.headline.strip() or not response.summary.strip():
-                raise ValueError("headline or summary is empty")
+            response = _parse_compose_response(raw_response)
         except (json.JSONDecodeError, ValidationError, ValueError) as e:
             msg = f"Kirjoitus epäonnistui '{primary_title}': {e} - pudotettu koosteesta"
             logger.warning(msg)
             warnings.append(msg)
             continue
+
+        length_error = _validate_output_lengths(response)
+        if length_error:
+            logger.warning("compose: %s for '%s', retrying once", length_error, primary_title)
+            retry_prompt = (user_prompt + "\n\n"
+                            "Lyhennä vastausta: edellinen vastaus ylitti sallitun "
+                            "merkkirajan. Vastaa uudelleen samoilla JSON-kentillä "
+                            "ja noudata annettuja enimmäispituuksia.")
+            retry_raw_response, _usage = llm_call(system_prompt, retry_prompt)
+            try:
+                response = _parse_compose_response(retry_raw_response)
+                retry_length_error = _validate_output_lengths(response)
+                if retry_length_error:
+                    raise ValueError(retry_length_error)
+            except (json.JSONDecodeError, ValidationError, ValueError) as e:
+                msg = f"Kirjoitus epäonnistui '{primary_title}': {e} - pudotettu koosteesta"
+                logger.warning(msg)
+                warnings.append(msg)
+                continue
 
         news_items.append(NewsItem(
             headline=response.headline,

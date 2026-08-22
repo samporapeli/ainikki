@@ -32,3 +32,12 @@ examples:
       Vaikka kyseessä on kokeellinen ongelma ilman käytännön
       sovelluksia, tulos on merkittävä virstanpylväs
       kvanttilaskennan kehityksessä.
+
+  - headline: "Firefox jää ainoaksi suureksi selaimeksi joka tukee uBlock Originia"
+    summary: >
+      Chromium-pohjaiset selaimet siirtyvät Manifest V3 -arkkitehtuuriin,
+      joka rajoittaa uBlock Originin toimintaa. Firefox ilmoitti jatkavansa
+      tuen tarjoamista, joten muiden selainten käyttäjille jäävät suppeampi
+      uBlock Origin Lite tai selaimen oma mainostenesto. Muutos tekee
+      selaimen valinnasta merkityksellisen mainosteneston ja yksityisyyden
+      kannalta.

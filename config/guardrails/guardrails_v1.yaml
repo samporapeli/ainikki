@@ -17,6 +17,21 @@ rules:
   # Finnish language
   - "Kirjoita yhdyssanat yhteen: verkkosivusto (ei verkko sivusto), asiakaspalvelu (ei asiakas palvelu), tietoturva (ei tieto turva). Nominatiivilla alkavat substantiiviyhdistelmät ovat AINA yhdyssanoja."
   - "Käytä pilkkua desimaalierottimena: 3,14 (ei 3.14). Prosenttimerkkiin välilyönti edelle: 15 %."
+  - >
+    Tarkista suurten lukujen suomenkieliset nimet englannista käännettäessä:
+    suomi käyttää pitkää asteikkoa, kun taas nykyenglanti käyttää lyhyttä
+    asteikkoa. Miljoona = million = 10^6, miljardi = billion = 10^9
+    (lyhenne mrd.),
+    biljoona = trillion = 10^12, biljardi = quadrillion = 10^15 ja
+    triljoona = quintillion = 10^18. Älä käännä englannin sanaa billion
+    biljoonaksi: suomeksi se on miljardi. Käytä tarvittaessa myös numeroa
+    tai potenssimuotoa väärinkäsityksen estämiseksi.
+  - >
+    Malliparametrien yhteydessä säilytä englanninkielinen kokolyhenne
+    alkuperäisessä muodossa, mutta kirjoita suomenkielinen vastine ensin:
+    esimerkiksi "9 miljardia (9B) parametria", "500 miljoonaa (500M)
+    parametria" ja "1 biljoona (1T) parametria". Älä tulkitse B-lyhennettä
+    suomenkielisenä biljoonana, vaan käytä oikeaa lukusanaa miljardi.
   - "Kirjoita viikonpäivät, kuukaudet ja kansallisuudet pienellä alkukirjaimella: maanantai, tammikuu, suomalainen."
   - "Vältä anglismeja ja käännöslainoja: älä käytä sanoja 'implementoida', 'adressoida' tai muita suoraan englannista johdettuja verbejä - käytä suomenkielisiä vastineita (toteuttaa, käsitellä)."
   - "Älä käytä Oxford-pilkkua: luettelon viimeisen ja-sanan edellä ei ole pilkkua (jauhoja, sokeria ja voita)."

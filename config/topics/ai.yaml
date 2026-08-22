@@ -1,4 +1,8 @@
 # Sources to use for the AI topic (keys from config/sources.yaml).
+target_audience: >
+  Kokenut ohjelmistokehittäjä joka seuraa AI-alaa aktiivisesti mutta
+  ei ehdi lukea kaikkea itse. Ei tarvitse peruskäsitteiden selityksiä
+  (esim. mitä on LLM, mitä on RAG).
 period: daily
 sources:
   - hn

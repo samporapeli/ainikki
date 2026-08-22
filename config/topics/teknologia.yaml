@@ -1,4 +1,8 @@
 # Sources to use for the Teknologia topic (keys from config/sources.yaml).
+target_audience: >
+  Teknologiasta kiinnostunut lukija, mahdollisesti alan ammattilainen.
+  Ei tarvitse peruskäsitteiden selityksiä (esim. mikä on suoritin,
+  mikä on käyttöjärjestelmä, mitä on HTTP).
 period: weekly
 sources:
   - hn

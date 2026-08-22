@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Tuple
 
 from agent.compose import (
-    build_compose_system_prompt, compose_items,
+    build_compose_system_prompt, build_compose_user_prompt, compose_items,
     Persona, GoldenExamplesConfig, GuardrailsConfig,
 )
 from agent.schema import RawItem, SourceType, EnrichedCandidate
@@ -30,17 +30,35 @@ def test_system_prompt_includes_all_three_configs():
     golden_examples = GoldenExamplesConfig.load(GOLDEN_EXAMPLES_DIR / persona.golden_examples_ref)
     guardrails = GuardrailsConfig.load(GUARDRAILS_PATH)
 
-    prompt = build_compose_system_prompt(persona, golden_examples, guardrails, "ai")
+    prompt = build_compose_system_prompt(
+        persona, golden_examples, guardrails, "ai", "Testiyleisö"
+    )
 
     assert "ainikki" in prompt
     assert "clickbait" in prompt  # persona.avoid
     assert "Käytä VAIN annetussa lähdemateriaalissa mainittuja faktoja." in prompt  # guardrails rule
-    assert "Anthropic julkaisi Claude Opus 4.8" in prompt  # golden example
-    assert '{"headline"' in prompt  # JSON format requirement
+    assert "AGENTS.md yleistyy koodausagenttien yhteisenä tiedostomuotona" in prompt  # golden example
+    assert '{"otsikko"' in prompt  # JSON format requirement
     # v2: Finnish language rules
     assert "yhdyssanat" in prompt
     assert "desimaalipilkku" in prompt or "desimaalierottimena" in prompt
     assert "Oxford" in prompt
+
+
+def test_compose_uses_fallback_content_source():
+    item = _make_enriched("Ensisijainen otsikko", "Fallback-artikkelin sisältö", rank=1)
+    item.content_source = RawItem(
+        title="Toissijainen otsikko", url="https://example.com/fallback",
+        source_type=SourceType.rss,
+        published_at=datetime(2026, 7, 14, tzinfo=timezone.utc),
+        raw_signal={}, origin_id="fallback", fetched_at=datetime.now(timezone.utc),
+    )
+
+    prompt = build_compose_user_prompt(item)
+
+    assert "Toissijainen otsikko" in prompt
+    assert "Ensisijainen otsikko" not in prompt
+    assert "Fallback-artikkelin sisältö" in prompt
 
 
 def test_compose_items_happy_path():
@@ -51,20 +69,21 @@ def test_compose_items_happy_path():
 
     def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         if "Uusi malli" in user_prompt:
-            return json.dumps({"headline": "Yhtiö julkaisi uuden mallin",
-                                "summary": "Malli tuo parannuksia aiempaan verrattuna."}), {"prompt_tokens": 50, "completion_tokens": 30, "total_tokens": 80, "cost": 0.0001}
-        return json.dumps({"headline": "Uusi tutkimus haastaa aiemman käsityksen",
-                            "summary": "Tutkijat löysivät yllättävän tuloksen."}), {"prompt_tokens": 50, "completion_tokens": 30, "total_tokens": 80, "cost": 0.0001}
+            return json.dumps({"otsikko": "Yhtiö julkaisi uuden mallin",
+                                "tiivistelmä": "Malli tuo parannuksia aiempaan verrattuna."}), {"prompt_tokens": 50, "completion_tokens": 30, "total_tokens": 80, "cost": 0.0001}
+        return json.dumps({"otsikko": "Uusi tutkimus haastaa aiemman käsityksen",
+                            "tiivistelmä": "Tutkijat löysivät yllättävän tuloksen."}), {"prompt_tokens": 50, "completion_tokens": 30, "total_tokens": 80, "cost": 0.0001}
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
+                            target_audience="Testiyleisö",
                             golden_examples_dir=GOLDEN_EXAMPLES_DIR)
 
     assert len(result.items) == 2
     assert len(result.warnings) == 0
     assert result.persona_id == "ainikki-v1"
     assert result.guardrails_version == "v1"
-    assert result.golden_examples_version == "v1"
+    assert result.golden_examples_version == "v2"
 
     first = result.items[0]
     assert first.headline == "Yhtiö julkaisi uuden mallin"
@@ -82,11 +101,12 @@ def test_partial_failure_drops_only_bad_item():
 
     def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         if "Toimiva" in user_prompt:
-            return json.dumps({"headline": "Toimiva otsikko", "summary": "Toimiva yhteenveto."}), {}
+            return json.dumps({"otsikko": "Toimiva otsikko", "tiivistelmä": "Toimiva yhteenveto."}), {}
         return "tämä ei ole JSON:ia", {}
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
+                            target_audience="Testiyleisö",
                             golden_examples_dir=GOLDEN_EXAMPLES_DIR)
 
     assert len(result.items) == 1, "only the successful item should remain"
@@ -99,10 +119,11 @@ def test_empty_headline_is_rejected():
     items = [_make_enriched("Juttu", "Sisältö...", rank=1)]
 
     def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
-        return json.dumps({"headline": "   ", "summary": "Jotain tekstiä."}), {}
+        return json.dumps({"otsikko": "   ", "tiivistelmä": "Jotain tekstiä."}), {}
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
+                            target_audience="Testiyleisö",
                             golden_examples_dir=GOLDEN_EXAMPLES_DIR)
 
     assert len(result.items) == 0
@@ -114,11 +135,12 @@ def test_code_fenced_json_is_parsed():
     items = [_make_enriched("Artikkeli", "Sisältö...", rank=1)]
 
     def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
-        inner = json.dumps({"headline": "Koodiblokkiotsikko", "summary": "Koodiblokkikuvailu."})
+        inner = json.dumps({"otsikko": "Koodiblokkiotsikko", "tiivistelmä": "Koodiblokkikuvailu."})
         return f"```json\n{inner}\n```", {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15, "cost": 0.00001}
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm_code_fence,
                             topic="test",
+                            target_audience="Testiyleisö",
                             golden_examples_dir=GOLDEN_EXAMPLES_DIR)
 
     assert len(result.items) == 1
@@ -134,14 +156,42 @@ def test_compose_retries_on_empty_response():
         call_count += 1
         if call_count == 1:
             return "", {}
-        return json.dumps({"headline": "Toistettu otsikko", "summary": "Toistettu yhteenveto."}), {}
+        return json.dumps({"otsikko": "Toistettu otsikko", "tiivistelmä": "Toistettu yhteenveto."}), {}
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
+                            target_audience="Testiyleisö",
                             golden_examples_dir=GOLDEN_EXAMPLES_DIR)
 
     assert len(result.items) == 1
     assert result.items[0].headline == "Toistettu otsikko"
+    assert call_count == 2
+
+
+def test_compose_retries_on_overlong_output():
+    items = [_make_enriched("Juttu", "Sisältö...", rank=1)]
+    call_count = 0
+
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return json.dumps({
+                "otsikko": "x" * 257,
+                "tiivistelmä": "Lyhyt yhteenveto.",
+            }), {}
+        return json.dumps({
+            "otsikko": "Korjattu otsikko",
+            "tiivistelmä": "Korjattu yhteenveto.",
+        }), {}
+
+    result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
+                            topic="test",
+                            target_audience="Testiyleisö",
+                            golden_examples_dir=GOLDEN_EXAMPLES_DIR)
+
+    assert len(result.items) == 1
+    assert result.items[0].headline == "Korjattu otsikko"
     assert call_count == 2
 
 
@@ -156,6 +206,7 @@ def test_compose_gives_up_after_retry():
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
+                            target_audience="Testiyleisö",
                             golden_examples_dir=GOLDEN_EXAMPLES_DIR)
 
     assert len(result.items) == 0
@@ -174,13 +225,13 @@ def test_compose_retries_on_empty_code_fence():
         call_count += 1
         if call_count == 1:
             return "```json\n\n```", {}
-        return json.dumps({"headline": "Toistettu otsikko", "summary": "Toistettu yhteenveto."}), {}
+        return json.dumps({"otsikko": "Toistettu otsikko", "tiivistelmä": "Toistettu yhteenveto."}), {}
 
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
+                            target_audience="Testiyleisö",
                             golden_examples_dir=GOLDEN_EXAMPLES_DIR)
 
     assert len(result.items) == 1
     assert result.items[0].headline == "Toistettu otsikko"
     assert call_count == 2
-

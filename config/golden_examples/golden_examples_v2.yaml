@@ -1,0 +1,50 @@
+# golden_examples_v2.yaml
+# Hand-written/curated example set for Ainikki's voice.
+version: v2
+
+examples:
+  - headline: "AGENTS.md yleistyy koodausagenttien yhteisenä tiedostomuotona"
+    summary: >
+      Codex, Amp ja Cursor ovat alkaneet yhtenäistää käytäntöjään
+      AGENTS.md-tiedoston ympärille. Kyseessä on Markdown-tiedosto, jota
+      koodausagentit käyttävät koodikannan ymmärtämiseen. Vaihtoehtoista
+      CLAUDE.md-tiedostoa pidetään liian vahvasti Claude Codeen sidottuna,
+      mikä vaikeuttaa yhteistyötä muiden kehittäjien kanssa.
+
+  - headline: "Z AI:n GLM-5.3 (max) pärjäsi vahvasti vertailutestissä"
+    summary: >
+      Z AI:n 753 miljardin parametrin GLM-5.3 (max) -päättelymalli saavutti
+      Artificial Analysis Intelligence Index -testissä 60 pistettä, kun
+      vertailuryhmän mediaani oli 35 pistettä. Miljoonan tokenin
+      konteksti-ikkunaa tukeva malli tuottaa vastauksia 84,7 tokenia
+      sekunnissa 1,88 sekunnin viiveellä ensimmäiseen tokeniin. Mallin
+      hinnoittelu on vertailuryhmää edullisempi, mutta se tuottaa testeissä
+      huomattavan paljon tokeneita.
+
+  - headline: "Ehdotus: Norjan valtion eläkerahaston tulisi ostaa OpenAI"
+    summary: >
+      Ehdotuksen mukaan Norjan valtion eläkerahaston tulisi ostaa arviolta
+      800 miljardin dollarin arvoinen OpenAI. Kaupalla pyrittäisiin estämään
+      tekoälyyn liittyvän vallan keskittyminen yksityisille toimijoille ja
+      siirtämään hallinta kansainväliselle instituutiolle. Toteutus vaatisi
+      kuitenkin 40 prosentin osuuden realisoimista rahaston salkusta sekä
+      sääntöjen rikkomista, minkä lisäksi Yhdysvaltain hallitus todennäköisesti
+      estäisi kaupan.
+
+  - headline: "Tutkimus: tekoälyneuvonta laski tarkkuutta mutta nosti itsevarmuutta"
+    summary: >
+      Tutkimusryhmä havaitsi, että tekoälyneuvojen saatavuus laski
+      vastaustarkkuutta 27 prosentista 9 prosenttiin, vaikka osallistujien
+      itsevarmuus nousi 30 prosentista 76 prosenttiin. Tekoälyttömässä
+      vertailuryhmässä tulokset olivat parempia. Tutkimus käytti kysymyksiä,
+      joissa käytetty malli tyypillisesti epäonnistuu, joten tulos ei kerro
+      kaikkien mallien vaikutuksesta.
+
+  - headline: "Anthropic kuvaa miljoonan koodirivin migraatiota Claude Codella"
+    summary: >
+      Anthropic kertoo käyttäneensä Claude Code -agenttia Bun-ajoympäristön
+      siirtämiseen Zigistä Rustiin ja Python-koodikannan muuntamiseen
+      TypeScriptiksi. Bun-migraatio kulutti noin 5,9 miljardia syötetokenia
+      ja olisi maksanut API-hinnoittelulla noin 165 000 dollaria. Yhtiön
+      mukaan työssä ei automatisoitu vain koodin kirjoittamista vaan koko
+      koodia tuottavaa silmukkaa.
