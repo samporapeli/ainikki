@@ -59,7 +59,7 @@ def load_previous_stories(topic: str, since: date, days: int = 7,
         if not match:
             continue
         file_date = date.fromisoformat(match.group(1))
-        if file_date > since or file_date < since - timedelta(days=days):
+        if file_date >= since or file_date < since - timedelta(days=days):
             continue
         try:
             briefing = Briefing(**json.loads(path.read_text()))

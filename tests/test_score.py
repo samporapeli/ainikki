@@ -268,7 +268,7 @@ def test_load_previous_stories_includes_previous_day(tmp_path):
     assert stories[0]["title"] == "Yesterday Story"
 
 
-def test_load_previous_stories_excludes_future(tmp_path):
+def test_load_previous_stories_excludes_current_and_future(tmp_path):
     from datetime import date
     today = date(2026, 7, 20)
 
@@ -280,7 +280,7 @@ def test_load_previous_stories_excludes_future(tmp_path):
 
     stories = load_previous_stories("ai", today, output_dir=tmp_path)
     titles = [s["title"] for s in stories]
-    assert "Current Story" in titles
+    assert "Current Story" not in titles
     assert "Future Story" not in titles
 
 
