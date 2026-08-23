@@ -15,6 +15,7 @@ if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID_TEST:-}" ]; then
     exit 1
 fi
 
+# The RSS fixtures are dated 2026-08-21; override this only with matching data.
 TEST_DATE="${AINIKKI_TEST_DATE:-2026-08-21}"
 SITE_BASE_URL=""
 

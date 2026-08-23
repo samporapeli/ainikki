@@ -40,6 +40,8 @@ The test writes its `test` output like a normal pipeline run to
 `data/output/` and `data/pipeline/`. Start Astro yourself with
 `cd site && npm run dev` and open the printed test URL. The production build
 and deploy exclude topics whose configuration sets `public: false`.
+The default test date follows the timestamps in the checked-in RSS fixtures;
+override `AINIKKI_TEST_DATE` only when using matching fixture data.
 
 ## Build and deploy the site
 

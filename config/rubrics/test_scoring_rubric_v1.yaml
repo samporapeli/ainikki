@@ -1,0 +1,43 @@
+version: v1
+topic: test
+topic_description: |
+  Tekoäly ja teknologia-aiheiset testiuutiset.
+
+  Pidä ehdokkaat, jos niiden otsikko käsittelee selvästi tekoälyä,
+  ohjelmistokehitystä, teknologiaa tai niihin liittyvää yhteiskunnallista
+  vaikutusta. Testiaineiston tarkoitus on harjoittaa koko putkea, ei arvioida
+  tuotantokoosteen uutiskynnystä.
+
+criteria:
+  - name: "aiheeseen liittyminen"
+    description: >
+      Liittyykö juttu selvästi testiaiheeseen? Pidä myös rajatapaukset,
+      jotta putken myöhemmät vaiheet saavat käsiteltävää aineistoa.
+    weight: high
+  - name: "uutuusarvo"
+    description: >
+      Onko jutussa konkreettinen julkaisu, havainto, tapahtuma tai muu
+      uutinen? Käytä tätä kevyenä erotteluna, älä vaadi tuotantotason
+      uutiskynnystä.
+    weight: medium
+  - name: "lähteiden monipuolisuus"
+    description: >
+      Suosi eri aiheita ja itsenäisiä lähteitä, mutta älä karsi ehdokkaita
+      liian tiukasti.
+    weight: low
+
+examples:
+  good:
+    - title: "GPT-malli julkaistu"
+      reason: "selkeä AI-aihe"
+    - title: "Uusi ohjelmistotyökalu julkaistu"
+      reason: "selkeä teknologia-aihe"
+  bad:
+    - title: "Sääennuste viikonlopulle"
+      reason: "ei liity testiaiheeseen"
+
+exclude: []
+
+items_per_briefing:
+  min: 1
+  max: 8

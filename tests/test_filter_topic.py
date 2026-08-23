@@ -1,6 +1,9 @@
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Tuple
+
+import yaml
 
 from agent.filter_topic import filter_topic, build_filter_prompt
 from agent.schema import Candidate, RawItem, SourceType
@@ -95,9 +98,31 @@ def test_empty_input():
 
 def test_prompt_stays_lightweight():
     candidates = [_make_candidate("GPT-5 julkaistu"), _make_candidate("Claude 5")]
-    _, user_prompt = build_filter_prompt(candidates, "tekoäly")
+    topic_description = """Tekoäly
+
+PIDÄ:
+- tekoälymallit ja AI-työkalut
+
+JÄTÄ POIS:
+- yleinen robotiikka ilman AI-yhteyttä"""
+    system_prompt, user_prompt = build_filter_prompt(candidates, topic_description)
     assert "story_text" not in user_prompt
     assert len(user_prompt) < 1000
+    assert "Aihe:\nTekoäly" in system_prompt
+    assert "PIDÄ:" in system_prompt
+    assert "JÄTÄ POIS:" in system_prompt
+    assert "Arvioi vain otsikon perusteella." in system_prompt
+
+
+def test_ai_filter_prompt_uses_explicit_scope():
+    rubric = yaml.safe_load(Path("config/rubrics/ai_scoring_rubric_v1.yaml").read_text())
+    system_prompt, _ = build_filter_prompt(
+        [_make_candidate("Tekoäly muuttaa työelämää")], rubric["topic_description"]
+    )
+
+    assert "tekoälyn vaikutukset työhön" in system_prompt
+    assert "tekoälyyn liittyvä luottamus" in system_prompt
+    assert "yleinen robotiikka" in system_prompt
 
 
 def test_code_fenced_json_is_parsed():

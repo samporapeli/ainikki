@@ -46,14 +46,19 @@ def build_filter_prompt(candidates: list[Candidate],
         topic_lines.append(f"[{i}] {primary.title}")
     user_prompt = "Ehdokkaat:\n" + "\n".join(topic_lines)
 
-    system_prompt = f"""Saat listan uutisehdokkaita. Tehtäväsi on arvioida jokainen
-ehdokas: liittyykö se aiheeseen vai ei? Ehdokas liittyy aiheeseen ({topic_description}),
-jos aihe on jutun pääaihe. Myös aiheen sovellukset ja vaikutukset eri aloihin
-kuuluvat mukaan, kun aihe on jutun keskiössä. Pelkkä sivumaininta tai aiheen
-käyttöön liittyvä työkalu ei yksin riitä.
+    system_prompt = f"""Saat listan uutisehdokkaita. Tee niille laaja
+aiheen esisuodatus ennen myöhempää pisteytystä.
 
-Älä suodata ehdokkaita liian tiukasti tässä vaiheessa: pisteytysvaihe
-arvioi myöhemmin uutisen merkittävyyden ja laadun.
+Aihe:
+{topic_description.strip()}
+
+Pidä ehdokas, jos se sopii yllä kuvattuun aiheeseen. Tässä vaiheessa et arvioi
+uutisen merkittävyyttä, laatua tai kiinnostavuutta: ne arvioidaan myöhemmin.
+
+Arvioi vain otsikon perusteella. Älä päättele aiheyhteyttä pelkästä robotista,
+algoritmista, automaatiosta tai muusta yleisestä teknologiasta. Jos otsikossa on
+selkeä aiheeseen kuuluva signaali, mutta tarkka merkitys jää epäselväksi, pidä
+ehdokas pisteytystä varten.
 
 Vastaa VAIN JSON-muodossa:
 {{"results": [{{"index": 0, "keep": true}}, {{"index": 1, "keep": false}}, ...]}}"""
