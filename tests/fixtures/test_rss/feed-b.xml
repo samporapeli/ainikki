@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Ainikki test feed B</title>
+    <item>
+      <title>Open Aurora model is now available to run on your own hardware</title>
+      <link>http://127.0.0.1:8765/articles/aurora-report.html</link>
+      <guid>aurora-report-b</guid>
+      <pubDate>Fri, 21 Aug 2026 13:00:00 GMT</pubDate>
+      <description>The Aurora model launch brings open local inference.</description>
+    </item>
+    <item>
+      <title>AI benchmark dataset receives a new academic analysis</title>
+      <link>http://127.0.0.1:8765/articles/benchmark-analysis.html</link>
+      <guid>benchmark-analysis-b</guid>
+      <pubDate>Fri, 21 Aug 2026 14:00:00 GMT</pubDate>
+      <description>A separate analysis examines an AI benchmark dataset.</description>
+    </item>
+    <item>
+      <title>Open-weight Aurora model launches for local inference</title>
+      <link>http://127.0.0.1:8765/articles/aurora-launch.html</link>
+      <guid>aurora-launch-b</guid>
+      <pubDate>Fri, 21 Aug 2026 15:00:00 GMT</pubDate>
+      <description>The same Aurora launch appeared in another feed.</description>
+    </item>
+  </channel>
+</rss>

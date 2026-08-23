@@ -1,0 +1,8 @@
+public: false
+target_audience: >
+  Testiajoa varten koottu uutisyleisö, joka tuntee teknologian ja
+  tekoälyn peruskäsitteet.
+period: daily
+sources:
+  - test-rss-a
+  - test-rss-b

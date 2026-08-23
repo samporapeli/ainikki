@@ -1,4 +1,5 @@
 # Sources to use for the Teknologia topic (keys from config/sources.yaml).
+public: true
 target_audience: >
   Teknologiasta kiinnostunut lukija, mahdollisesti alan ammattilainen.
   Ei tarvitse peruskäsitteiden selityksiä (esim. mikä on suoritin,

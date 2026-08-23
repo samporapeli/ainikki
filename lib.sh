@@ -3,7 +3,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_PYTHON="$SCRIPT_DIR/venv/bin/python3"
-SITE_BASE_URL="https://sampo.website/ainikki"
+SITE_BASE_URL="${SITE_BASE_URL:-https://sampo.website/ainikki}"
 
 validate_env() {
     if [ -z "${OPENROUTER_API_KEY:-}" ]; then
@@ -83,12 +83,18 @@ import json, sys
 d = json.load(open('$json_file'))
 print(d.get('digest_topic', ''))
 ")
-    link="${SITE_BASE_URL}/${topic}/${display_date}/"
+    link=""
+    if [ -n "$SITE_BASE_URL" ]; then
+        link="${SITE_BASE_URL}/${topic}/${display_date}/"
+    fi
     nl=$'\n'
     if [ -n "$digest_topic" ]; then
-        msg="${digest_topic}${nl}${nl}${overview}${nl}${nl}${link}"
+        msg="${digest_topic}${nl}${nl}${overview}"
     else
-        msg="${overview}${nl}${nl}${link}"
+        msg="${overview}"
+    fi
+    if [ -n "$link" ]; then
+        msg="${msg}${nl}${nl}${link}"
     fi
 
     echo "== Sending Telegram notification =="

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Layout from '../layouts/Layout.astro';
 import { TOPIC_META } from '../lib/topics';
+import { isSiteTopic } from '../lib/site-data';
 
 const dataDir = path.resolve('../data/output');
 
@@ -13,7 +14,7 @@ if (fs.existsSync(dataDir)) {
   const topicSet = new Set<string>();
   for (const file of files) {
     const data = JSON.parse(fs.readFileSync(path.join(dataDir, file), 'utf-8'));
-    topicSet.add(data.topic);
+    if (isSiteTopic(data.topic)) topicSet.add(data.topic);
   }
   topics = [...topicSet].sort();
 }

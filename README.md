@@ -31,6 +31,16 @@ A/B compare models without editing config:
       --model-override score=openrouter:gpt-4o \
       --model-override compose=openrouter:claude-opus-4-8
 
+Run the full end-to-end test topic:
+
+    OPENROUTER_API_KEY='...' TELEGRAM_BOT_TOKEN='...' \
+      TELEGRAM_CHAT_ID_TEST='...' ./test.sh
+
+The test writes its `test` output like a normal pipeline run to
+`data/output/` and `data/pipeline/`. Start Astro yourself with
+`cd site && npm run dev` and open the printed test URL. The production build
+and deploy exclude topics whose configuration sets `public: false`.
+
 ## Build and deploy the site
 
     cd site && npm install && npm run build
@@ -38,6 +48,9 @@ A/B compare models without editing config:
 Generated HTML lands in `site/dist/`. Deploy:
 
     DEPLOY_TARGET=user@host:/var/www/ainikki ./site/deploy.sh
+
+Every topic configuration defines `public`. Local development builds include
+all topics, while `site/deploy.sh` publishes only topics with `public: true`.
 
 ## Automation
 

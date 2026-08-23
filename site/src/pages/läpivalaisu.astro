@@ -1,19 +1,10 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { readFileSync, readdirSync } from 'node:fs';
-import path from 'node:path';
-import { load } from 'js-yaml';
-import { isSiteTopic } from '../lib/site-data';
+import { getSiteTopics } from '../lib/site-data';
 
-const topicsDir = path.resolve('../config/topics');
-const topicPeriods: Record<string, string> = {};
-for (const file of readdirSync(topicsDir)) {
-  if (!file.endsWith('.yaml')) continue;
-  const key = file.replace('.yaml', '');
-  if (!isSiteTopic(key)) continue;
-  const cfg = load(readFileSync(path.join(topicsDir, file), 'utf-8')) as { period?: string };
-  topicPeriods[key] = cfg.period ?? 'weekly';
-}
+const topicPeriods = Object.fromEntries(
+  getSiteTopics().map(topic => [topic.name, topic.config.period ?? 'weekly'])
+);
 const topicLabels: Record<string, string> = {
   ai: 'AI',
   teknologia: 'Teknologia',

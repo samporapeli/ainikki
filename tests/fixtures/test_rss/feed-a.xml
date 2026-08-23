@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Ainikki test feed A</title>
+    <item>
+      <title>Open-weight Aurora model launches for local inference</title>
+      <link>http://127.0.0.1:8765/articles/aurora-launch.html</link>
+      <guid>aurora-launch-a</guid>
+      <pubDate>Fri, 21 Aug 2026 10:00:00 GMT</pubDate>
+      <description>A new Aurora model is available for local inference.</description>
+    </item>
+    <item>
+      <title>Agentic coding tool adds repository-wide test execution</title>
+      <link>http://127.0.0.1:8765/articles/agent-tests.html</link>
+      <guid>agent-tests-a</guid>
+      <pubDate>Fri, 21 Aug 2026 11:00:00 GMT</pubDate>
+      <description>The coding tool can now run tests across a repository.</description>
+    </item>
+    <item>
+      <title>Shared AI benchmark dataset published for researchers</title>
+      <link>http://127.0.0.1:8765/articles/benchmark-dataset.html</link>
+      <guid>benchmark-dataset-a</guid>
+      <pubDate>Fri, 21 Aug 2026 12:00:00 GMT</pubDate>
+      <description>Researchers published a shared dataset for AI benchmarks.</description>
+    </item>
+  </channel>
+</rss>

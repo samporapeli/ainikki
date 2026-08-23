@@ -168,9 +168,12 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     if not config_paths.topic_config.exists():
         raise ValueError(f"Topic configuration not found: {config_paths.topic_config}")
     topic_config = yaml.safe_load(config_paths.topic_config.read_text())
-    if not isinstance(topic_config, dict) or not topic_config.get("target_audience"):
+    if (not isinstance(topic_config, dict)
+            or not topic_config.get("target_audience")
+            or not isinstance(topic_config.get("public"), bool)):
         raise ValueError(
-            f"Topic configuration must define target_audience: {config_paths.topic_config}"
+            "Topic configuration must define target_audience and boolean public: "
+            f"{config_paths.topic_config}"
         )
     target_audience = topic_config["target_audience"]
     effective_display_date = display_date or since.date()

@@ -96,3 +96,17 @@ sources:
     badge: Ars Technica
     site_url: https://arstechnica.com/
     feed_url: https://arstechnica.com/tag/ai/feed/
+
+  - key: test-rss-a
+    type: rss
+    pretty_name: Testifeed A
+    badge: Testi
+    site_url: http://127.0.0.1:8765/
+    feed_url: http://127.0.0.1:8765/feed-a.xml
+
+  - key: test-rss-b
+    type: rss
+    pretty_name: Testifeed B
+    badge: Testi
+    site_url: http://127.0.0.1:8765/
+    feed_url: http://127.0.0.1:8765/feed-b.xml
