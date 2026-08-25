@@ -101,8 +101,14 @@ def test_full_pipeline_happy_path(tmp_path):
     assert briefing.meta.persona == "ainikki-v1"
     assert briefing.meta.rubric_version == "v1"
     assert briefing.meta.guardrails_version == "v1"
-    assert set(briefing.meta.models_used.keys()) == {"cluster", "filter_topic", "score", "compose", "overview"}
+    assert set(briefing.meta.models_used.keys()) == {"cluster", "filter_topic", "score", "compose", "overview", "tts"}
     assert briefing.meta.models_used["compose"]
+    assert briefing.meta.models_used["tts"] == "google-cloud/fi-FI-Chirp3-HD-Callirrhoe"
+
+    pipeline_file = tmp_data / "pipeline" / "ai_daily_2026-07-16.json"
+    debug = json.loads(pipeline_file.read_text())
+    assert debug["steps"]["tts"]["provider"] == "google-cloud"
+    assert debug["steps"]["tts"]["voice"] == "fi-FI-Chirp3-HD-Callirrhoe"
 
 
 def test_pipeline_raises_on_critical_score_failure(tmp_path):

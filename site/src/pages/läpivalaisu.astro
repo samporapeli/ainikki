@@ -272,7 +272,7 @@ const topicLabels: Record<string, string> = {
     const llmStats = pipelineData?.llm_stats || {};
     const llmPrompts = pipelineData?.llm_prompts || {};
 
-    const ttsEnabled = pipe.tts?.enabled === true && output.tts_text?.length;
+    const ttsHasAudio = pipe.tts?.has_audio === true;
 
     // Summary totals
     let totalCalls = 0;
@@ -385,10 +385,11 @@ const topicLabels: Record<string, string> = {
         num: 9,
         name: 'Puhemalli',
         llm: false,
-        model: modelsUsed['tts'] ? modelsUsed['tts'].split('/').pop() : (ttsEnabled ? 'Chirp 3 HD' : null),
-        countText: ttsEnabled ? `${outputData.tts_text?.length || 0} merkkiä äänitetty` : null,
-        desc: 'Muuntaa valmiin tekstin puheeksi neurallisella puhemallilla.',
-        dots: ttsEnabled ? true : null,
+        tts: true,
+        model: modelsUsed['tts'] ? modelsUsed['tts'].split('/').pop() : null,
+        countText: ttsHasAudio ? `${outputData.tts_text?.length || 0} merkkiä äänitetty` : 'Ei äänitettä tuotettu',
+        desc: 'Muuntaa koosteen tekstin puheeksi.',
+        dots: ttsHasAudio ? true : null,
         stepKey: 'tts',
       },
       {
@@ -406,8 +407,10 @@ const topicLabels: Record<string, string> = {
     let html = `<h2>Prosessi</h2>${summaryHtml}<div class="flow">`;
     for (const s of steps) {
       const llmClass = s.llm ? 'llm' : 'code';
-      const badgeClass = s.llm ? 'badge badge-llm' : 'badge badge-code';
-      const badgeText = s.llm ? (s.model ? `Kielimalli · ${s.model}` : 'Kielimalli') : 'Koodi';
+      const badgeClass = s.tts ? 'badge badge-tts' : (s.llm ? 'badge badge-llm' : 'badge badge-code');
+      const badgeText = s.tts
+        ? (s.model ? `Puhemalli · ${s.model}` : 'Puhemalli')
+        : (s.llm ? (s.model ? `Kielimalli · ${s.model}` : 'Kielimalli') : 'Koodi');
       const stepDur = stepDurations[s.stepKey];
 
       // Build common stats list (count + duration for all steps, LLM stats for LLM steps)
@@ -623,11 +626,11 @@ const topicLabels: Record<string, string> = {
       el.style.display = 'none';
       return;
     }
-    el.style.display = 'block';
 
     const ttsText = pipe.tts?.text || output.tts_text || '';
-    const provider = pipe.tts?.provider || null;
-    const voice = pipe.tts?.voice || null;
+    const ttsModel = output.meta?.models_used?.tts || '';
+    const [provider, ...voiceParts] = ttsModel.split('/');
+    const voice = voiceParts.join('/') || null;
     const hasAudio = pipe.tts?.has_audio || false;
 
     let html = '<h2>Puhesynteesi</h2>';
@@ -640,8 +643,9 @@ const topicLabels: Record<string, string> = {
     }
 
     const metaParts = [];
-    if (provider) metaParts.push(`Malli: ${escHtml(provider)}`);
-    if (voice) metaParts.push(`Ääni: ${escHtml(voice)}`);
+    if (voice) metaParts.push(`Puhemalli: ${escHtml(voice)}`);
+    if (provider) metaParts.push(`Palvelu: ${escHtml(provider)}`);
+    if (!hasAudio) metaParts.push('Ei äänitettä tuotettu');
     if (metaParts.length > 0) {
       html += `<p class="tts-meta">${metaParts.join(' · ').trim()}</p>`;
     }
@@ -809,6 +813,11 @@ const topicLabels: Record<string, string> = {
   .badge-code {
     background: var(--border);
     color: var(--fg-muted);
+  }
+
+  .badge-tts {
+    background: #2f7d5a;
+    color: #fff;
   }
 
   .step-desc {

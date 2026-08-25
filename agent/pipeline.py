@@ -337,6 +337,7 @@ def run_pipeline(
 
     tts_cfg = topic_config.get("tts", {})
     tts_text = ""
+    tts_has_audio = False
     provider = tts_cfg.get("provider", "google-cloud")
     voice = tts_cfg.get("voice", "fi-FI-Chirp3-HD-Callirrhoe")
     if tts_cfg.get("enabled", False):
@@ -359,6 +360,7 @@ def run_pipeline(
             if tts_result:
                 audio_path = out_dir / f"{topic}_{period.value}_{date_str}_audio.mp3"
                 audio_path.write_bytes(tts_result.audio_bytes)
+                tts_has_audio = True
                 logger.info("tts: audio saved to %s", audio_path)
                 step_durations["tts"] = round(perf_counter() - t0_tts, 2)
             else:
@@ -368,7 +370,9 @@ def run_pipeline(
                 "tts: generation failed for provider=%s voice=%s: %s (type: %s)",
                 provider, voice, e, type(e).__name__, exc_info=e
             )
-    
+
+    models_used['tts'] = f"{provider}/{voice}"
+
     total_duration = round(perf_counter() - t_pipeline_start, 2)
 
     # 8. Validate (CRITICAL - EmptyBriefingError if nothing remains)
@@ -456,8 +460,9 @@ def run_pipeline(
             "tts": {
                 "enabled": tts_cfg.get("enabled", False),
                 "text": tts_text if tts_cfg.get("enabled") else None,
-                "provider": provider if tts_cfg.get("enabled") else None,
-                "voice": voice if tts_cfg.get("enabled") else None,
+                "provider": provider,
+                "voice": voice,
+                "has_audio": tts_has_audio,
             },
         },
     }
