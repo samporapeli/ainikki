@@ -35,7 +35,7 @@ echo "Installing dependencies..."
 npm install
 
 echo "Building..."
-rm -f public/data/output/*.json public/data/pipeline/*.json
+rm -f public/data/output/*.json public/data/output/*.mp3 public/data/pipeline/*.json public/data/pipeline/*.mp3
 AINIKKI_PUBLIC_ONLY=1 npm run build
 
 echo "Copying data files..."
