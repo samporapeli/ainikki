@@ -272,6 +272,8 @@ const topicLabels: Record<string, string> = {
     const llmStats = pipelineData?.llm_stats || {};
     const llmPrompts = pipelineData?.llm_prompts || {};
 
+    const ttsEnabled = pipe.tts?.enabled === true && output.tts_text?.length;
+
     // Summary totals
     let totalCalls = 0;
     let totalPromptTokens = 0;
@@ -381,6 +383,16 @@ const topicLabels: Record<string, string> = {
       },
       {
         num: 9,
+        name: 'Puhemalli',
+        llm: false,
+        model: modelsUsed['tts'] ? modelsUsed['tts'].split('/').pop() : (ttsEnabled ? 'Chirp 3 HD' : null),
+        countText: ttsEnabled ? `${outputData.tts_text?.length || 0} merkkiä äänitetty` : null,
+        desc: 'Muuntaa valmiin tekstin puheeksi neurallisella puhemallilla.',
+        dots: ttsEnabled ? true : null,
+        stepKey: 'tts',
+      },
+      {
+        num: 10,
         name: 'Validointi',
         llm: false,
         model: null,

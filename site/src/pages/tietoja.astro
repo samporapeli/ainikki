@@ -86,12 +86,17 @@ const topicCount = topics.length;
      llm: true,
      description: 'Kielimalli kirjoittaa lyhyen yhteenvedon päivän koosteesta.',
    },
-   {
-     name: 'Validointi',
-     llm: false,
-     description: 'Kokoaa tulokset yhteen ja tarkistaa, että kooste on täydellinen ja julkaisukelpoinen.',
-   },
- ];
+     {
+       name: 'Puhemalli',
+      llm: false,
+      description: 'Muuntaa valmiin tekstin puheeksi neurallisella puhemallilla (toiminnassa Googlen Chirp 3 HD -puhemalli). Kaikki koosteet, joille TTS on otettu käyttöön, ovat kuunneltavissa suorilla digest-sivuilla sekä läpivalaisussa.',
+     },
+    {
+      name: 'Validointi',
+      llm: false,
+      description: 'Kokoaa tulokset yhteen ja tarkistaa, että kooste on täydellinen ja julkaisukelpoinen.',
+    },
+  ];
 ---
 
 <Layout title="Tietoja — Ainikki" description="Miten Ainikki toimii: uutisten keruu, valinta ja koosteen tuottaminen.">
@@ -107,8 +112,8 @@ const topicCount = topics.length;
     <p>
       Ainikki kerää uutisia määritellyistä aiheista, valitsee niistä
       tärkeimmät ja kirjoittaa jokaisesta suomenkielisen tiivistelmän.
-      Prosessi koostuu kymmenestä vaiheesta, joista osa käyttää kielimalleja
-      (tekoälyä) ja osa on determinististä logiikkaa eli perinteistä koodia.
+      Prosessi koostuu kymmenestä vaiheesta. Osa käyttää kielimalleja
+      (tekoälyä), yksi vaihe käyttää puhemallia valmiin tekstin muuntamiseen puheeksi ja loput ovat determinististä logiikkaa eli perinteistä koodia.
     </p>
   </section>
 
