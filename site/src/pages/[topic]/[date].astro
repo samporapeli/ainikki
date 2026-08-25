@@ -101,7 +101,7 @@ const nextBriefing = briefing._next || null;
 
   <header>
     <h1>{topicUpper} — {prettyDate}</h1>
-    {briefing.digest_topic && <p class="digest-topic">{briefing.digest_topic}</p>}
+    {briefing.digest_topic && <h2 class="digest-topic">{briefing.digest_topic}</h2>}
     <p class="byline">
       Kirjoittanut Ainikki (tekoäly) · klo {new Date(briefing.meta.generated_at).toLocaleTimeString('fi-FI', { hour: 'numeric', minute: '2-digit' })}
       {meta?.telegramUrl && <span> · <a href={meta.telegramUrl} target="_blank" rel="noopener noreferrer">Telegram</a></span>}
@@ -115,7 +115,8 @@ const nextBriefing = briefing._next || null;
 
   <Overview text={briefing.overview} />
 
-  <hr />
+  <p class="stories-label">Uutiset</p>
+  <hr class="stories-rule" />
 
   <section class="stories">
     {briefing.items
@@ -176,15 +177,14 @@ const nextBriefing = briefing._next || null;
   }
 
   header {
-    margin-bottom: 2rem;
+    margin-bottom: 0.5rem;
   }
 
   .digest-topic {
-    font-size: 1.15rem;
-    font-weight: 600;
+    font-size: clamp(1.1rem, 3vw, 1.35rem);
     color: var(--fg);
     margin-top: 0.35rem;
-    line-height: 1.4;
+    line-height: 1.3;
   }
 
   .byline {
@@ -202,11 +202,24 @@ const nextBriefing = briefing._next || null;
     flex-direction: column;
   }
 
+  .stories-label {
+    color: var(--fg-subtle);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+
+  .stories-rule {
+    margin: 0.45rem 0 0.35rem;
+  }
+
   .audio-player {
     width: 100%;
     max-width: 620px;
     height: 3.5rem;
-    margin: 0.75rem auto;
+    margin: 0.25rem auto 1.5rem;
     display: block;
     border-radius: 0.75rem;
     filter: grayscale(1) contrast(90%) opacity(0.82);
