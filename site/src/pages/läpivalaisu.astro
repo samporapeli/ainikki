@@ -1,10 +1,24 @@
 ---
+import fs from 'node:fs';
+import path from 'node:path';
 import Layout from '../layouts/Layout.astro';
 import { getSiteTopics } from '../lib/site-data';
 
-const topicPeriods = Object.fromEntries(
-  getSiteTopics().map(topic => [topic.name, topic.config.period ?? 'weekly'])
-);
+const siteTopics = getSiteTopics();
+const topicPeriods = Object.fromEntries(siteTopics.map(topic => [topic.name, topic.config.period ?? 'weekly']));
+const outputDir = path.resolve('../data/output');
+const topicDates = Object.fromEntries(siteTopics.map(topic => {
+  const period = topic.config.period ?? 'weekly';
+  const prefix = `${topic.name}_${period}_`;
+  const dates = fs.existsSync(outputDir)
+    ? fs.readdirSync(outputDir)
+      .filter(file => file.startsWith(prefix) && file.endsWith('.json'))
+      .map(file => file.slice(prefix.length, -'.json'.length))
+      .filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date))
+      .sort()
+    : [];
+  return [topic.name, dates];
+}));
 const topicLabels: Record<string, string> = {
   ai: 'AI',
   teknologia: 'Teknologia',
@@ -47,7 +61,7 @@ const topicLabels: Record<string, string> = {
   </div>
 </Layout>
 
-<script define:vars={{ topicPeriods }}>
+<script define:vars={{ topicPeriods, topicDates }}>
   const topicSel = document.getElementById('topic-select');
   const dateInput = document.getElementById('date-input');
   const status = document.getElementById('status');
@@ -57,7 +71,7 @@ const topicLabels: Record<string, string> = {
 
   let debounceTimer = null;
 
-  topicSel.addEventListener('change', onInputChange);
+  topicSel.addEventListener('change', onTopicChange);
   dateInput.addEventListener('change', onInputChange);
   dateInput.addEventListener('input', onInputChange);
 
@@ -67,13 +81,28 @@ const topicLabels: Record<string, string> = {
     const urlDate = p.get('date') || '';
     topicSel.value = topic;
     if (urlDate) dateInput.value = urlDate;
-    if (!dateInput.value) dateInput.value = new Date().toISOString().split('T')[0];
+    if (!dateInput.value) {
+      dateInput.value = new Date().toISOString().split('T')[0];
+      selectLatestDate();
+    }
     if (topic && dateInput.value) loadPipeline();
   })();
 
   function onInputChange() {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(loadPipeline, 300);
+  }
+
+  function onTopicChange() {
+    selectLatestDate();
+    onInputChange();
+  }
+
+  function selectLatestDate() {
+    const dates = topicDates[topicSel.value] || [];
+    if (dates.length > 0 && !dates.includes(dateInput.value)) {
+      dateInput.value = dates[dates.length - 1];
+    }
   }
 
   function updateUrl() {
@@ -387,7 +416,7 @@ const topicLabels: Record<string, string> = {
         llm: false,
         tts: true,
         model: modelsUsed['tts'] ? modelsUsed['tts'].split('/').pop() : null,
-        countText: ttsHasAudio ? `${outputData.tts_text?.length || 0} merkkiä äänitetty` : 'Ei äänitettä tuotettu',
+        countText: ttsHasAudio ? `${output.tts_text?.length || 0} merkkiä äänitetty` : 'Ei äänitettä tuotettu',
         desc: 'Muuntaa koosteen tekstin puheeksi.',
         dots: ttsHasAudio ? true : null,
         stepKey: 'tts',
@@ -413,10 +442,10 @@ const topicLabels: Record<string, string> = {
         : (s.llm ? (s.model ? `Kielimalli · ${s.model}` : 'Kielimalli') : 'Koodi');
       const stepDur = stepDurations[s.stepKey];
 
-      // Build common stats list (count + duration for all steps, LLM stats for LLM steps)
+      // Build common stats list (duration + count for all steps, LLM stats for LLM steps)
       const statsItems = [];
-      if (s.countText) statsItems.push(`<li>${s.countText}</li>`);
       if (stepDur != null) statsItems.push(`<li>${formatDuration(stepDur)}</li>`);
+      if (s.countText) statsItems.push(`<li>${s.countText}</li>`);
       if (s.llm && llmStats[s.stepKey]) {
         const st = llmStats[s.stepKey];
         const calls = st.calls || 0;
@@ -636,7 +665,10 @@ const topicLabels: Record<string, string> = {
     let html = '<h2>Puhesynteesi</h2>';
 
     if (hasAudio) {
-      const audioPath = output.period ? `${dataPath()}/output/${output.topic}_${output.period}_audio.mp3` : null;
+      const audioDate = output.display_date || output.period_start;
+      const audioPath = output.topic && output.period && audioDate
+        ? `${dataPath()}/output/${output.topic}_${output.period}_${audioDate}_audio.mp3`
+        : null;
       if (audioPath) {
         html += `<audio controls preload="metadata" src="${escHtml(audioPath)}" class="audio-player" aria-label="Kuunteluvalikko"></audio>`;
       }
@@ -650,7 +682,7 @@ const topicLabels: Record<string, string> = {
       html += `<p class="tts-meta">${metaParts.join(' · ').trim()}</p>`;
     }
     if (ttsText) {
-      html += `<details open><summary>Käytetty ääneen luettu teksti (<span class="text-size">${ttsText.length}</span> merkkiä)</summary><pre class="tts-text">${escHtml(ttsText)}</pre></details>`;
+      html += `<details open><summary>Käsikirjoitus (<span class="text-size">${ttsText.length}</span> merkkiä)</summary><pre class="tts-text">${escHtml(ttsText)}</pre></details>`;
     }
 
     el.innerHTML = html;

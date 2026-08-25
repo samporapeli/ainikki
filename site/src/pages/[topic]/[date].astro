@@ -109,11 +109,11 @@ const nextBriefing = briefing._next || null;
     </p>
   </header>
 
-  <Overview text={briefing.overview} />
-
   {hasAudio && (
     <audio controls preload="metadata" src={`${import.meta.env.BASE_URL}/data/output/${audioFilename}`} class="audio-player" aria-label="Kuunteluvalikko" />
   )}
+
+  <Overview text={briefing.overview} />
 
   <hr />
 
