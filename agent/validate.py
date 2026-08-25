@@ -6,6 +6,7 @@ survived (all were filtered out in score/enrich/compose), the entire run
 fails visibly and no empty/misleading digest is written.
 """
 
+import httpx
 from datetime import date, datetime, timezone
 
 from agent.dateformat import fi_date
@@ -20,13 +21,15 @@ class EmptyBriefingError(Exception):
 
 
 def assemble_briefing(topic: str, period: Period, period_start: date, period_end: date,
-                      overview_result: OverviewResult, compose_result: ComposeResult,
-                      models_used: dict[str, str], pipeline_version: str,
-                      rubric_version: str, display_date: date | None = None,
-                      dropped_stories: list[DroppedStory] | None = None,
-                      extra_warnings: list[str] | None = None,
-                      duration_seconds: float | None = None,
-                      llm_stats: dict[str, dict] | None = None) -> Briefing:
+                       overview_result: OverviewResult, compose_result: ComposeResult,
+                       models_used: dict[str, str], pipeline_version: str,
+                       rubric_version: str, display_date: date | None = None,
+                       dropped_stories: list[DroppedStory] | None = None,
+                       extra_warnings: list[str] | None = None,
+                       duration_seconds: float | None = None,
+                       llm_stats: dict[str, dict] | None = None,
+                       tts_text: str = "") -> Briefing:
+
     if not compose_result.items:
         raise EmptyBriefingError(
             f"No validated items remaining for topic '{topic}' "
@@ -58,4 +61,5 @@ def assemble_briefing(topic: str, period: Period, period_start: date, period_end
         overview=overview_result.overview,
         items=compose_result.items, meta=meta,
         dropped_stories=dropped_stories or [], warnings=all_warnings,
+        tts_text=tts_text,
     )

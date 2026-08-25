@@ -1,0 +1,29 @@
+# TTS template for Ainikki. Each key maps to data from the topic config.
+# Placeholders use {placeholder} syntax and will be filled by the pipeline.
+
+overview_heading: "{overview_heading}"
+overview_text: "{overview_text}"
+bridges:
+  - "Siirrytään käsittelemään koosteen juttuja tarkemmin!"
+  - "Seuraavaksi käsittelen uutiset – yksi kerrallaan."
+  - "Syvennytään seuraavaksi uutisaiheisiin."
+
+news_item_bridges:
+  - ["Ensimmäinen uutinen"]
+  - ["Toisena listalla"]
+  - ["Kolmas uutinen"]
+  - ["Neljäntenä"]
+  - ["Viides uutinen"]
+  - ["Kuudentena listalla"]
+  - ["Seitsemäs uutinen"]
+  - ["Kahdeksas uutinen"]
+  - ["Seuraava uutinen"]
+  - ["Viimeisenä koosteessa"]
+
+news_items_template: "{headline}. {summary}{source_info}"
+source_info_template: " Jutun lähde: {source_domain}."
+
+closing_statements:
+  - "Koosteen teki Ainikki-tekoäly."
+  - "Koosteen laati tekoäly Ainikki."
+  - "Tässä kaikki tällä erää. Koosteen takana on Ainikki-tekoäly."

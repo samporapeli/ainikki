@@ -115,9 +115,9 @@ JÄTÄ POIS:
 
 
 def test_ai_filter_prompt_uses_explicit_scope():
-    rubric = yaml.safe_load(Path("config/rubrics/ai_scoring_rubric_v1.yaml").read_text())
+    topic_data = yaml.safe_load(Path("config/topics/ai.yaml").read_text())
     system_prompt, _ = build_filter_prompt(
-        [_make_candidate("Tekoäly muuttaa työelämää")], rubric["topic_description"]
+        [_make_candidate("Tekoäly muuttaa työelämää")], topic_data["topic_description"]
     )
 
     assert "tekoälyn vaikutukset työhön" in system_prompt

@@ -37,6 +37,8 @@ from agent.overview import generate_overview
 from agent.validate import assemble_briefing, EmptyBriefingError
 from agent.write import write_briefing, WriteRoundtripError
 from agent.llm import make_llm_call, load_models_config, resolve_step_config
+from agent.tts import synthesize, load_tts_config
+from agent.tts_template import TtsTemplate
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +67,7 @@ class ConfigPaths:
             else config_dir / "rubrics" / "ai_scoring_rubric_v1.yaml"
         )
         self.sources = config_dir / "sources.yaml"
+        self.template_path = config_dir / "tts-templates" / "ainikki-oletus.yaml"
 
 
 def _load_sources_config(config_paths: ConfigPaths) -> list[dict]:
@@ -154,14 +157,17 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
     return _tracked_call
 
 
-def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
-                  config_dir: Path = Path("config"), data_dir: Path = Path("data"),
-                  out_dir: Path | None = None, min_points: int = 20,
-                  display_date: date | None = None,
-                  model_overrides: dict[str, tuple[str | None, str | None]] | None = None,
-                  raw_items_override: list[RawItem] | None = None,
-                  llm_client: httpx.Client | None = None,
-                  enrich_client: httpx.Client | None = None) -> Path:
+def run_pipeline(
+    topic: str, period: Period, since: datetime, until: datetime,
+    config_dir: Path = Path("config"), data_dir: Path = Path("data"),
+    out_dir: Path | None = None, min_points: int = 20,
+    display_date: date | None = None,
+    model_overrides: dict[str, tuple[str | None, str | None]] | None = None,
+    raw_items_override: list[RawItem] | None = None,
+    llm_client: httpx.Client | None = None,
+    enrich_client: httpx.Client | None = None,
+) -> Path:
+
     model_overrides = model_overrides or {}
     out_dir = out_dir or (data_dir / "output")
     config_paths = ConfigPaths(config_dir, topic)
@@ -231,7 +237,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     t0 = perf_counter()
     llm_filter = _resolve_llm_call("filter_topic", models_config, config_paths, model_overrides,
                                     llm_client, models_used, llm_stats, llm_prompts)
-    topic_description = rubric.get("topic_description", topic)
+    topic_description = topic_config.get("topic_description", topic)
     filter_result = filter_topic(candidates, topic_description, llm_filter)
     if filter_result.warning:
         all_warnings.append(filter_result.warning)
@@ -329,6 +335,40 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
                                          examples_path=config_paths.overview_examples)
     step_durations["overview"] = round(perf_counter() - t0, 2)
 
+    tts_cfg = topic_config.get("tts", {})
+    tts_text = ""
+    if tts_cfg.get("enabled", False):
+        t0_tts = perf_counter()
+        try:
+            provider = tts_cfg.get("provider", "google-cloud")
+            voice = tts_cfg.get("voice", "fi-FI-Chirp3-HD-Callirrhoe")
+            logger.info("tts: generating audio for overview (provider=%s, voice=%s)", provider, voice)
+
+            # Load and render TTS template if configured
+            tts_template = TtsTemplate(config_paths.template_path)
+            tts_text = tts_template.render({
+                "overview_heading": overview_result.digest_topic,
+                "overview_text": overview_result.overview,
+                "items": compose_result.items
+            })
+            logger.info("tts: rendering template (provider=%s, voice=%s)", provider, voice)
+            logger.info("tts: template output preview:\n%s", tts_text[:300])
+            logger.debug("tts: full template output:\n%s", tts_text)
+
+            tts_result = synthesize(tts_text, provider, voice)
+            if tts_result:
+                audio_path = out_dir / f"{topic}_{period.value}_{date_str}_audio.mp3"
+                audio_path.write_bytes(tts_result.audio_bytes)
+                logger.info("tts: audio saved to %s", audio_path)
+                step_durations["tts"] = round(perf_counter() - t0_tts, 2)
+            else:
+                logger.warning("tts: synthesis returned no result (missing config or too long?)")
+        except Exception as e:
+            logger.error(
+                "tts: generation failed for provider=%s voice=%s: %s (type: %s)",
+                provider, voice, e, type(e).__name__, exc_info=e
+            )
+    
     total_duration = round(perf_counter() - t_pipeline_start, 2)
 
     # 8. Validate (CRITICAL - EmptyBriefingError if nothing remains)
@@ -343,9 +383,10 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
         extra_warnings=all_warnings,
         duration_seconds=total_duration,
         llm_stats=llm_stats,
+        tts_text=tts_text,
     )
 
-    # 9. Write pipeline debug data
+    # 10. Write pipeline debug data
     pipeline_dir = data_dir / "pipeline"
     pipeline_dir.mkdir(parents=True, exist_ok=True)
     pipeline_file = pipeline_dir / f"{topic}_{period.value}_{date_str}.json"
@@ -419,7 +460,7 @@ def run_pipeline(topic: str, period: Period, since: datetime, until: datetime,
     )
     logger.info("pipeline debug: written %s", pipeline_file)
 
-    # 10. Write
+    # 11. Write
     path = write_briefing(briefing, output_dir=out_dir)
     logger.info("write: written %s (%d warnings)", path, len(briefing.warnings))
     return path

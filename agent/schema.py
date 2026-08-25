@@ -132,17 +132,15 @@ class Briefing(BaseModel):
     period: Period
     period_start: date
     period_end: date
-    display_date: date | None = None  # date shown to the user; None = period_start
-    display_date_fi: str | None = None  # Finnish format (e.g. "tiistai 18.7.2026")
+    display_date: date | None = None
+    display_date_fi: str | None = None
     digest_topic: str = ""
     overview: str
     items: list[NewsItem]
     meta: GenerationMeta
     dropped_stories: list[DroppedStory] = Field(default_factory=list)
-    # Non-critical degradations (e.g. cluster step failed and fell back to
-    # singletons) are recorded here — visible in the final JSON, not hidden
-    # in logs only. Empty list = all steps worked as expected.
     warnings: list[str] = Field(default_factory=list)
+    tts_text: str = ""
 
     @property
     def effective_display_date(self) -> date:

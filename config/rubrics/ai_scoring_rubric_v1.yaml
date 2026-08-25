@@ -7,19 +7,6 @@
 
 version: v1
 topic: ai
-topic_description: |
-  Tekoäly
-
-  PIDÄ:
-  - tekoälymallit, LLM:t, agentit, tutkimus, turvallisuus ja arviointi
-  - AI-työkalut, tuotteet, hinnoittelu ja käyttöönotto, myös ohjelmistokehityksessä
-  - tekoälyn vaikutukset työhön, luovaan työhön, koulutukseen, palveluihin ja arkeen
-  - tekoälyyn liittyvä luottamus, sääntely, oikeudet, markkinat, valta ja infrastruktuuri
-
-  JÄTÄ POIS:
-  - yleinen robotiikka, automaatio tai algoritmit ilman selvää AI-yhteyttä
-  - teknologiajuttu, jossa AI on vain taustalla tai sivumaininta
-  - juttu, jossa AI:ta käytetään tutkimuksen työkaluna mutta se ei ole jutun aihe
 
 # Criteria the model applies when scoring candidates.
 # Write these as concretely as possible - the more specific

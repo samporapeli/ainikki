@@ -31,7 +31,11 @@ done
 
 echo "== Collect and process test news ($TEST_DATE) =="
 run_pipeline "test" "daily" "$TEST_DATE" "$TEST_DATE" "$TEST_DATE"
-send_telegram "test" "daily" "$TEST_DATE" "$TELEGRAM_CHAT_ID_TEST"
+AUDIO_PATH="data/output/test_daily_${TEST_DATE}_audio.mp3"
+if [ -f "$AUDIO_PATH" ]; then
+    ls -la "data/output/" >&2
+fi
+send_telegram "test" "daily" "$TEST_DATE" "$TELEGRAM_CHAT_ID_TEST" "$AUDIO_PATH"
 
 mkdir -p site/public/data/output site/public/data/pipeline
 cp "data/output/test_daily_${TEST_DATE}.json" site/public/data/output/

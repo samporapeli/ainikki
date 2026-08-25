@@ -1,13 +1,7 @@
 version: v1
 topic: test
-topic_description: |
-  Tekoäly ja teknologia-aiheiset testiuutiset.
 
-  Pidä ehdokkaat, jos niiden otsikko käsittelee selvästi tekoälyä,
-  ohjelmistokehitystä, teknologiaa tai niihin liittyvää yhteiskunnallista
-  vaikutusta. Testiaineiston tarkoitus on harjoittaa koko putkea, ei arvioida
-  tuotantokoosteen uutiskynnystä.
-
+# Criteria for test scoring (looser rules to generate testable content).
 criteria:
   - name: "aiheeseen liittyminen"
     description: >

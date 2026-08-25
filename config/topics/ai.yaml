@@ -5,6 +5,25 @@ target_audience: >
   ei ehdi lukea kaikkea itse. Ei tarvitse peruskäsitteiden selityksiä
   (esim. mitä on LLM, mitä on RAG).
 period: daily
+
+topic_description: |
+  Tekoäly
+
+  PIDÄ:
+  - tekoälymallit, LLM:t, agentit, tutkimus, turvallisuus ja arviointi
+  - AI-työkalut, tuotteet, hinnoittelu ja käyttöönotto, myös ohjelmistokehityksessä
+  - tekoälyn vaikutukset työhön, luovaan työhön, koulutukseen, palveluihin ja arkeen
+  - tekoälyyn liittyvä luottamus, sääntely, oikeudet, markkinat, valta ja infrastruktuuri
+
+  JÄTÄ POIS:
+  - yleinen robotiikka, automaatio tai algoritmit ilman selvää AI-yhteyttä
+  - teknologiajuttu, jossa AI on vain taustalla tai sivumaininta
+  - juttu, jossa AI:ta käytetään tutkimuksen työkaluna mutta se ei ole jutun aihe
+tts:
+  enabled: false
+  provider: google-cloud
+  voice: fi-FI-Chirp3-HD-Callirrhoe
+  template_path: tts-templates/ainikki-oletus.yaml
 sources:
   - hn
   - yle-tiede

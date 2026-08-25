@@ -24,7 +24,8 @@ deploy_site
 
 # --- Telegram notification ---
 if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID_TEKNOLOGIA:-}" ]; then
-    send_telegram "teknologia" "weekly" "$TODAY" "$TELEGRAM_CHAT_ID_TEKNOLOGIA"
+    AUDIO_PATH="data/output/teknologia_weekly_${TODAY}_audio.mp3"
+    send_telegram "teknologia" "weekly" "$TODAY" "$TELEGRAM_CHAT_ID_TEKNOLOGIA" "$AUDIO_PATH"
 else
     echo "Telegram: TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID_TEKNOLOGIA not set, skipping."
 fi

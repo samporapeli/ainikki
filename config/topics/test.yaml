@@ -3,6 +3,19 @@ target_audience: >
   Testiajoa varten koottu uutisyleisö, joka tuntee teknologian ja
   tekoälyn peruskäsitteet.
 period: daily
+tts:
+  enabled: true
+  provider: google-cloud
+  voice: fi-FI-Chirp3-HD-Callirrhoe
+  template_path: tts-templates/ainikki-oletus.yaml
 sources:
   - test-rss-a
   - test-rss-b
+
+topic_description: |
+  Tekoäly ja teknologia-aiheiset testiuutiset.
+
+  Pidä ehdokkaat, jos niiden otsikko käsittelee selvästi tekoälyä,
+  ohjelmistokehitystä, teknologiaa tai niihin liittyvää yhteiskunnallista
+  vaikutusta. Testiaineiston tarkoitus on harjoittaa koko putkea, ei arvioida
+  tuotantokoosteen uutiskynnystä.

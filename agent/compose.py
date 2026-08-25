@@ -17,7 +17,7 @@ from others.
 import json
 import logging
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 import yaml
 from pydantic import BaseModel, Field, ValidationError
@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field, ValidationError
 from agent.json_utils import strip_code_fences
 from agent.schema import EnrichedCandidate, NewsItem, RawItem, Source
 from agent.cluster import LlmCall
+from random import choice
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +115,7 @@ Vastaa VAIN JSON-muodossa, ei muuta tekstiä:
 {{"otsikko": "...", "tiivistelmä": "..."}}"""
 
 
+
 def build_compose_user_prompt(item: EnrichedCandidate) -> str:
     content_source = item.content_source or item.items[0]
     return f"""Alkuperäinen otsikko: {content_source.title}
@@ -135,6 +137,7 @@ class ComposeResult(NamedTuple):
     persona_id: str
     guardrails_version: str
     golden_examples_version: str
+    persona_path: Optional[Path] = None
 
 
 def _parse_compose_response(raw_response: str) -> ComposeResponse:
@@ -230,4 +233,6 @@ def compose_items(enriched: list[EnrichedCandidate], persona_path: Path,
         items=news_items, warnings=warnings,
         persona_id=persona.id, guardrails_version=guardrails.version,
         golden_examples_version=golden_examples.version,
+        persona_path=persona_path,
     )
+

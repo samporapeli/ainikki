@@ -1,0 +1,15 @@
+# TTS providers configuration.
+# Each provider defines its endpoint, API token env var, supported voices with params.
+# Add new providers by adding entries here (extensible pattern like sources).
+
+providers:
+  google-cloud:
+    enabled: true
+    endpoint: "https://texttospeech.googleapis.com/v1/text:synthesize"
+    token_env_var: "GOOGLE_CLOUD_API_TOKEN"
+    voices:
+      fi-FI-Chirp3-HD-Callirrhoe:
+        name: "fi-FI-Chirp3-HD-Callirrhoe"
+        language: "fi-FI"
+        audio_encoding: "MP3"
+        speaking_rate: 1.1

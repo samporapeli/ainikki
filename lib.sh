@@ -64,7 +64,7 @@ deploy_site() {
 }
 
 send_telegram() {
-    local topic="$1" period="$2" display_date="$3" chat_id="$4"
+    local topic="$1" period="$2" display_date="$3" chat_id="$4" audio_path="$5"
     local json_file link overview digest_topic msg
 
     json_file="data/output/${topic}_${period}_${display_date}.json"
@@ -98,8 +98,15 @@ print(d.get('digest_topic', ''))
     fi
 
     echo "== Sending Telegram notification =="
-    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-        -d chat_id="${chat_id}" \
-        --data-urlencode "text=${msg}" > /dev/null
+    if [ -n "$audio_path" ] && [ -f "$audio_path" ]; then
+        response=$(curl -s --max-time 30 -w "\nHTTP_CODE:%{http_code}" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendVoice" \
+            -F "voice=@${audio_path}" \
+            -F "caption=${msg}" \
+            -F "chat_id=${chat_id}" 2>&1)
+    else
+        response=$(curl -s --max-time 30 -w "\nHTTP_CODE:%{http_code}" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -F "chat_id=${chat_id}" \
+            -F "text=${msg}")
+    fi
     echo "Telegram: done."
 }

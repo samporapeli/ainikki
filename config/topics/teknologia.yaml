@@ -4,7 +4,43 @@ target_audience: >
   Teknologiasta kiinnostunut lukija, mahdollisesti alan ammattilainen.
   Ei tarvitse peruskäsitteiden selityksiä (esim. mikä on suoritin,
   mikä on käyttöjärjestelmä, mitä on HTTP).
-period: weekly
+period: daily
+
+topic_description: |
+  Teknologia-aiheeseen kuuluvat laitteisto (esim. tietokoneet,
+  komponentit ja älylaitteet), ohjelmistot, verkkopalvelut,
+  mediatekniikka, tietoturva ja muu teknologian kehitys, tutkimus,
+  julkaisut ja yhteiskunnallinen keskustelu. Mukaan kuuluvat myös
+  teknologian vaikutukset yhteiskuntaan sekä yhteiskunnan vaikutus
+  teknologian suuntaan.
+
+  Pidä ehdokas mukana, jos teknologia on jutun pääaihe tai merkittävä
+  mahdollistaja, kohde, sovellus tai yhteiskunnallisen muutoksen aiheuttaja.
+  Tämä koskee esimerkiksi uusia laitteita ja palveluita, sosiaalisen median
+  käyttöä ja teknologian muuttamia toimintatapoja. Pelkkä lyhyt maininta
+  teknologiasta tai teknologia vain jutun toteutustapana ei riitä.
+
+  Esimerkkejä:
+  - PIDÄ: "Children's early social media use linked to poorer school outcomes"
+    (Teknologian yhteiskunnallinen vaikutus on jutun aihe.)
+  - PIDÄ: "Apple unveils a new generation of laptop hardware"
+    (Laitteistojulkaisu on jutun pääaihe.)
+  - PIDÄ: "Small teams adopt agentic tools for end-to-end software work"
+    (Ohjelmistokehityksen muutos teknologian seurauksena on jutun aihe.)
+  - PIDÄ: "Gen Z says avoiding AI has become a way to protect their focus"
+    (Teknologian käyttö ja sen välttäminen ovat jutun yhteiskunnallinen aihe.)
+  - JÄTÄ POIS: "City launches a new online permit service"
+    (Teknologia on vain palvelun toteutustapa, ei jutun varsinainen aihe.)
+  - JÄTÄ POIS: "Food delivery company expands to three new cities"
+    (Kyseessä on liiketoiminnan laajentuminen, eikä jutussa käsitellä
+    teknologiaa.)
+
+  Älä arvioi uutisen merkittävyyttä liian tiukasti tässä vaiheessa.
+  Pisteytysvaihe arvioi myöhemmin uutisarvon ja vaikutuksen laajuuden.
+tts:
+  enabled: true
+  provider: google-cloud
+  voice: fi-FI-Chirp3-HD-Callirrhoe
 sources:
   - hn
   - yle-tiede
