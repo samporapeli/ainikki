@@ -71,9 +71,31 @@ class TestTtsTemplate:
         assert "Tekoälyn kehitys" in result
         assert "Tänään katsomme LLM-mallien uusia edistyksiä" in result
         assert any(b in result for b in first_bridges)
-        assert "OpenAI julkaisee uuden GPT-mallin. Uusi malli on nopeampi ja tarkempa." in result
+        assert "Open AI julkaisee uuden GPT-mallin. Uusi malli on nopeampi ja tarkempa." in result
         assert any(b in result for b in last_bridges)
         assert "MikroGPT:n suosio kasvaa. Lukijoiden rakastama yksinkertainen malli jatkaa suosioaan." in result
+
+    def test_pronunciation_overrides(self):
+        """Test phonetic replacements for words like OpenAI and Qwen."""
+        template = TtsTemplate(Path("config/tts-templates/ainikki-oletus.yaml"))
+        news_items = [
+            NewsItem(
+                headline="Qwen 2.5 ja OpenAI julkaisevat malleja",
+                summary="Alibaban Qwen kilpailee suoraan OpenAI:n kanssa.",
+                sources=[],
+                rank=1,
+                tags=[],
+                selection_reason="test",
+            )
+        ]
+        result = template.render({
+            "overview_heading": "Test",
+            "overview_text": "Overview with Qwen",
+            "items": news_items,
+        })
+        assert "Kwen" in result
+        assert "Open AI" in result
+        assert "Qwen" not in result
 
     def test_random_bridge_selection(self):
         """Test that bridges are randomly selected from options."""

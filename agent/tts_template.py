@@ -3,6 +3,7 @@ Template rendering for TTS narration.
 Supports YAML-based templates with nested lists for random phrase selection.
 """
 
+import re
 import random
 import logging
 from pathlib import Path
@@ -131,7 +132,19 @@ class TtsTemplate:
                 if flat_pool:
                     result_parts.append(random.choice(flat_pool))
 
-        return "\n\n".join(result_parts)
+        rendered = "\n\n".join(result_parts)
+        return self._apply_pronunciations(rendered)
+
+    def _apply_pronunciations(self, text: str) -> str:
+        """Apply phonetic pronunciation overrides configured in template."""
+        pronunciations = self.template_data.get("pronunciations")
+        if not pronunciations or not isinstance(pronunciations, dict):
+            return text
+
+        for term, phonetic in pronunciations.items():
+            if term and phonetic:
+                text = re.sub(rf"\b{re.escape(str(term))}\b", str(phonetic), text)
+        return text
 
     def _process_field(self, field_name: str, data: dict[str, Any]) -> str:
         """Process a field from template data."""

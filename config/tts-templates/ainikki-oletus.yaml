@@ -27,3 +27,8 @@ closing_statements:
   - "Koosteen teki Ainikki-tekoäly."
   - "Koosteen laati tekoäly Ainikki."
   - "Tässä kaikki tällä erää. Koosteen takana on Ainikki-tekoäly."
+
+# Phonetic replacements for TTS pronunciation (word-boundary matched)
+pronunciations:
+  OpenAI: "Open AI"
+  Qwen: "Kwen"

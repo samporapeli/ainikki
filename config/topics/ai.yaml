@@ -20,10 +20,9 @@ topic_description: |
   - teknologiajuttu, jossa AI on vain taustalla tai sivumaininta
   - juttu, jossa AI:ta käytetään tutkimuksen työkaluna mutta se ei ole jutun aihe
 tts:
-  enabled: false
+  enabled: true
   provider: google-cloud
   voice: fi-FI-Chirp3-HD-Callirrhoe
-  template_path: tts-templates/ainikki-oletus.yaml
 sources:
   - hn
   - yle-tiede
