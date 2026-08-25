@@ -337,11 +337,11 @@ def run_pipeline(
 
     tts_cfg = topic_config.get("tts", {})
     tts_text = ""
+    provider = tts_cfg.get("provider", "google-cloud")
+    voice = tts_cfg.get("voice", "fi-FI-Chirp3-HD-Callirrhoe")
     if tts_cfg.get("enabled", False):
         t0_tts = perf_counter()
         try:
-            provider = tts_cfg.get("provider", "google-cloud")
-            voice = tts_cfg.get("voice", "fi-FI-Chirp3-HD-Callirrhoe")
             logger.info("tts: generating audio for overview (provider=%s, voice=%s)", provider, voice)
 
             # Load and render TTS template if configured
@@ -452,6 +452,12 @@ def run_pipeline(
             "overview": {
                 "overview": overview_result.overview,
                 "digest_topic": overview_result.digest_topic,
+            },
+            "tts": {
+                "enabled": tts_cfg.get("enabled", False),
+                "text": tts_text if tts_cfg.get("enabled") else None,
+                "provider": provider if tts_cfg.get("enabled") else None,
+                "voice": voice if tts_cfg.get("enabled") else None,
             },
         },
     }

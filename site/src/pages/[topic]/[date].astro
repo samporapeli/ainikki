@@ -74,6 +74,10 @@ const period = briefing.period || "daily";
 const pipelinePath = path.resolve(`../data/pipeline/${topic}_${period}_${dateStr}.json`);
 const hasPipelineDebug = fs.existsSync(pipelinePath);
 
+const audioFilename = `${topic}_${period}_${dateStr}_audio.mp3`;
+const audioPath = path.resolve(`../data/output/${audioFilename}`);
+const hasAudio = fs.existsSync(audioPath);
+
 function navUrl(b: any): string | null {
   if (!b) return null;
   const dd = b.display_date || b.period_start;
@@ -106,6 +110,10 @@ const nextBriefing = briefing._next || null;
   </header>
 
   <Overview text={briefing.overview} />
+
+  {hasAudio && (
+    <audio controls preload="metadata" src={`${import.meta.env.BASE_URL}/data/output/${audioFilename}`} class="audio-player" aria-label="Kuunteluvalikko" />
+  )}
 
   <hr />
 
@@ -192,5 +200,12 @@ const nextBriefing = briefing._next || null;
   .stories {
     display: flex;
     flex-direction: column;
+  }
+
+  .audio-player {
+    width: 100%;
+    max-width: 620px;
+    margin: 0.75rem auto;
+    display: block;
   }
 </style>
