@@ -17,7 +17,7 @@ fi
 
 # The RSS fixtures are dated 2026-08-21; override this only with matching data.
 TEST_DATE="${AINIKKI_TEST_DATE:-2026-08-21}"
-SITE_BASE_URL=""
+SITE_BASE_URL="${AINIKKI_SITE_BASE_URL:-https://sampo.website/ainikki}"
 
 cd "$SCRIPT_DIR"
 python3 -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures/test_rss \

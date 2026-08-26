@@ -65,36 +65,35 @@ deploy_site() {
 
 send_telegram() {
     local topic="$1" period="$2" display_date="$3" chat_id="$4" audio_path="$5"
-    local json_file link overview digest_topic msg
 
-    json_file="data/output/${topic}_${period}_${display_date}.json"
+    local json_file="data/output/${topic}_${period}_${display_date}.json"
     if [ ! -f "$json_file" ]; then
         echo "Warning: ${json_file} not found, Telegram message not sent." >&2
         return
     fi
 
-    overview=$("$VENV_PYTHON" -c "
-import json, sys
-d = json.load(open('$json_file'))
-print(d.get('overview', 'No overview available.'))
-")
-    digest_topic=$("$VENV_PYTHON" -c "
-import json, sys
-d = json.load(open('$json_file'))
-print(d.get('digest_topic', ''))
-")
-    link=""
+    local item_count link overview digest_topic msg nl
+    nl=$'\n'
+
+    item_count=$(jq '.items | length' "$json_file")
+
+    overview=$(jq -r '.overview // "No overview available."' "$json_file")
+    digest_topic=$(jq -r '.digest_topic // ""' "$json_file")
+
+    msg="$overview"
+    if [ -n "$item_count" ] && [ "$item_count" -gt 0 ] 2>/dev/null; then
+        msg="${msg}${nl}${nl}Lue koko kooste (${item_count} uutista):"
+    else
+        msg="${msg}${nl}${nl}Lue koko kooste:"
+    fi
+
+    if [ -n "$digest_topic" ]; then
+        msg="${nl}${nl}${nl}${digest_topic}${nl}${nl}${msg}"
+    fi
+
     if [ -n "$SITE_BASE_URL" ]; then
         link="${SITE_BASE_URL}/${topic}/${display_date}/"
-    fi
-    nl=$'\n'
-    if [ -n "$digest_topic" ]; then
-        msg="${digest_topic}${nl}${nl}${overview}"
-    else
-        msg="${overview}"
-    fi
-    if [ -n "$link" ]; then
-        msg="${msg}${nl}${nl}${link}"
+        msg="${msg}${nl}${link}"
     fi
 
     echo "== Sending Telegram notification =="
