@@ -21,10 +21,10 @@ class TestTtsTemplate:
         assert "news_item_bridges" in template.template_data
 
     def test_template_has_news_bridges(self):
-        """Test that template has 10 items in news_item_bridges."""
+        """Test that template has 8 keys in news_item_bridges dict."""
         template = TtsTemplate(Path("config/tts-templates/ainikki-oletus.yaml"))
-        bridges = template.template_data.get("news_item_bridges", [])
-        assert len(bridges) == 10
+        bridges = template.template_data.get("news_item_bridges", {})
+        assert len(bridges) == 8
 
     def test_render_basic_overview(self):
         """Test rendering with basic overview data."""
@@ -66,8 +66,8 @@ class TestTtsTemplate:
             "items": news_items
         })
 
-        first_bridges = template.template_data["news_item_bridges"][0]
-        last_bridges = template.template_data["news_item_bridges"][-1]
+        first_bridges = template.template_data["news_item_bridges"][1]
+        last_bridges = template.template_data.get("last_item_bridge", [])
         assert "Tekoälyn kehitys" in result
         assert "Tänään katsomme LLM-mallien uusia edistyksiä" in result
         assert any(b in result for b in first_bridges)
@@ -150,10 +150,10 @@ class TestTtsTemplate:
             "items": news_items
         })
 
-        # Beyond range items should use second-to-last bridge group, and last item should use last bridge group
-        penultimate_bridges = template.template_data["news_item_bridges"][-2]
-        last_bridges = template.template_data["news_item_bridges"][-1]
-        assert any(b in result for b in penultimate_bridges)
+        # Beyond range items should use generic_bridge_over_eight, and last item should use last_item_bridge
+        generic_bridges = template.template_data.get("generic_bridge_over_eight", [])
+        last_bridges = template.template_data.get("last_item_bridge", [])
+        assert any(b in result for b in generic_bridges)
         assert any(b in result for b in last_bridges)
         assert "Test headline 14. Test summary 14" in result
 
@@ -178,8 +178,8 @@ class TestTtsTemplate:
             "items": news_items
         })
 
-        # Single item is also the last item, so it should use one of the choices from the last bridge group
-        last_bridges = template.template_data["news_item_bridges"][-1]
+        # Single item is also the last item, so it should use one of the choices from last_item_bridge
+        last_bridges = template.template_data.get("last_item_bridge", [])
         assert any(b in result for b in last_bridges)
         assert "Test headline. Test summary" in result
 

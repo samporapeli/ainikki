@@ -3,22 +3,55 @@
 
 overview_heading: "{overview_heading}"
 overview_text: "{overview_text}"
+
 bridges:
   - "Siirrytään käsittelemään koosteen juttuja tarkemmin!"
   - "Seuraavaksi käsittelen uutiset – yksi kerrallaan."
   - "Syvennytään seuraavaksi uutisaiheisiin."
 
 news_item_bridges:
-  - ["Ensimmäinen uutinen"]
-  - ["Toisena listalla"]
-  - ["Kolmas uutinen"]
-  - ["Neljäntenä"]
-  - ["Viides uutinen"]
-  - ["Kuudentena listalla"]
-  - ["Seitsemäs uutinen"]
-  - ["Kahdeksas uutinen"]
-  - ["Seuraava uutinen"]
-  - ["Viimeisenä koosteessa"]
+  1:
+    - "Ensimmäinen uutinen"
+    - "Aloitetaan tästä uutisesta"
+    - "Ensimmäisenä uutisena tänään"
+  2:
+    - "Toinen uutinen"
+    - "Toisena listalla"
+    - "Jatketaan toiseen uutiseen"
+  3:
+    - "Kolmas uutinen"
+    - "Kolmantena listalla"
+    - "Kolmantena uutisena"
+  4:
+    - "Neljäs uutinen"
+    - "Neljäntenä listalla"
+    - "Neljäntenä uutisena"
+  5:
+    - "Viides uutinen"
+    - "Viidentenä listalla"
+    - "Viidentenä uutisena"
+  6:
+    - "Kuudes uutinen"
+    - "Kuudentena listalla"
+    - "Kuudentena uutisena"
+  7:
+    - "Seitsemäs uutinen"
+    - "Seitsemäntenä listalla"
+    - "Seitsemäntenä uutisena"
+  8:
+    - "Kahdeksas uutinen"
+    - "Kahdeksantena listalla"
+    - "Kahdeksantena uutisena"
+
+generic_bridge_over_eight:
+  - "Seuraava uutinen"
+  - "Jatketaan seuraavalla"
+  - "Siirrytään seuraavaan uutiseen"
+
+last_item_bridge:
+  - "Viimeisenä koosteessa"
+  - "Koosteen viimeisenä uutisena"
+  - "Viimeisenä aiheena"
 
 news_items_template: "{headline}. {summary}{source_info}"
 source_info_template: " Jutun lähde: {source_domain}."
@@ -27,6 +60,9 @@ closing_statements:
   - "Koosteen teki Ainikki-tekoäly."
   - "Koosteen laati tekoäly Ainikki."
   - "Tässä kaikki tällä erää. Koosteen takana on Ainikki-tekoäly."
+  - "Koosteen kokosi Ainikki-tekoäly."
+  - "Tämän koosteen tuotti Ainikki-tekoäly."
+  - "Kooste syntyi Ainikki-tekoälyn avulla."
 
 # Phonetic replacements for TTS pronunciation (word-boundary matched)
 pronunciations:

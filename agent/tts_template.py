@@ -44,9 +44,11 @@ class TtsTemplate:
             "overview_heading": "{overview_heading}",
             "overview_text": "{overview_text}",
             "bridges": list[str],
-            "news_item_bridges": list[list[str]],  # random choice from this nested list
-            "news_items_template": str,  # format string like "{headline}. {summary}"
-            "closing_statements": list[str],  # pool for random selection fallback
+            "news_item_bridges": dict[int, list[str]],  # keyed by position (1-indexed)
+            "generic_bridge_over_eight": list[str],     # fallback for items beyond position 8
+            "last_item_bridge": list[str],               # bridge for the final item in the digest
+            "news_items_template": str,                  # format string like "{headline}. {summary}"
+            "closing_statements": list[str],             # pool for random selection fallback
         }
 
         Returns: fully rendered text ready for TTS.
@@ -78,31 +80,34 @@ class TtsTemplate:
         template = self.template_data.get("news_items_template", "{headline}. {summary}")
         items = data.get("items", [])
         if items:
-            news_item_bridges = self.template_data.get("news_item_bridges", [])
+            news_item_bridges = self.template_data.get("news_item_bridges", {})
 
             for i, item in enumerate(items):
                 # Determine which bridge text to use
-                if i == len(items) - 1:
-                    # Last item: use the very last bridge option (index -1)
-                    bridge_options = news_item_bridges[-1]
+                position = i + 1  # 1-based position
+                last_idx = len(items) - 1
+
+                if i == last_idx:
+                    # Last item of the digest: use last_item_bridge
+                    bridge_options = self.template_data.get("last_item_bridge", [])
                     if isinstance(bridge_options, (list, tuple)) and bridge_options:
                         bridge_text = random.choice(bridge_options)
                     else:
-                        bridge_text = str(bridge_options)
-                elif i < len(news_item_bridges):
-                    bridge_options = news_item_bridges[i]
+                        bridge_text = str(bridge_options) if bridge_options else "Seuraavaksi"
+                elif position in news_item_bridges:
+                    # Position within template range
+                    bridge_options = news_item_bridges[position]
                     if isinstance(bridge_options, (list, tuple)) and bridge_options:
                         bridge_text = random.choice(bridge_options)
                     else:
                         bridge_text = str(bridge_options)
                 else:
-                    # Items beyond template range: use second-to-last bridge
-                    fallback_idx = len(news_item_bridges) - 2 if len(news_item_bridges) >= 2 else 0
-                    fallback_options = news_item_bridges[fallback_idx]
-                    if isinstance(fallback_options, (list, tuple)) and fallback_options:
-                        bridge_text = random.choice(fallback_options)
+                    # Items beyond template range (position > 8): use generic_bridge_over_eight
+                    generic = self.template_data.get("generic_bridge_over_eight", [])
+                    if isinstance(generic, (list, tuple)) and generic:
+                        bridge_text = random.choice(generic)
                     else:
-                        bridge_text = str(fallback_options)
+                        bridge_text = "Jatketaan seuraavaan uutiseen"
 
                 source_domain = ""
                 if getattr(item, "sources", None):
