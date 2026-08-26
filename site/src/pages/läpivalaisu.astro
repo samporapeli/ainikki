@@ -57,7 +57,6 @@ const topicLabels: Record<string, string> = {
     <section id="clusters" class="section"></section>
     <section id="stories" class="section"></section>
     <section id="dropped" class="section"></section>
-    <section id="tts" class="section"></section>
   </div>
 </Layout>
 
@@ -165,7 +164,6 @@ const topicLabels: Record<string, string> = {
       renderClusters(document.getElementById('clusters'), pipe);
       renderStories(document.getElementById('stories'), outputData, pipelineData);
       renderDropped(document.getElementById('dropped'), outputData);
-      renderTts(document.getElementById('tts'), pipe, outputData);
     } catch (e) {
       status.textContent = 'Virhe: ' + e.message;
     }
@@ -229,6 +227,12 @@ const topicLabels: Record<string, string> = {
   function formatDecimal(value, decimals) {
     if (typeof value !== 'number' || value == null) return '';
     return value.toFixed(decimals).replace(/\./g, ',');
+  }
+
+  function formatWordCount(text) {
+    if (typeof text !== 'string' || !text.trim()) return '';
+    const words = text.trim().split(/\s+/).length;
+    return `${words} sanaa`;
   }
 
   function renderLlmStats(el, pipelineData) {
@@ -433,6 +437,8 @@ const topicLabels: Record<string, string> = {
       },
     ];
 
+    const ttsText = pipe.tts?.text || output.tts_text || '';
+
     let html = `<h2>Prosessi</h2>${summaryHtml}<div class="flow">`;
     for (const s of steps) {
       const llmClass = s.llm ? 'llm' : 'code';
@@ -444,8 +450,19 @@ const topicLabels: Record<string, string> = {
 
       // Build common stats list (duration + count for all steps, LLM stats for LLM steps)
       const statsItems = [];
-      if (stepDur != null) statsItems.push(`<li>${formatDuration(stepDur)}</li>`);
-      if (s.countText) statsItems.push(`<li>${s.countText}</li>`);
+      if (stepDur != null) statsItems.push(`<li>${formatDuration(stepDur)}${s.tts ? ' tuotantoaika' : ''}</li>`);
+      if (s.tts && ttsText) {
+        if (ttsHasAudio) {
+          statsItems.push('<li id="tts-audio-duration">? äänitteen kesto</li>');
+          if (stepDur != null) {
+            statsItems.push('<li id="tts-speed">?× reaaliaikakerroin (RTF)</li>');
+          }
+        }
+        statsItems.push(`<li>${ttsText.length} merkkiä</li>`);
+        statsItems.push(`<li>${formatWordCount(ttsText)}</li>`);
+      } else if (s.countText) {
+        statsItems.push(`<li>${s.countText}</li>`);
+      }
       if (s.llm && llmStats[s.stepKey]) {
         const st = llmStats[s.stepKey];
         const calls = st.calls || 0;
@@ -462,6 +479,17 @@ const topicLabels: Record<string, string> = {
         : '';
 
       const dotsHtml = s.dots != null ? renderDots(s.dots) : '';
+
+      const ttsAudioHtml = s.tts && ttsHasAudio && output.topic && output.period
+        ? `<audio id="tts-audio" controls preload="metadata" src="${escHtml(`${dataPath()}/output/${output.topic}_${output.period}_${output.display_date || output.period_start}_audio.mp3`)}" class="audio-player" aria-label="Kuunteluvalikko"></audio>`
+        : '';
+
+      const ttsScriptHtml = s.tts && ttsText
+        ? `<details class="tts-script">
+            <summary>Käsikirjoitus</summary>
+            <pre class="tts-text">${escHtml(ttsText)}</pre>
+          </details>`
+        : '';
 
       // Embed prompt blocks directly into the step card
       const prompts = llmPrompts[s.stepKey];
@@ -513,11 +541,30 @@ const topicLabels: Record<string, string> = {
           <p class="step-desc">${s.desc}</p>
           ${statsHtml}
           ${dotsHtml}
+          ${ttsAudioHtml}
+          ${ttsScriptHtml}
           ${promptsHtml}
         </div>`;
     }
     html += '</div>';
     el.innerHTML = html;
+
+    const audio = document.getElementById('tts-audio');
+    const durationStat = document.getElementById('tts-audio-duration');
+    const speedStat = document.getElementById('tts-speed');
+    if (audio) {
+      const updateDuration = () => {
+        if (Number.isFinite(audio.duration)) {
+          const durationSeconds = audio.duration;
+          if (durationStat) durationStat.textContent = `${formatDuration(durationSeconds)} äänitteen kesto`;
+          if (speedStat && stepDurations.tts != null && durationSeconds > 0) {
+            speedStat.textContent = `${formatDecimal(durationSeconds / stepDurations.tts, 1)}× reaaliaikakerroin (RTF)`;
+          }
+        }
+      };
+      audio.addEventListener('loadedmetadata', updateDuration, { once: true });
+      if (audio.readyState >= 1) updateDuration();
+    }
   }
 
   function renderClusters(el, pipe) {
@@ -646,45 +693,6 @@ const topicLabels: Record<string, string> = {
       }
       html += '</ul></details>';
     }
-    el.innerHTML = html;
-  }
-
-  function renderTts(el, pipe, output) {
-    const hasSource = (pipe.tts && pipe.tts.enabled && pipe.tts.text) || output.tts_text;
-    if (!hasSource) {
-      el.style.display = 'none';
-      return;
-    }
-
-    const ttsText = pipe.tts?.text || output.tts_text || '';
-    const ttsModel = output.meta?.models_used?.tts || '';
-    const [provider, ...voiceParts] = ttsModel.split('/');
-    const voice = voiceParts.join('/') || null;
-    const hasAudio = pipe.tts?.has_audio || false;
-
-    let html = '<h2>Puhesynteesi</h2>';
-
-    if (hasAudio) {
-      const audioDate = output.display_date || output.period_start;
-      const audioPath = output.topic && output.period && audioDate
-        ? `${dataPath()}/output/${output.topic}_${output.period}_${audioDate}_audio.mp3`
-        : null;
-      if (audioPath) {
-        html += `<audio controls preload="metadata" src="${escHtml(audioPath)}" class="audio-player" aria-label="Kuunteluvalikko"></audio>`;
-      }
-    }
-
-    const metaParts = [];
-    if (voice) metaParts.push(`Puhemalli: ${escHtml(voice)}`);
-    if (provider) metaParts.push(`Palvelu: ${escHtml(provider)}`);
-    if (!hasAudio) metaParts.push('Ei äänitettä tuotettu');
-    if (metaParts.length > 0) {
-      html += `<p class="tts-meta">${metaParts.join(' · ').trim()}</p>`;
-    }
-    if (ttsText) {
-      html += `<details open><summary>Käsikirjoitus (<span class="text-size">${ttsText.length}</span> merkkiä)</summary><pre class="tts-text">${escHtml(ttsText)}</pre></details>`;
-    }
-
     el.innerHTML = html;
   }
 
@@ -1240,10 +1248,14 @@ const topicLabels: Record<string, string> = {
   }
 
   /* TTS narration styles */
-  .tts-meta {
-    font-size: 0.85rem;
+  .tts-duration {
     color: var(--fg-muted);
+    font-size: 0.85rem;
     margin-bottom: 1rem;
+  }
+
+  .tts-script {
+    margin-top: 0.75rem;
   }
 
   .text-size {
