@@ -5,6 +5,10 @@ import { load } from 'js-yaml';
 import Layout from '../layouts/Layout.astro';
 import { TOPIC_META } from '../lib/topics';
 import { getSiteTopics } from '../lib/site-data';
+import { getDigestCostStatsByTopic } from '../lib/cost';
+
+const { averagePerDigest } = getDigestCostStatsByTopic('ai');
+const sentPerDigest = (averagePerDigest * 100).toFixed(1).replace('.', ',');
 
 const sourcesPath = path.resolve('../config/sources.yaml');
 const sourcesData = load(readFileSync(sourcesPath, 'utf-8'));
@@ -241,12 +245,11 @@ const steps = [
       malleja julkaistaan tai vanhoja poistuu tarjonnasta, Ainikki voidaan
       siirtää käyttämään niitä ilman, että koko toteutusta joudutaan
       rakentamaan uudelleen.
-    </p>
-    <p>
-      Päivittäisen koosteen luonti maksaa tällä hetkellä noin 0,05–0,15 euroa.
-      Toisin kuin monet tekoälypalvelut, Ainikin tuotos on jaettua: sama kooste
-      näytetään kaikille käyttäjille. Mitä enemmän käyttäjiä, sitä pienempi
-      generointikustannus käyttäjää kohti.
+     </p>
+     <p>
+       Viimeisen viikon keskiarvo tekoälykoosteen kielimallikustannuksista on noin {sentPerDigest} senttiä (USD) / kooste.
+       Toisin kuin monet tekoälypalvelut, Ainikin tuotos on jaettua: sama kooste
+       näytetään kaikille käyttäjille. Mitä enemmän käyttäjiä, sitä pienempi generointikustannus käyttäjää kohti.
     </p>
   </section>
 
