@@ -34,29 +34,28 @@ class TestTtsSynthesize:
     """Test TTS synthesis functionality."""
 
     def test_returns_none_for_missing_config(self):
-        result = synthesize("test", "nonexistent-provider", "default-voice")
+        result = synthesize(["test"], "nonexistent-provider", "default-voice")
         assert result is None
 
     def test_returns_none_for_disabled_provider(self):
         with patch.dict(os.environ, {"GOOGLE_CLOUD_API_TOKEN": "test-token"}):
             with patch("agent.tts.load_tts_config") as mock_load:
                 mock_load.return_value = {"providers": {"disabled-provider": {"enabled": False, "voices": {}}}}
-                result = synthesize("test", "disabled-provider", "default-voice")
+                result = synthesize(["test"], "disabled-provider", "default-voice")
                 assert result is None
 
     def test_returns_none_for_missing_token(self, monkeypatch):
         monkeypatch.delenv("GOOGLE_CLOUD_API_TOKEN", raising=False)
-        result = synthesize("test", "google-cloud", "fi-FI-Chirp3-HD-Callirrhoe")
+        result = synthesize(["test"], "google-cloud", "fi-FI-Chirp3-HD-Callirrhoe")
         assert result is None
 
     def test_returns_none_for_too_long_input(self):
         long_text = "A" * 10000
-        result = synthesize(long_text, "google-cloud", "fi-FI-Chirp3-HD-Callirrhoe", max_input_bytes=5000)
+        result = synthesize([long_text], "google-cloud", "fi-FI-Chirp3-HD-Callirrhoe", max_input_bytes=5000)
         assert result is None
 
     def test_synthesize_success_with_mocked_client(self):
         fake_audio_base64 = "VGVzdEF1ZGlvQnl0ZXM="
-        mock_resp = patch("httpx.Client.post").start() if False else None  # explicit response mock
         with patch.dict(os.environ, {"GOOGLE_CLOUD_API_TOKEN": "mock-token"}):
             with patch("httpx.Client.post") as mock_post:
                 mock_post.return_value.raise_for_status.return_value = None
@@ -64,7 +63,7 @@ class TestTtsSynthesize:
                     "audioContent": fake_audio_base64,
                     "audioConfig": {"sampleRateHertz": 24000},
                 }
-                result = synthesize("Test text", "google-cloud", "fi-FI-Chirp3-HD-Callirrhoe")
+                result = synthesize(["Test text"], "google-cloud", "fi-FI-Chirp3-HD-Callirrhoe")
                 assert result is not None
                 assert result.audio_bytes == b"TestAudioBytes"
                 assert result.duration_ms == 24000
@@ -76,7 +75,7 @@ class TestTtsSynthesize:
             with patch("httpx.Client.post") as mock_post:
                 mock_post.return_value.raise_for_status.return_value = None
                 mock_post.return_value.json.return_value = {"audioContent": None}
-                result = synthesize("Test text", "google-cloud", "fi-FI-Chirp3-HD-Callirrhoe")
+                result = synthesize(["Test text"], "google-cloud", "fi-FI-Chirp3-HD-Callirrhoe")
                 assert result is None
 
 
@@ -97,7 +96,6 @@ class TestTtsDecodeAudio:
         from agent.tts import _decode_audio
         encoded = "data:audio/mp3,VGVzdA=="
         assert _decode_audio(encoded) == b"Test"
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

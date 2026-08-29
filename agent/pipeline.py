@@ -336,7 +336,7 @@ def run_pipeline(
     step_durations["overview"] = round(perf_counter() - t0, 2)
 
     tts_cfg = topic_config.get("tts", {})
-    tts_text = ""
+    tts_text = []
     tts_has_audio = False
     provider = tts_cfg.get("provider", "google-cloud")
     voice = tts_cfg.get("voice", "fi-FI-Chirp3-HD-Callirrhoe")
@@ -345,27 +345,28 @@ def run_pipeline(
         try:
             logger.info("tts: generating audio for overview (provider=%s, voice=%s)", provider, voice)
 
-            # Load and render TTS template if configured
+            # Load and render TTS template into segments
             tts_template = TtsTemplate(config_paths.template_path)
             tts_text = tts_template.render({
                 "overview_heading": overview_result.digest_topic,
                 "overview_text": overview_result.overview,
                 "items": compose_result.items
             })
-            logger.info("tts: rendering template (provider=%s, voice=%s)", provider, voice)
-            logger.info("tts: template output preview:\n%s", tts_text[:300])
-            logger.debug("tts: full template output:\n%s", tts_text)
+            logger.info("tts: rendered %d segments (provider=%s, voice=%s)", len(tts_text), provider, voice)
+            if tts_text:
+                logger.info("tts: segment 0 preview:\n%s", tts_text[0][:300])
 
             tts_result = synthesize(tts_text, provider, voice)
             if tts_result:
                 audio_path = out_dir / f"{topic}_{period.value}_{date_str}_audio.mp3"
                 audio_path.write_bytes(tts_result.audio_bytes)
                 tts_has_audio = True
-                logger.info("tts: audio saved to %s", audio_path)
+                logger.info("tts: audio saved to %s (%d segments)", audio_path, len(tts_text))
                 step_durations["tts"] = round(perf_counter() - t0_tts, 2)
             else:
-                n_bytes = len(tts_text.encode("utf-8"))
-                msg = f"tts: synthesis returned no result (input {n_bytes} bytes exceeds limit)"
+                total = len(tts_text)
+                too_long = sum(1 for s in tts_text if len(s.encode("utf-8")) > 5000)
+                msg = f"tts: synthesis returned no result ({too_long}/{total} segments over {5000} byte limit)"
                 logger.warning(msg)
                 all_warnings.append(msg)
         except Exception as e:

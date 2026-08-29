@@ -9,7 +9,6 @@ import base64
 import logging
 import os
 from dataclasses import dataclass
-from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -18,7 +17,6 @@ import yaml
 
 from .schema import Briefing
 from .tts_template import TtsTemplate
-
 
 logger = logging.getLogger(__name__)
 
@@ -43,17 +41,16 @@ def load_tts_config(config_dir: Path) -> dict[str, Any]:
 
 
 def synthesize(
-    text: str,
+    segments: list[str],
     provider_name: str,
     voice_name: str,
     max_input_bytes: int = 5000,
     client: httpx.Client | None = None,
 ) -> TtsResult | None:
-    """Synthesize plain text into MP3 for a given provider and voice.
+    """Synthesize text segments into MP3 audio.
 
-    Returns TtsResult on success or None if the input is too long or configuration is missing.
-    Deliberate limitation avoids manual chunking complexity — if a digest is too
-    long for one TTS request, audio simply isn't generated (non-critical degradation).
+    Each segment is synthesized separately and the resulting MP3 blobs are
+    concatenated. Returns TtsResult on success or None if all segments fail.
     """
     tts_config = load_tts_config(Path("config"))
 
@@ -83,58 +80,84 @@ def synthesize(
         logger.error("TTS skipped — provider '%s' token environment variable '%s' not set", provider_name, token_env)
         return None
 
-    input_bytes = len(text.encode("utf-8"))
-    if input_bytes > max_input_bytes:
-        logger.warning(
-            "TTS skipped — input %d bytes exceeds limit of %d for provider %s",
-            input_bytes,
-            max_input_bytes,
-            provider_name,
-        )
-        return None
+    silence_path = Path("data/tts_silence_300ms.mp3")
+    if not silence_path.exists():
+        raise FileNotFoundError(f"TTS silence file required: {silence_path.resolve()}")
+    silence = silence_path.read_bytes()
 
-    payload = {
-        "input": {"text": text},
-        "voice": {
-            "name": voice_cfg["name"],
-            "languageCode": voice_cfg["language"],
-        },
-        "audioConfig": {
-            "audioEncoding": voice_cfg["audio_encoding"],
-            "speakingRate": voice_cfg.get("speaking_rate", 1.0),
-        },
-    }
+    all_audio: list[bytes] = []
+    total_duration_ms = 0.0
+    n_success = 0
+    n_skipped = 0
 
-    endpoint = provider_cfg.get("endpoint", TTS_ENDPOINT)
+    for idx, text in enumerate(segments):
+        input_bytes = len(text.encode("utf-8"))
+        if input_bytes > max_input_bytes:
+            logger.warning(
+                "TTS skipped — segment %d input %d bytes exceeds limit of %d for provider %s",
+                idx, input_bytes, max_input_bytes, provider_name,
+            )
+            n_skipped += 1
+            continue
 
-    try:
-        if client is not None:
-            url = f"{endpoint}?key={token}"
-            resp = client.post(url, json=payload)
-        else:
-            with httpx.Client(timeout=90.0, follow_redirects=True) as c:
+        payload = {
+            "input": {"text": text},
+            "voice": {
+                "name": voice_cfg["name"],
+                "languageCode": voice_cfg["language"],
+            },
+            "audioConfig": {
+                "audioEncoding": voice_cfg["audio_encoding"],
+                "speakingRate": voice_cfg.get("speaking_rate", 1.0),
+            },
+        }
+
+        endpoint = provider_cfg.get("endpoint", TTS_ENDPOINT)
+
+        try:
+            if client is not None:
                 url = f"{endpoint}?key={token}"
-                resp = c.post(url, json=payload)
+                resp = client.post(url, json=payload)
+            else:
+                with httpx.Client(timeout=90.0, follow_redirects=True) as c:
+                    url = f"{endpoint}?key={token}"
+                    resp = c.post(url, json=payload)
 
-        resp.raise_for_status()
-        data = resp.json()
-    except httpx.TimeoutException as e:
-        logger.error("TTS skipped — request timed out for provider '%s': %s", provider_name, e)
-        return None
-    except httpx.HTTPError as e:
-        logger.error("TTS skipped — HTTP error from provider '%s': %s", provider_name, e)
+            resp.raise_for_status()
+            data = resp.json()
+        except httpx.TimeoutException as e:
+            logger.error("TTS skipped — segment %d timed out: %s", idx, e)
+            n_skipped += 1
+            continue
+        except httpx.HTTPError as e:
+            logger.error("TTS skipped — segment %d HTTP error: %s", idx, e)
+            n_skipped += 1
+            continue
+
+        audio_content = data.get("audioContent")
+        if not audio_content:
+            logger.error("TTS skipped — segment %d API returned no audioContent", idx)
+            n_skipped += 1
+            continue
+
+        all_audio.append(_decode_audio(audio_content))
+        all_audio.append(silence)
+        total_duration_ms += data.get("audioConfig", {}).get("sampleRateHertz", 0)
+        n_success += 1
+
+    # Strip trailing silence
+    if len(all_audio) > 1:
+        all_audio.pop()
+
+    if not all_audio:
+        logger.warning("TTS skipped — no segments synthesized (0/%d)", len(segments))
         return None
 
-    audio_content = data.get("audioContent")
-    if not audio_content:
-        logger.error("TTS skipped — API returned no audioContent")
-        return None
-
-    raw_data = {"provider": provider_name, "voice": voice_name, "response": data}
+    raw_data = {"provider": provider_name, "voice": voice_name, "n_segments": len(segments), "n_success": n_success, "n_skipped": n_skipped}
 
     return TtsResult(
-        audio_bytes=_decode_audio(audio_content),
-        duration_ms=data.get("audioConfig", {}).get("sampleRateHertz", 0),
+        audio_bytes=b"".join(all_audio),
+        duration_ms=total_duration_ms,
         raw_data=raw_data,
     )
 
@@ -154,11 +177,12 @@ def _decode_audio(content: str) -> bytes:
 DEFAULT_MAX_INPUT_BYTES = 5000
 
 
-def render_script(briefing: Briefing, config_dir: Path = Path("config")) -> tuple[str, str, str]:
+def render_script(briefing: Briefing, config_dir: Path = Path("config")) -> tuple[list[str], str, str]:
     """Render the narration text for a Briefing using its topic configuration.
 
     Returns:
-        (rendered_text, provider_name, voice_name)
+        (segments, provider_name, voice_name) — segments is a list of strings,
+        each suitable for a single TTS API request.
     """
     topic_config_path = config_dir / "topics" / f"{briefing.topic}.yaml"
     topic_cfg = yaml.safe_load(topic_config_path.read_text()) if topic_config_path.exists() else {}
@@ -170,12 +194,12 @@ def render_script(briefing: Briefing, config_dir: Path = Path("config")) -> tupl
     template_path = config_dir / template_rel
 
     template = TtsTemplate(template_path)
-    text = template.render({
+    segments = template.render({
         "overview_heading": briefing.digest_topic,
         "overview_text": briefing.overview,
         "items": briefing.items,
     })
-    return text, provider, voice
+    return segments, provider, voice
 
 
 def test_cli():
@@ -205,36 +229,39 @@ def test_cli():
             sys.exit(f"Digest file not found: {digest_path}")
 
         briefing = Briefing(**json.loads(digest_path.read_text()))
-        text, default_provider, default_voice = render_script(briefing)
+        segments, default_provider, default_voice = render_script(briefing)
 
         provider = args.provider or default_provider
         voice = args.voice or default_voice
         default_out = digest_path.with_name(f"{digest_path.stem}_audio.mp3")
         output_path = Path(args.output) if args.output else default_out
     elif args.text:
-        text = args.text
+        segments = [args.text]
         provider = args.provider or "google-cloud"
         voice = args.voice or "fi-FI-Chirp3-HD-Callirrhoe"
         output_path = Path(args.output) if args.output else Path("/tmp/tts_sample.mp3")
     else:
         sys.exit("No input given. Use --digest <path> or --text <string>")
 
-    byte_len = len(text.encode("utf-8"))
-    char_len = len(text)
-    headroom_bytes = max_bytes - byte_len
-    pct = (byte_len / max_bytes) * 100
-
-    print(f"--- Script Preview ({char_len} chars, {byte_len}/{max_bytes} bytes [{pct:.1f}% used, {headroom_bytes} bytes headroom]) ---")
-    print(text)
+    total_chars = sum(len(s) for s in segments)
+    total_bytes = sum(len(s.encode("utf-8")) for s in segments)
+    print(f"--- Script Preview ({len(segments)} segments, {total_chars} chars, {total_bytes}/{max_bytes} bytes) ---")
+    for idx, segment in enumerate(segments):
+        seg_bytes = len(segment.encode("utf-8"))
+        flag = " OVER LIMIT" if seg_bytes > max_bytes else ""
+        print(f"  [{idx}] {seg_bytes} bytes{flag}:")
+        print(segment[:200])
+        print()
     print("-" * 70)
 
     if args.render_only:
         return
 
-    if byte_len > max_bytes:
-        sys.exit(f"Error: Script size ({byte_len} bytes) exceeds limit ({max_bytes} bytes) by {abs(headroom_bytes)} bytes.")
+    for seg in segments:
+        if len(seg.encode("utf-8")) > max_bytes:
+            sys.exit(f"Error: segment {segments.index(seg)} ({len(seg.encode('utf-8'))} bytes) exceeds limit ({max_bytes} bytes).")
 
-    result = synthesize(text, provider, voice, max_input_bytes=max_bytes)
+    result = synthesize(segments, provider, voice, max_input_bytes=max_bytes)
     if result is None:
         sys.exit("TTS synthesis returned no result (check GOOGLE_CLOUD_API_TOKEN or provider configuration).")
 

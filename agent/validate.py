@@ -28,7 +28,7 @@ def assemble_briefing(topic: str, period: Period, period_start: date, period_end
                        extra_warnings: list[str] | None = None,
                        duration_seconds: float | None = None,
                        llm_stats: dict[str, dict] | None = None,
-                       tts_text: str = "") -> Briefing:
+                       tts_text: list[str] | None = None) -> Briefing:
 
     if not compose_result.items:
         raise EmptyBriefingError(
@@ -61,5 +61,5 @@ def assemble_briefing(topic: str, period: Period, period_start: date, period_end
         overview=overview_result.overview,
         items=compose_result.items, meta=meta,
         dropped_stories=dropped_stories or [], warnings=all_warnings,
-        tts_text=tts_text,
+        tts_text=tts_text or [],
     )

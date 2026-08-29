@@ -140,7 +140,7 @@ class Briefing(BaseModel):
     meta: GenerationMeta
     dropped_stories: list[DroppedStory] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
-    tts_text: str = ""
+    tts_text: list[str] = Field(default_factory=list)
 
     @property
     def effective_display_date(self) -> date:

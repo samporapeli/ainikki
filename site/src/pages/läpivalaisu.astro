@@ -420,7 +420,7 @@ const topicLabels: Record<string, string> = {
         llm: false,
         tts: true,
         model: modelsUsed['tts'] ? modelsUsed['tts'].split('/').pop() : null,
-        countText: ttsHasAudio ? `${output.tts_text?.length || 0} merkkiä äänitetty` : 'Ei äänitettä tuotettu',
+        countText: ttsHasAudio ? `${Array.isArray(output.tts_text) ? output.tts_text.reduce((s, seg) => s + seg.length, 0) : (output.tts_text?.length || 0)} merkkiä äänitetty` : 'Ei äänitettä tuotettu',
         desc: 'Muuntaa koosteen tekstin puheeksi.',
         dots: ttsHasAudio ? true : null,
         stepKey: 'tts',
@@ -437,7 +437,8 @@ const topicLabels: Record<string, string> = {
       },
     ];
 
-    const ttsText = pipe.tts?.text || output.tts_text || '';
+    const ttsSegments = pipe.tts?.text || output.tts_text || [];
+    const ttsText = ttsSegments.join('\n\n');
 
     let html = `<h2>Prosessi</h2>${summaryHtml}<div class="flow">`;
     for (const s of steps) {
@@ -451,15 +452,17 @@ const topicLabels: Record<string, string> = {
       // Build common stats list (duration + count for all steps, LLM stats for LLM steps)
       const statsItems = [];
       if (stepDur != null) statsItems.push(`<li>${formatDuration(stepDur)}${s.tts ? ' tuotantoaika' : ''}</li>`);
-      if (s.tts && ttsText) {
+      if (s.tts && ttsSegments.length > 0) {
         if (ttsHasAudio) {
           statsItems.push('<li id="tts-audio-duration">? äänitteen kesto</li>');
           if (stepDur != null) {
             statsItems.push('<li id="tts-speed">?× reaaliaikakerroin (RTF)</li>');
           }
         }
-        statsItems.push(`<li>${ttsText.length} merkkiä</li>`);
-        statsItems.push(`<li>${formatWordCount(ttsText)}</li>`);
+        const totalChars = ttsSegments.reduce((sum, seg) => sum + seg.length, 0);
+        const totalWords = ttsSegments.reduce((sum, seg) => sum + seg.trim().split(/\s+/).filter(Boolean).length, 0);
+        statsItems.push(`<li>${ttsSegments.length} osaa, ${totalChars} merkkiä</li>`);
+        statsItems.push(`<li>${totalWords} sanaa</li>`);
       } else if (s.countText) {
         statsItems.push(`<li>${s.countText}</li>`);
       }
@@ -484,9 +487,9 @@ const topicLabels: Record<string, string> = {
         ? `<audio id="tts-audio" controls preload="metadata" src="${escHtml(`${dataPath()}/output/${output.topic}_${output.period}_${output.display_date || output.period_start}_audio.mp3`)}" class="audio-player" aria-label="Kuunteluvalikko"></audio>`
         : '';
 
-      const ttsScriptHtml = s.tts && ttsText
+      const ttsScriptHtml = s.tts && ttsSegments.length > 0
         ? `<details class="tts-script">
-            <summary>Käsikirjoitus</summary>
+            <summary>Käsikirjoitus (${ttsSegments.length} osaa)</summary>
             <pre class="tts-text">${escHtml(ttsText)}</pre>
           </details>`
         : '';

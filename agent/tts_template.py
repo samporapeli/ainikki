@@ -28,15 +28,15 @@ class TtsTemplate:
         import yaml
         return yaml.safe_load(template_path.read_text())
 
-    def render(self, data: dict[str, Any]) -> str:
-        """Render template with provided data.
+    def render(self, data: dict[str, Any]) -> list[str]:
+        """Render template into TTS segments, one per audio chunk.
 
         Data format expected:
         {
             "overview_heading": str,
             "overview_text": str,
-            "items": list[NewsItem],  # where NewsItem = {headline, summary, sources, rank, tags, selection_reason}
-            "closing_statement": str | None,  # override from pipeline/persona config; uses yaml pool as fallback
+            "items": list[NewsItem],
+            "closing_statement": str | None,
         }
 
         Template structure:
@@ -44,70 +44,75 @@ class TtsTemplate:
             "overview_heading": "{overview_heading}",
             "overview_text": "{overview_text}",
             "bridges": list[str],
-            "news_item_bridges": dict[int, list[str]],  # keyed by position (1-indexed)
-            "generic_bridge_over_eight": list[str],     # fallback for items beyond position 8
-            "last_item_bridge": list[str],               # bridge for the final item in the digest
-            "news_items_template": str,                  # format string like "{headline}. {summary}"
-            "closing_statements": list[str],             # pool for random selection fallback
+            "news_item_bridges": dict[int, list[str]],
+            "generic_bridge_over_eight": list[str],
+            "last_item_bridge": list[str],
+            "news_items_template": str,
+            "closing_statements": list[str],
         }
 
-        Returns: fully rendered text ready for TTS.
+        Returns: list of segment strings, each fitting in one TTS request.
         """
         if not self.template_data:
-            return data["overview_text"]
+            return [data["overview_text"]]
 
-        result_parts = []
+        segments: list[str] = []
 
-        # Overview section
+        # Overview section (segment 0)
+        overview_parts = []
         overview_heading = self._process_field("overview_heading", data)
         overview_text = self._process_field("overview_text", data)
-
         if overview_heading and data.get("overview_heading"):
-            result_parts.append(overview_heading)
+            overview_parts.append(overview_heading)
         if overview_text:
-            result_parts.append(overview_text)
+            overview_parts.append(overview_text)
+        if overview_parts:
+            segments.append(self._pronounce("\n\n".join(overview_parts)))
 
-        # Bridges
+        # Bridge from overview to first news item (appended to segment 0
+        # when short; if overview is already large, it may overflow — that's
+        # fine, TTS limit catches it per segment).
         bridges = self.template_data.get("bridges", [])
         bridges_processed = [self._process_field(b, data) for b in bridges]
         all_empty = all(not t for t in bridges_processed)
+        bridge_text = ""
         if all_empty and bridges:
-            result_parts.append(str(bridges[random.randrange(len(bridges))]))
+            bridge_text = str(bridges[random.randrange(len(bridges))])
         elif any(bridges_processed):
-            result_parts.append("\n".join(t for t in bridges_processed if t))
+            bridge_text = "\n".join(t for t in bridges_processed if t)
+        if bridge_text and segments:
+            segments[0] = segments[0] + "\n\n" + bridge_text
+        elif bridge_text:
+            segments.append(self._pronounce(bridge_text))
 
-        # News items
-        template = self.template_data.get("news_items_template", "{headline}. {summary}")
+        # News items (one segment per item)
+        nitem_tpl = self.template_data.get("news_items_template", "{headline}. {summary}")
         items = data.get("items", [])
         if items:
             news_item_bridges = self.template_data.get("news_item_bridges", {})
 
             for i, item in enumerate(items):
-                # Determine which bridge text to use
-                position = i + 1  # 1-based position
+                position = i + 1
                 last_idx = len(items) - 1
 
                 if i == last_idx:
-                    # Last item of the digest: use last_item_bridge
                     bridge_options = self.template_data.get("last_item_bridge", [])
                     if isinstance(bridge_options, (list, tuple)) and bridge_options:
-                        bridge_text = random.choice(bridge_options)
+                        bridge = random.choice(bridge_options)
                     else:
-                        bridge_text = str(bridge_options) if bridge_options else "Seuraavaksi"
+                        bridge = str(bridge_options) if bridge_options else "Seuraavaksi"
                 elif position in news_item_bridges:
-                    # Position within template range
                     bridge_options = news_item_bridges[position]
                     if isinstance(bridge_options, (list, tuple)) and bridge_options:
-                        bridge_text = random.choice(bridge_options)
+                        bridge = random.choice(bridge_options)
                     else:
-                        bridge_text = str(bridge_options)
+                        bridge = str(bridge_options)
                 else:
-                    # Items beyond template range (position > 8): use generic_bridge_over_eight
                     generic = self.template_data.get("generic_bridge_over_eight", [])
                     if isinstance(generic, (list, tuple)) and generic:
-                        bridge_text = random.choice(generic)
+                        bridge = random.choice(generic)
                     else:
-                        bridge_text = "Jatketaan seuraavaan uutiseen"
+                        bridge = "Jatketaan seuraavaan uutiseen"
 
                 source_domain = ""
                 if getattr(item, "sources", None):
@@ -122,25 +127,23 @@ class TtsTemplate:
                     "source_domain": source_domain,
                     "source_info": source_info,
                 }
-                formatted = template.format(**item_dict)
-                result_parts.append(f"{bridge_text}: {formatted}")
+                formatted = nitem_tpl.format(**item_dict)
+                segments.append(self._pronounce(f"{bridge}: {formatted}"))
 
-        # Closing statement: data override first, yaml pool as fallback
+        # Closing statement (final segment)
         closing_data = data.get("closing_statement")
         if closing_data:
-            result_parts.append(closing_data)
+            segments.append(self._pronounce(closing_data))
         else:
             closing_pool = self.template_data.get("closing_statements", [])
             if closing_pool and isinstance(closing_pool, list):
-                # If it's nested (list of lists), flatten first then pick
                 flat_pool = [choice for opt in closing_pool for choice in (opt if isinstance(opt, list) else [opt] if opt else [])]
                 if flat_pool:
-                    result_parts.append(random.choice(flat_pool))
+                    segments.append(self._pronounce(random.choice(flat_pool)))
 
-        rendered = "\n\n".join(result_parts)
-        return self._apply_pronunciations(rendered)
+        return segments
 
-    def _apply_pronunciations(self, text: str) -> str:
+    def _pronounce(self, text: str) -> str:
         """Apply phonetic pronunciation overrides configured in template."""
         pronunciations = self.template_data.get("pronunciations")
         if not pronunciations or not isinstance(pronunciations, dict):

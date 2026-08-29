@@ -108,6 +108,7 @@ def test_full_pipeline_happy_path(tmp_path):
     # TTS warning: synthesize returns None in test env (no credentials)
     assert len(briefing.warnings) == 1
     assert "tts: synthesis returned no result" in briefing.warnings[0]
+    assert "segments" in briefing.warnings[0]
 
     pipeline_file = tmp_data / "pipeline" / "ai_daily_2026-07-16.json"
     debug = json.loads(pipeline_file.read_text())
