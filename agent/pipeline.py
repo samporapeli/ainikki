@@ -364,7 +364,10 @@ def run_pipeline(
                 logger.info("tts: audio saved to %s", audio_path)
                 step_durations["tts"] = round(perf_counter() - t0_tts, 2)
             else:
-                logger.warning("tts: synthesis returned no result (missing config or too long?)")
+                n_bytes = len(tts_text.encode("utf-8"))
+                msg = f"tts: synthesis returned no result (input {n_bytes} bytes exceeds limit)"
+                logger.warning(msg)
+                all_warnings.append(msg)
         except Exception as e:
             logger.error(
                 "tts: generation failed for provider=%s voice=%s: %s (type: %s)",

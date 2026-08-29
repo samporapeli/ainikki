@@ -105,6 +105,10 @@ def test_full_pipeline_happy_path(tmp_path):
     assert briefing.meta.models_used["compose"]
     assert briefing.meta.models_used["tts"] == "google-cloud/fi-FI-Chirp3-HD-Callirrhoe"
 
+    # TTS warning: synthesize returns None in test env (no credentials)
+    assert len(briefing.warnings) == 1
+    assert "tts: synthesis returned no result" in briefing.warnings[0]
+
     pipeline_file = tmp_data / "pipeline" / "ai_daily_2026-07-16.json"
     debug = json.loads(pipeline_file.read_text())
     assert debug["steps"]["tts"]["provider"] == "google-cloud"
