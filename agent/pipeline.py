@@ -20,6 +20,7 @@ from pathlib import Path
 from time import perf_counter
 
 import httpx
+import shutil
 import yaml
 
 from agent.schema import Period, RawItem
@@ -157,6 +158,35 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
     return _tracked_call
 
 
+def _load_topic_model_overrides(
+    topic_config: dict,
+    model_overrides: dict[str, tuple[str | None, str | None]],
+) -> None:
+    """Load per-topic model overrides from the topic yaml.
+
+    Mirrors ``config/models.yaml`` (nested ``steps -> step -> { provider, model, ... }``).
+    Only the steps present in the override are applied; missing steps fall back
+    to ``config/models.yaml``. CLI ``--model-override`` wins if also set.
+
+    Example (topic yaml):
+
+        models_overrides:
+          steps:
+            compose:
+              provider: openrouter
+              model: "deepseek/deepseek-v4-flash"
+    """
+    raw = topic_config.get("models_overrides") or {}
+    steps = raw.get("steps") or {}
+    for step, cfg in steps.items():
+        if step in model_overrides:
+            continue  # CLI wins
+        provider = cfg.get("provider")
+        model = cfg.get("model")
+        if provider and model:
+            model_overrides[step] = (provider.strip(), model.strip())
+
+
 def run_pipeline(
     topic: str, period: Period, since: datetime, until: datetime,
     config_dir: Path = Path("config"), data_dir: Path = Path("data"),
@@ -181,6 +211,8 @@ def run_pipeline(
             "Topic configuration must define target_audience and boolean public: "
             f"{config_paths.topic_config}"
         )
+    # Topic-level model overrides (override config/models.yaml for this topic).
+    _load_topic_model_overrides(topic_config, model_overrides)
     target_audience = topic_config["target_audience"]
     effective_display_date = display_date or since.date()
     date_str = effective_display_date.isoformat()
@@ -336,11 +368,25 @@ def run_pipeline(
     step_durations["overview"] = round(perf_counter() - t0, 2)
 
     tts_cfg = topic_config.get("tts", {})
-    tts_text = []
+    tts_text: list[str] = []
     tts_has_audio = False
+    tts_raw_data: dict | None = None
     provider = tts_cfg.get("provider", "google-cloud")
     voice = tts_cfg.get("voice", "fi-FI-Chirp3-HD-Callirrhoe")
-    if tts_cfg.get("enabled", False):
+
+    # Check ffmpeg availability early — TTS needs it for silence generation
+    # and segment concatenation. Skip TTS entirely if unavailable.
+    if tts_cfg.get("enabled", False) and shutil.which("ffmpeg") is None:
+        all_warnings.append("TTS on: ffmpeg not found in PATH — audio skipped")
+        logger.warning("tts: ffmpeg not available, skipping audio")
+
+    # Resolve the voice config to get the silence duration for the pipeline debug log
+    _tts_config = load_tts_config(config_dir)
+    _voice_cfg = _tts_config.get("providers", {}).get(provider, {}).get("voices", {}).get(voice, {}) if provider and voice else {}
+    _silence_between_ms = _voice_cfg.get("silence_between_segments_ms", 600)
+
+    tts_result = None
+    if tts_cfg.get("enabled", False) and shutil.which("ffmpeg") is not None:
         t0_tts = perf_counter()
         try:
             logger.info("tts: generating audio for overview (provider=%s, voice=%s)", provider, voice)
@@ -352,13 +398,14 @@ def run_pipeline(
                 "overview_text": overview_result.overview,
                 "items": compose_result.items
             })
-            logger.info("tts: rendered %d segments (provider=%s, voice=%s)", len(tts_text), provider, voice)
+            logger.info("tts: rendered %d segments (provider=%s, voice=%s)",
+                        len(tts_text), provider, voice)
             if tts_text:
                 logger.info("tts: segment 0 preview:\n%s", tts_text[0][:300])
 
             tts_result = synthesize(tts_text, provider, voice)
             if tts_result:
-                audio_path = out_dir / f"{topic}_{period.value}_{date_str}_audio.mp3"
+                audio_path = out_dir / f"{topic}_{period.value}_{date_str}_audio.ogg"
                 audio_path.write_bytes(tts_result.audio_bytes)
                 tts_has_audio = True
                 logger.info("tts: audio saved to %s (%d segments)", audio_path, len(tts_text))
@@ -463,10 +510,15 @@ def run_pipeline(
             },
             "tts": {
                 "enabled": tts_cfg.get("enabled", False),
-                "text": tts_text if tts_cfg.get("enabled") else None,
                 "provider": provider,
                 "voice": voice,
                 "has_audio": tts_has_audio,
+                "silence_between_ms": _silence_between_ms,
+                "n_success": tts_result.raw_data["n_success"] if tts_result else 0,
+                "segments": [
+                    {"index": i, "text": s, "input_bytes": len(s.encode("utf-8"))}
+                    for i, s in enumerate(tts_text)
+                ] if tts_text else [],
             },
         },
     }

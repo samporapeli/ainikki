@@ -8,8 +8,153 @@ providers:
     endpoint: "https://texttospeech.googleapis.com/v1/text:synthesize"
     token_env_var: "GOOGLE_CLOUD_API_TOKEN"
     voices:
+      fi-FI-Chirp3-HD-Achernar:
+        name: "fi-FI-Chirp3-HD-Achernar"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Achird:
+        name: "fi-FI-Chirp3-HD-Achird"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Algenib:
+        name: "fi-FI-Chirp3-HD-Algenib"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Algieba:
+        name: "fi-FI-Chirp3-HD-Algieba"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Alnilam:
+        name: "fi-FI-Chirp3-HD-Alnilam"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Aoede:
+        name: "fi-FI-Chirp3-HD-Aoede"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Autonoe:
+        name: "fi-FI-Chirp3-HD-Autonoe"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
       fi-FI-Chirp3-HD-Callirrhoe:
         name: "fi-FI-Chirp3-HD-Callirrhoe"
         language: "fi-FI"
-        audio_encoding: "MP3"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Charon:
+        name: "fi-FI-Chirp3-HD-Charon"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Despina:
+        name: "fi-FI-Chirp3-HD-Despina"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Enceladus:
+        name: "fi-FI-Chirp3-HD-Enceladus"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Erinome:
+        name: "fi-FI-Chirp3-HD-Erinome"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Fenrir:
+        name: "fi-FI-Chirp3-HD-Fenrir"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Gacrux:
+        name: "fi-FI-Chirp3-HD-Gacrux"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Iapetus:
+        name: "fi-FI-Chirp3-HD-Iapetus"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Kore:
+        name: "fi-FI-Chirp3-HD-Kore"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Laomedeia:
+        name: "fi-FI-Chirp3-HD-Laomedeia"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Leda:
+        name: "fi-FI-Chirp3-HD-Leda"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Orus:
+        name: "fi-FI-Chirp3-HD-Orus"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Pulcherrima:
+        name: "fi-FI-Chirp3-HD-Pulcherrima"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Puck:
+        name: "fi-FI-Chirp3-HD-Puck"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Rasalgethi:
+        name: "fi-FI-Chirp3-HD-Rasalgethi"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Sadachbia:
+        name: "fi-FI-Chirp3-HD-Sadachbia"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Sadaltager:
+        name: "fi-FI-Chirp3-HD-Sadaltager"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Schedar:
+        name: "fi-FI-Chirp3-HD-Schedar"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Sulafat:
+        name: "fi-FI-Chirp3-HD-Sulafat"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Umbriel:
+        name: "fi-FI-Chirp3-HD-Umbriel"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Vindemiatrix:
+        name: "fi-FI-Chirp3-HD-Vindemiatrix"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Zephyr:
+        name: "fi-FI-Chirp3-HD-Zephyr"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
+        speaking_rate: 1.1
+      fi-FI-Chirp3-HD-Zubenelgenubi:
+        name: "fi-FI-Chirp3-HD-Zubenelgenubi"
+        language: "fi-FI"
+        audio_encoding: "OGG_OPUS"
         speaking_rate: 1.1

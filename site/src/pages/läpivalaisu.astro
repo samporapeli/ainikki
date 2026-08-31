@@ -484,15 +484,45 @@ const topicLabels: Record<string, string> = {
       const dotsHtml = s.dots != null ? renderDots(s.dots) : '';
 
       const ttsAudioHtml = s.tts && ttsHasAudio && output.topic && output.period
-        ? `<audio id="tts-audio" controls preload="metadata" src="${escHtml(`${dataPath()}/output/${output.topic}_${output.period}_${output.display_date || output.period_start}_audio.mp3`)}" class="audio-player" aria-label="Kuunteluvalikko"></audio>`
+        ? `<audio id="tts-audio" controls preload="metadata" src="${escHtml(`${dataPath()}/output/${output.topic}_${output.period}_${output.display_date || output.period_start}_audio.ogg`)}" class="audio-player" aria-label="Kuunteluvalikko"></audio>`
         : '';
 
-      const ttsScriptHtml = s.tts && ttsSegments.length > 0
-        ? `<details class="tts-script">
-            <summary>Käsikirjoitus (${ttsSegments.length} osaa)</summary>
-            <pre class="tts-text">${escHtml(ttsText)}</pre>
-          </details>`
-        : '';
+            const pausesRaw = pipe.tts?.pauses_after;
+      let pauseAfter = Array.isArray(pausesRaw) && pausesRaw.length > 0 ? new Set(pausesRaw) : null;
+      if (pauseAfter === null || pauseAfter.size === 0) {
+        // Fallback: all segments except the last get a pause
+        const n = pipe.tts?.segments?.length || output.tts_text?.length || 0;
+        pauseAfter = new Set(Array.from({ length: Math.max(n - 1, 0) }, (_, i) => i));
+      }
+
+      const silenceMs = pipe.tts?.silence_between_ms ?? pipe.tts?.silence_ms;
+
+      let segments = pipe.tts?.segments || output.tts_text || [];
+
+      let ttsScriptHtml = '';
+      if (s.tts && segments.length > 0) {
+        if (typeof segments[0] === 'string') {
+          // Plain string[] format
+          ttsScriptHtml = `<details class="tts-script"><summary>Käsikirjoitus (${segments.length} osaa)</summary>` +
+            segments.map((seg, i) => {
+              const html = `<pre class="tts-segment">${escHtml(seg)}</pre>`;
+              const nextNeedsPause = pauseAfter.has(seg.index);
+              return html + (nextNeedsPause && silenceMs != null ? `<div class="tauko-block"><hr><span>Tauko: ${silenceMs}ms</span></div>` : '');
+            }).join('') +
+            '</details>';
+        } else {
+          // {index, text, input_bytes} format
+          const segmentList = segments;
+          ttsScriptHtml = `<details class="tts-script"><summary>Käsikirjoitus (${segmentList.length} osaa)</summary>` +
+            segmentList.map((seg, i) => {
+              const meta = `<p class="tts-segment-meta">[${escHtml(String(seg.index))}] ${seg.input_bytes}B</p>`;
+              const html = `<pre class="tts-segment">${escHtml(seg.text)}</pre>`;
+              const nextNeedsPause = pauseAfter.has(seg.index);
+              return meta + html + (nextNeedsPause && silenceMs != null ? `<div class="tauko-block"><hr><span>Tauko: ${silenceMs}ms</span></div>` : '');
+            }).join('') +
+            '</details>';
+        }
+      }
 
       // Embed prompt blocks directly into the step card
       const prompts = llmPrompts[s.stepKey];
@@ -1277,6 +1307,60 @@ const topicLabels: Record<string, string> = {
     overflow-x: auto;
     white-space: pre-wrap;
     word-break: break-word;
+  }
+
+  .tts-segment {
+    margin: 0.25rem 0;
+    padding: 0.75rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .tts-segment + .tts-segment {
+    margin-top: 0.75rem;
+  }
+
+  .tts-segment code {
+    font-size: inherit;
+  }
+
+  .tauko-block {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0;color: var(--fg-muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .tauko-block::before,
+  .tauko-block::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid var(--border);
+    opacity: 0.5;
+  }
+
+  .tauko-block span {
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+
+  .tts-segment-meta {
+    color: var(--fg-subtle);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+    margin-bottom: 0.55rem;
+    text-transform: uppercase;
   }
 
   .audio-player {

@@ -6,11 +6,23 @@ period: daily
 tts:
   enabled: true
   provider: google-cloud
-  voice: fi-FI-Chirp3-HD-Callirrhoe
+  voice: fi-FI-Chirp3-HD-Achird
   template_path: tts-templates/ainikki-oletus.yaml
 sources:
   - test-rss-a
   - test-rss-b
+
+# Per-step model overrides (overrules config/models.yaml for this topic only).
+# Same shape as models.yaml — only steps present here are applied.
+# Steps not listed use the defaults from config/models.yaml.
+models_overrides:    # mirrors config/models.yaml — only steps present here are overridden
+  steps:
+    compose:
+      provider: openrouter
+      model: "deepseek/deepseek-v4-flash"
+    overview:
+      provider: openrouter
+      model: "deepseek/deepseek-v4-flash"
 
 topic_description: |
   Tekoäly ja teknologia-aiheiset testiuutiset.

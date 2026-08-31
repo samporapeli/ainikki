@@ -5,6 +5,25 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_PYTHON="$SCRIPT_DIR/venv/bin/python3"
 SITE_BASE_URL="${SITE_BASE_URL:-https://sampo.website/ainikki}"
 
+# Muunnetaan MP3 OGG Opusiksi (Telegram sendVoice vaatii OGG).
+# # TTS tuottaa NyKYääN OGG:n suoraan; tämä toimii vain vanhojen .mp3-tiedostojen jälkikäsittelyyn.
+# Jos ffmpeg ei löydy, palautetaan alkuperäinen polku.
+prepare_audio() {
+    local path="$1"
+    if [[ "$path" == *.ogg ]]; then
+        echo "$path"
+        return
+    fi
+    if [[ "$path" == *.mp3 ]] && command -v ffmpeg &>/dev/null; then
+        local ogg_path="${path%.mp3}.ogg"
+        ffmpeg -y -i "$path" -c:a libopus -b:a 64k "$ogg_path" >/dev/null 2>&1
+        if [[ -s "$ogg_path" ]]; then
+            path="$ogg_path"
+        fi
+    fi
+    echo "$path"
+}
+
 validate_env() {
     if [ -z "${OPENROUTER_API_KEY:-}" ]; then
         echo "Error: OPENROUTER_API_KEY is not set." >&2

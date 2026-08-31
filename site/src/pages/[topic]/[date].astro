@@ -74,7 +74,7 @@ const period = briefing.period || "daily";
 const pipelinePath = path.resolve(`../data/pipeline/${topic}_${period}_${dateStr}.json`);
 const hasPipelineDebug = fs.existsSync(pipelinePath);
 
-const audioFilename = `${topic}_${period}_${dateStr}_audio.mp3`;
+const audioFilename = `${topic}_${period}_${dateStr}_audio.ogg`;
 const audioPath = path.resolve(`../data/output/${audioFilename}`);
 const hasAudio = fs.existsSync(audioPath);
 

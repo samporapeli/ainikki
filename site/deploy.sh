@@ -35,7 +35,7 @@ echo "Installing dependencies..."
 npm install
 
 echo "Building..."
-rm -f public/data/output/*.json public/data/output/*.mp3 public/data/pipeline/*.json public/data/pipeline/*.mp3
+rm -f public/data/output/*.json public/data/output/*.ogg public/data/pipeline/*.json public/data/pipeline/*.ogg
 AINIKKI_PUBLIC_ONLY=1 npm run build
 
 echo "Copying data files..."
@@ -45,12 +45,12 @@ mkdir -p public/data/output public/data/pipeline
 while IFS=: read -r topic period; do
   cp "$PROJECT_DIR/data/output/${topic}_${period}_"*.json dist/data/output/ 2>/dev/null || true
   cp "$PROJECT_DIR/data/pipeline/${topic}_${period}_"*.json dist/data/pipeline/ 2>/dev/null || true
-  cp "$PROJECT_DIR/data/output/${topic}_${period}_"*.mp3   dist/data/output/ 2>/dev/null || true
-  cp "$PROJECT_DIR/data/pipeline/${topic}_${period}_"*.mp3   dist/data/pipeline/ 2>/dev/null || true
+  cp "$PROJECT_DIR/data/output/${topic}_${period}_"*.ogg   dist/data/output/ 2>/dev/null || true
+  cp "$PROJECT_DIR/data/pipeline/${topic}_${period}_"*.ogg   dist/data/pipeline/ 2>/dev/null || true
   cp "$PROJECT_DIR/data/output/${topic}_${period}_"*.json public/data/output/ 2>/dev/null || true
   cp "$PROJECT_DIR/data/pipeline/${topic}_${period}_"*.json public/data/pipeline/ 2>/dev/null || true
-  cp "$PROJECT_DIR/data/output/${topic}_${period}_"*.mp3   public/data/output/ 2>/dev/null || true
-  cp "$PROJECT_DIR/data/pipeline/${topic}_${period}_"*.mp3   public/data/pipeline/ 2>/dev/null || true
+  cp "$PROJECT_DIR/data/output/${topic}_${period}_"*.ogg   public/data/output/ 2>/dev/null || true
+  cp "$PROJECT_DIR/data/pipeline/${topic}_${period}_"*.ogg   public/data/pipeline/ 2>/dev/null || true
 done < <(public_topics)
 
 echo "Deploying to $DEPLOY_TARGET..."

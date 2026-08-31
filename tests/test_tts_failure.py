@@ -4,12 +4,15 @@ from pathlib import Path
 
 import httpx
 import pytest
+from unittest.mock import patch
 
+from agent import tts
 from agent.pipeline import run_pipeline
 from agent.score import ScoreValidationError
 from agent.validate import EmptyBriefingError
 from agent.collect.hn import parse_hn_hits
 from agent.schema import Period, Briefing
+
 
 CLEAN_HTML = Path("tests/fixtures/article_clean.html").read_text()
 
@@ -105,7 +108,7 @@ def test_full_pipeline_happy_path(tmp_path):
     assert briefing.meta.models_used["compose"]
     assert briefing.meta.models_used["tts"] == "google-cloud/fi-FI-Chirp3-HD-Callirrhoe"
 
-    # TTS warning: ffmpeg not available in test env
+    # TTS warning: ffmpeg not available, so audio skipped entirely
     assert len(briefing.warnings) == 1
     assert "TTS on: ffmpeg not found in PATH" in briefing.warnings[0]
 
@@ -127,6 +130,7 @@ def test_pipeline_raises_on_critical_score_failure(tmp_path):
         is_anthropic = request.url.host == "api.anthropic.com"
         system_prompt = body.get("system", "") if is_anthropic else body["messages"][0]["content"]
 
+        # Break ALL LLM steps — score, cluster, compose, and overview
         if "arvioi päivän ehdokaslistaa" in system_prompt:
             content = "tämä ei ole json:ia ollenkaan"
         elif "uutisanalyytikko" in system_prompt:
@@ -135,8 +139,10 @@ def test_pipeline_raises_on_critical_score_failure(tmp_path):
             content = json.dumps({"clusters": [
                 {"candidate_indices": [i], "primary_position": 0, "reason": None} for i in range(n)
             ]})
+        elif "tiivistelmäotsikko" in system_prompt:
+            content = "eipä toimittajiakaan"
         else:
-            content = "{}"
+            content = "ei tunnu toimittajan palauttavan mitään"
 
         if is_anthropic:
             return httpx.Response(200, json={"content": [{"type": "text", "text": content}]},
@@ -156,8 +162,10 @@ def test_pipeline_raises_on_critical_score_failure(tmp_path):
             config_dir=Path("config"), data_dir=tmp_data, out_dir=tmp_out,
             raw_items_override=raw_items, llm_client=llm_client,
         )
-    assert not tmp_out.exists() or not any(tmp_out.iterdir()), \
+    # NO file should have been written to tmp_out.
+    assert not tmp_out.exists() or not any(tmp_out.iterdir()), (
         "after critical failure there must be no written file"
+    )
 
 
 def test_pipeline_raises_on_empty_collect(tmp_path):
@@ -230,11 +238,9 @@ def test_pipeline_captures_llm_prompts(tmp_path):
         assert isinstance(call["raw_response"], str) and len(call["raw_response"]) > 0
 
     # Compose should have N entries (one per item, 4 items from test)
-    # N calls with 4 items per call
     compose_calls = prompts["compose"]
     assert len(compose_calls) == 4, f"compose should have 4 calls, got {len(compose_calls)}"
     for i, call in enumerate(compose_calls):
-        assert "system_prompt" in call
         assert "system_prompt" in call
         assert "user_prompt" in call
         assert "raw_response" in call
@@ -242,3 +248,50 @@ def test_pipeline_captures_llm_prompts(tmp_path):
         expected = json.dumps({"otsikko": "Testiotsikko juttu",
                                "tiivistelmä": "Testiyhteenveto joka kuvaa juttua lyhyesti."})
         assert call["raw_response"] == expected, f"compose call {i} raw_response mismatch"
+
+    # Overview
+    overview_calls = prompts["overview"]
+    assert len(overview_calls) == 1
+    assert "system_prompt" in overview_calls[0]
+
+
+def _mock_tts_no_audio(_request):
+    """Mock TTS provider that returns no synthesis result (same case that caused the crash)."""
+    return None
+
+
+def test_tts_synthesis_failure_no_crash(tmp_path, monkeypatch):
+    """TTS synthesis failure (returns no result) should not crash the pipeline."""
+    tmp_out = tmp_path / "out"
+    tmp_data = tmp_path / "data"
+    tmp_raw = tmp_path / "raw"
+
+    raw_items = _load_test_raw_items()
+    llm_client = httpx.Client(transport=httpx.MockTransport(_make_llm_handler()))
+    enrich_client = httpx.Client(transport=httpx.MockTransport(_enrich_handler))
+    monkeypatch.setattr(tts, "synthesize", _mock_tts_no_audio)
+
+    since = datetime(2026, 7, 16, tzinfo=timezone.utc)
+    until = since + timedelta(days=1)
+
+    path = run_pipeline(
+        topic="ai", period=Period.daily, since=since, until=until,
+        config_dir=Path("config"), data_dir=tmp_raw, out_dir=tmp_out,
+        raw_items_override=raw_items, llm_client=llm_client, enrich_client=enrich_client,
+    )
+    assert path.exists()
+    briefing = Briefing(**json.loads(path.read_text()))
+
+    pipeline_file = tmp_raw / "pipeline" / "ai_daily_2026-07-16.json"
+    debug = json.loads(pipeline_file.read_text())
+    assert debug["steps"]["tts"]["provider"] == "google-cloud"
+    assert debug["steps"]["tts"]["voice"] == "fi-FI-Chirp3-HD-Callirrhoe"
+
+
+def _mock_tts_no_result():
+    """Mock TTS provider that returns no synthesis result."""
+    return None
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

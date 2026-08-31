@@ -66,5 +66,6 @@ closing_statements:
 
 # Phonetic replacements for TTS pronunciation (word-boundary matched)
 pronunciations:
+  ChatGPT: "chat GPT"
   OpenAI: "Open AI"
   Qwen: "Kwen"
