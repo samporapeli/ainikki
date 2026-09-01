@@ -35,8 +35,7 @@ AUDIO_PATH="data/output/test_daily_${TEST_DATE}_audio.ogg"
 if [ -f "$AUDIO_PATH" ]; then
     ls -la "data/output/" >&2
 fi
-audio_path=$(prepare_audio "$AUDIO_PATH")
-send_telegram "test" "daily" "$TEST_DATE" "$TELEGRAM_CHAT_ID_TEST" "$audio_path"
+send_telegram "test" "daily" "$TEST_DATE" "$TELEGRAM_CHAT_ID_TEST" "$AUDIO_PATH"
 
 mkdir -p site/public/data/output site/public/data/pipeline
 rsync -a data/output/ site/public/data/output/
