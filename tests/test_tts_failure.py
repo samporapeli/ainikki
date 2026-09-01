@@ -288,10 +288,5 @@ def test_tts_synthesis_failure_no_crash(tmp_path, monkeypatch):
     assert debug["steps"]["tts"]["voice"] == "fi-FI-Chirp3-HD-Callirrhoe"
 
 
-def _mock_tts_no_result():
-    """Mock TTS provider that returns no synthesis result."""
-    return None
-
-
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

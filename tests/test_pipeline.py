@@ -235,7 +235,6 @@ def test_pipeline_captures_llm_prompts(tmp_path):
     assert len(compose_calls) == 4, f"compose should have 4 calls, got {len(compose_calls)}"
     for i, call in enumerate(compose_calls):
         assert "system_prompt" in call
-        assert "system_prompt" in call
         assert "user_prompt" in call
         assert "raw_response" in call
         # raw_response should match what the mock returns

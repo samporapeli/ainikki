@@ -144,6 +144,7 @@ const topicLabels: Record<string, string> = {
 
       if (!outputData) {
         status.textContent = `Koostetta ei löydy aiheelle "${topic}" päivälle ${date}.`;
+        content.style.display = 'none';
         return;
       }
 
@@ -166,6 +167,8 @@ const topicLabels: Record<string, string> = {
       renderDropped(document.getElementById('dropped'), outputData);
     } catch (e) {
       status.textContent = 'Virhe: ' + e.message;
+      status.style.display = 'block';
+      content.style.display = 'none';
     }
   }
 
@@ -306,6 +309,20 @@ const topicLabels: Record<string, string> = {
     const llmPrompts = pipelineData?.llm_prompts || {};
 
     const ttsHasAudio = pipe.tts?.has_audio === true;
+    let ttsSegments = [];
+    if (Array.isArray(pipe.tts?.segments)) {
+      ttsSegments = pipe.tts.segments;
+    } else if (pipe.tts?.text) {
+      ttsSegments = Array.isArray(pipe.tts.text) ? pipe.tts.text : (pipe.tts.text ? [pipe.tts.text] : []);
+    } else if (output.tts_text) {
+      ttsSegments = Array.isArray(output.tts_text) ? output.tts_text : (output.tts_text ? [output.tts_text] : []);
+    }
+
+    const ttsTotalChars = ttsSegments.reduce((sum, seg) => sum + (typeof seg === 'string' ? seg.length : (seg.text?.length || 0)), 0);
+    const ttsTotalWords = ttsSegments.reduce((sum, seg) => {
+      const t = typeof seg === 'string' ? seg : (seg.text || '');
+      return sum + t.trim().split(/\s+/).filter(Boolean).length;
+    }, 0);
 
     // Summary totals
     let totalCalls = 0;
@@ -420,7 +437,7 @@ const topicLabels: Record<string, string> = {
         llm: false,
         tts: true,
         model: modelsUsed['tts'] ? modelsUsed['tts'].split('/').pop() : null,
-        countText: ttsHasAudio ? `${Array.isArray(output.tts_text) ? output.tts_text.reduce((s, seg) => s + seg.length, 0) : (output.tts_text?.length || 0)} merkkiä äänitetty` : 'Ei äänitettä tuotettu',
+        countText: ttsHasAudio && ttsTotalChars > 0 ? `${ttsTotalChars} merkkiä äänitetty` : 'Ei äänitettä tuotettu',
         desc: 'Muuntaa koosteen tekstin puheeksi.',
         dots: ttsHasAudio ? true : null,
         stepKey: 'tts',
@@ -436,9 +453,6 @@ const topicLabels: Record<string, string> = {
         stepKey: 'validate',
       },
     ];
-
-    const ttsSegments = pipe.tts?.text || output.tts_text || [];
-    const ttsText = ttsSegments.join('\n\n');
 
     let html = `<h2>Prosessi</h2>${summaryHtml}<div class="flow">`;
     for (const s of steps) {
@@ -459,10 +473,9 @@ const topicLabels: Record<string, string> = {
             statsItems.push('<li id="tts-speed">?× reaaliaikakerroin (RTF)</li>');
           }
         }
-        const totalChars = ttsSegments.reduce((sum, seg) => sum + seg.length, 0);
-        const totalWords = ttsSegments.reduce((sum, seg) => sum + seg.trim().split(/\s+/).filter(Boolean).length, 0);
-        statsItems.push(`<li>${ttsSegments.length} osaa, ${totalChars} merkkiä</li>`);
-        statsItems.push(`<li>${totalWords} sanaa</li>`);
+        const partsLabel = ttsSegments.length === 1 ? '1 osa' : `${ttsSegments.length} osaa`;
+        statsItems.push(`<li>${partsLabel}, ${ttsTotalChars} merkkiä</li>`);
+        statsItems.push(`<li>${ttsTotalWords} sanaa</li>`);
       } else if (s.countText) {
         statsItems.push(`<li>${s.countText}</li>`);
       }
@@ -487,41 +500,35 @@ const topicLabels: Record<string, string> = {
         ? `<audio id="tts-audio" controls preload="metadata" src="${escHtml(`${dataPath()}/output/${output.topic}_${output.period}_${output.display_date || output.period_start}_audio.ogg`)}" class="audio-player" aria-label="Kuunteluvalikko"></audio>`
         : '';
 
-            const pausesRaw = pipe.tts?.pauses_after;
+      const pausesRaw = pipe.tts?.pauses_after;
       let pauseAfter = Array.isArray(pausesRaw) && pausesRaw.length > 0 ? new Set(pausesRaw) : null;
       if (pauseAfter === null || pauseAfter.size === 0) {
         // Fallback: all segments except the last get a pause
-        const n = pipe.tts?.segments?.length || output.tts_text?.length || 0;
+        const n = ttsSegments.length;
         pauseAfter = new Set(Array.from({ length: Math.max(n - 1, 0) }, (_, i) => i));
       }
 
       const silenceMs = pipe.tts?.silence_between_ms ?? pipe.tts?.silence_ms;
 
-      let segments = pipe.tts?.segments || output.tts_text || [];
-
       let ttsScriptHtml = '';
-      if (s.tts && segments.length > 0) {
-        if (typeof segments[0] === 'string') {
-          // Plain string[] format
-          ttsScriptHtml = `<details class="tts-script"><summary>Käsikirjoitus (${segments.length} osaa)</summary>` +
-            segments.map((seg, i) => {
+      if (s.tts && ttsSegments.length > 0) {
+        const partsLabel = ttsSegments.length === 1 ? '1 osa' : `${ttsSegments.length} osaa`;
+        ttsScriptHtml = `<details class="tts-script"><summary>Käsikirjoitus (${partsLabel})</summary>` +
+          ttsSegments.map((seg, i) => {
+            if (typeof seg === 'string') {
               const html = `<pre class="tts-segment">${escHtml(seg)}</pre>`;
-              const nextNeedsPause = pauseAfter.has(seg.index);
+              const nextNeedsPause = pauseAfter.has(i);
               return html + (nextNeedsPause && silenceMs != null ? `<div class="tauko-block"><hr><span>Tauko: ${silenceMs}ms</span></div>` : '');
-            }).join('') +
-            '</details>';
-        } else {
-          // {index, text, input_bytes} format
-          const segmentList = segments;
-          ttsScriptHtml = `<details class="tts-script"><summary>Käsikirjoitus (${segmentList.length} osaa)</summary>` +
-            segmentList.map((seg, i) => {
-              const meta = `<p class="tts-segment-meta">[${escHtml(String(seg.index))}] ${seg.input_bytes}B</p>`;
-              const html = `<pre class="tts-segment">${escHtml(seg.text)}</pre>`;
-              const nextNeedsPause = pauseAfter.has(seg.index);
+            } else {
+              const segIdx = seg.index != null ? seg.index : i;
+              const bytesMeta = seg.input_bytes != null ? ` ${seg.input_bytes}B` : '';
+              const meta = `<p class="tts-segment-meta">[${escHtml(String(segIdx))}]${bytesMeta}</p>`;
+              const html = `<pre class="tts-segment">${escHtml(seg.text || '')}</pre>`;
+              const nextNeedsPause = pauseAfter.has(segIdx);
               return meta + html + (nextNeedsPause && silenceMs != null ? `<div class="tauko-block"><hr><span>Tauko: ${silenceMs}ms</span></div>` : '');
-            }).join('') +
-            '</details>';
-        }
+            }
+          }).join('') +
+          '</details>';
       }
 
       // Embed prompt blocks directly into the step card
@@ -1334,7 +1341,7 @@ const topicLabels: Record<string, string> = {
     display: flex;
     align-items: center;
     gap: 1rem;
-    margin: 0;color: var(--fg-muted);
+    margin: 0; color: var(--fg-muted);
     font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.04em;
