@@ -3,5 +3,5 @@ __pycache__/
 venv/
 .env
 ainikki-cron.log
-*.local.md
+*.local.*
 logs/

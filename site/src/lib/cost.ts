@@ -15,7 +15,7 @@ export function getDigestCostStatsByTopic(topic: string): {
   numWithCost: number;
 } {
   const files = readdirSync(DATA_DIR)
-    .filter(f => f.startsWith('ai_daily_') && f.endsWith('.json'))
+    .filter(f => f.startsWith(`${topic}_`) && f.endsWith('.json'))
     .map(f => path.join(DATA_DIR, f));
 
   const dailyCosts: DailyDigestCost[] = [];
