@@ -40,7 +40,7 @@ topic_description: |
 tts:
   enabled: true
   provider: google-cloud
-  voice: fi-FI-Chirp3-HD-Callirrhoe
+  voice: fi-FI-Chirp3-HD-Achird
 sources:
   - hn
   - yle-tiede

@@ -103,7 +103,7 @@ def test_full_pipeline_happy_path(tmp_path):
     assert briefing.meta.guardrails_version == "v1"
     assert set(briefing.meta.models_used.keys()) == {"cluster", "filter_topic", "score", "compose", "overview", "tts"}
     assert briefing.meta.models_used["compose"]
-    assert briefing.meta.models_used["tts"] == "google-cloud/fi-FI-Chirp3-HD-Callirrhoe"
+    assert briefing.meta.models_used["tts"] == "google-cloud/fi-FI-Chirp3-HD-Achird"
 
     # TTS warning: ffmpeg not available in test env
     assert len(briefing.warnings) == 1
@@ -112,7 +112,7 @@ def test_full_pipeline_happy_path(tmp_path):
     pipeline_file = tmp_data / "pipeline" / "ai_daily_2026-07-16.json"
     debug = json.loads(pipeline_file.read_text())
     assert debug["steps"]["tts"]["provider"] == "google-cloud"
-    assert debug["steps"]["tts"]["voice"] == "fi-FI-Chirp3-HD-Callirrhoe"
+    assert debug["steps"]["tts"]["voice"] == "fi-FI-Chirp3-HD-Achird"
 
 
 def test_pipeline_raises_on_critical_score_failure(tmp_path):

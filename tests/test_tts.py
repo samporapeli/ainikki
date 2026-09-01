@@ -28,7 +28,7 @@ class TestLoadTtsConfig:
         config = load_tts_config(Path("config"))
         provider = config["providers"].get("google-cloud")
         voices = provider.get("voices", {})
-        assert "fi-FI-Chirp3-HD-Callirrhoe" in voices
+        assert "fi-FI-Chirp3-HD-Achird" in voices
 
 
 class TestTtsSynthesize:
@@ -47,12 +47,12 @@ class TestTtsSynthesize:
 
     def test_returns_none_for_missing_token(self, monkeypatch):
         monkeypatch.delenv("GOOGLE_CLOUD_API_TOKEN", raising=False)
-        result = synthesize(["test"], "google-cloud", "fi-FI-Chirp3-HD-Callirrhoe")
+        result = synthesize(["test"], "google-cloud", "fi-FI-Chirp3-HD-Achird")
         assert result is None
 
     def test_returns_none_for_too_long_input(self):
         long_text = "A" * 10000
-        result = synthesize([long_text], "google-cloud", "fi-FI-Chirp3-HD-Callirrhoe", max_input_bytes=5000)
+        result = synthesize([long_text], "google-cloud", "fi-FI-Chirp3-HD-Achird", max_input_bytes=5000)
         assert result is None
 
     def test_synthesize_success_with_mocked_client(self):
@@ -67,12 +67,12 @@ class TestTtsSynthesize:
                 }
                 with patch("agent.tts._find_ffmpeg", return_value="/fake/ffmpeg"), \
                      patch("agent.tts._ffmpeg_available", return_value=True):
-                    result = synthesize(["Test text"], "google-cloud", "fi-FI-Chirp3-HD-Callirrhoe")
+                    result = synthesize(["Test text"], "google-cloud", "fi-FI-Chirp3-HD-Achird")
                     assert result is not None
                     assert result.audio_bytes == fake_ogg
                     assert result.duration_ms == 3.0
                     assert result.raw_data["provider"] == "google-cloud"
-                    assert result.raw_data["voice"] == "fi-FI-Chirp3-HD-Callirrhoe"
+                    assert result.raw_data["voice"] == "fi-FI-Chirp3-HD-Achird"
                     assert result.raw_data["codec"] == "opus"
                     assert result.raw_data["container"] == "ogg"
                     assert result.raw_data["n_segments"] == 1
@@ -84,7 +84,7 @@ class TestTtsSynthesize:
             with patch("httpx.Client.post") as mock_post:
                 mock_post.return_value.raise_for_status.return_value = None
                 mock_post.return_value.json.return_value = {"audioContent": None, "audioConfig": {"sampleRateHertz": 24000}}
-                result = synthesize(["Test text"], "google-cloud", "fi-FI-Chirp3-HD-Callirrhoe")
+                result = synthesize(["Test text"], "google-cloud", "fi-FI-Chirp3-HD-Achird")
                 assert result is None
 
     def test_synthesize_returns_none_when_ffmpeg_missing(self):
@@ -95,7 +95,7 @@ class TestTtsSynthesize:
                 mock_post.return_value.json.return_value = {
                     "audioContent": base64.b64encode(fake_ogg).decode(),
                 }
-                result = synthesize(["Test text"], "google-cloud", "fi-FI-Chirp3-HD-Callirrhoe")
+                result = synthesize(["Test text"], "google-cloud", "fi-FI-Chirp3-HD-Achird")
                 assert result is None
 
     def test_synthesize_multiple_segments_with_silence(self):
@@ -114,7 +114,7 @@ class TestTtsSynthesize:
                     mock_concat.return_value = b"OggS_concatenated_x" * 20
                     result = synthesize(
                         ["Seg one", "Seg two"],
-                        "google-cloud", "fi-FI-Chirp3-HD-Callirrhoe",
+                        "google-cloud", "fi-FI-Chirp3-HD-Achird",
                     )
                     assert result is not None
                     assert result.raw_data["n_segments"] == 2

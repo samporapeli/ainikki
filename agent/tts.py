@@ -387,7 +387,7 @@ def render_script(briefing: Briefing, config_dir: Path = Path("config")) -> tupl
     tts_cfg = topic_cfg.get("tts", {})
 
     provider = tts_cfg.get("provider", "google-cloud")
-    voice = tts_cfg.get("voice", "fi-FI-Chirp3-HD-Callirrhoe")
+    voice = tts_cfg.get("voice", "fi-FI-Chirp3-HD-Achird")
     template_rel = tts_cfg.get("template_path", "tts-templates/ainikki-oletus.yaml")
     template_path = config_dir / template_rel
 
@@ -439,7 +439,7 @@ def test_cli():
     elif args.text:
         segments = [args.text]
         provider = args.provider or "google-cloud"
-        voice = args.voice or "fi-FI-Chirp3-HD-Callirrhoe"
+        voice = args.voice or "fi-FI-Chirp3-HD-Achird"
         output_path = Path(args.output) if args.output else Path("/tmp/tts_sample.ogg")
     else:
         sys.exit("No input given. Use --digest <path> or --text <string>")

@@ -372,7 +372,7 @@ def run_pipeline(
     tts_has_audio = False
     tts_raw_data: dict | None = None
     provider = tts_cfg.get("provider", "google-cloud")
-    voice = tts_cfg.get("voice", "fi-FI-Chirp3-HD-Callirrhoe")
+    voice = tts_cfg.get("voice", "fi-FI-Chirp3-HD-Achird")
 
     # Check ffmpeg availability early — TTS needs it for silence generation
     # and segment concatenation. Skip TTS entirely if unavailable.
