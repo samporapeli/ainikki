@@ -38,6 +38,10 @@ def test_whitespace_only():
     assert strip_code_fences("   \n  \n  ") == ""
 
 
+def test_none_input():
+    assert strip_code_fences(None) == ""
+
+
 def test_nested_json():
     inner = {"clusters": [{"indices": [0, 1]}]}
     raw = f"```json\n{json.dumps(inner)}\n```"

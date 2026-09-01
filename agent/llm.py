@@ -71,7 +71,8 @@ def _post_openai_compatible(base_url: str, api_key: str | None, model: str,
                               temperature: float = 0.2) -> tuple[str, dict]:
     """Sends a chat completion request to an OpenAI-compatible endpoint.
 
-    Retries on 429 with exponential backoff (_MAX_RETRIES attempts).
+    Retries on 429, 5xx server errors, and network timeouts/transport errors
+    with exponential backoff (_MAX_RETRIES attempts).
     If expect_json=True, adds response_format: {"type": "json_object"}
     to the request, forcing the model to return valid JSON.
 
@@ -91,25 +92,41 @@ def _post_openai_compatible(base_url: str, api_key: str | None, model: str,
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
     for attempt in range(_MAX_RETRIES + 1):
-        resp = client.post(f"{base_url}/chat/completions", json=payload, headers=headers)
-        if resp.status_code != 429:
+        try:
+            resp = client.post(f"{base_url}/chat/completions", json=payload, headers=headers)
+            if resp.status_code == 429 or resp.status_code >= 500 or resp.status_code == 408:
+                if attempt == _MAX_RETRIES:
+                    resp.raise_for_status()
+                delay = _RETRY_BASE_DELAY * (2 ** attempt)
+                retry_after = resp.headers.get("retry-after")
+                if retry_after:
+                    try:
+                        delay = max(delay, float(retry_after))
+                    except ValueError:
+                        pass
+                logger.warning("LLM request returned HTTP %d (attempt %d/%d), retrying in %.0fs...",
+                               resp.status_code, attempt + 1, _MAX_RETRIES + 1, delay)
+                time.sleep(delay)
+                continue
+
             resp.raise_for_status()
             data = resp.json()
-            content = data["choices"][0]["message"]["content"]
+            choices = data.get("choices") or []
+            content = ""
+            if choices:
+                message = choices[0].get("message") or {}
+                raw_content = message.get("content")
+                if raw_content is not None:
+                    content = str(raw_content)
             usage = data.get("usage") or {}
             return content, usage
-        if attempt == _MAX_RETRIES:
-            resp.raise_for_status()
-        delay = _RETRY_BASE_DELAY * (2 ** attempt)
-        retry_after = resp.headers.get("retry-after")
-        if retry_after:
-            try:
-                delay = max(delay, float(retry_after))
-            except ValueError:
-                pass
-        logger.warning("429 rate-limited (attempt %d/%d), retrying in %.0fs...",
-                        attempt + 1, _MAX_RETRIES + 1, delay)
-        time.sleep(delay)
+        except (httpx.TimeoutException, httpx.NetworkError) as e:
+            if attempt == _MAX_RETRIES:
+                raise
+            delay = _RETRY_BASE_DELAY * (2 ** attempt)
+            logger.warning("LLM request failed with %s (attempt %d/%d), retrying in %.0fs...",
+                           type(e).__name__, attempt + 1, _MAX_RETRIES + 1, delay)
+            time.sleep(delay)
 
     raise RuntimeError("Retries exhausted")  # unreachable, but satisfies mypy
 

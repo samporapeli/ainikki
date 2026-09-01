@@ -139,3 +139,109 @@ def test_make_llm_call_end_to_end_with_cluster():
 
     assert result.warning is None
     assert len(result.clusters) == 8
+
+
+def test_openai_compatible_null_content_returns_empty_string():
+    """Safety blocks or filter triggers returning null content should yield empty string."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": None}}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 0, "total_tokens": 10},
+        })
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    result, usage = _post_openai_compatible(
+        "https://openrouter.ai/api/v1", "fake-key", "openai/gpt-4o-mini",
+        "system", "user", client,
+    )
+
+    assert result == ""
+    assert isinstance(result, str)
+
+
+def test_openai_compatible_empty_choices_returns_empty_string():
+    """Responses with empty choices array should yield empty string."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={
+            "choices": [],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 0, "total_tokens": 10},
+        })
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    result, usage = _post_openai_compatible(
+        "https://openrouter.ai/api/v1", "fake-key", "openai/gpt-4o-mini",
+        "system", "user", client,
+    )
+
+    assert result == ""
+    assert isinstance(result, str)
+
+
+def test_openai_compatible_retries_on_502(monkeypatch):
+    """502 Bad Gateway should be retried with backoff."""
+    monkeypatch.setattr("agent.llm._RETRY_BASE_DELAY", 0.0)
+    attempts = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            return httpx.Response(502, text="Bad Gateway")
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": "toipui"}}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10},
+        })
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    result, _ = _post_openai_compatible(
+        "https://openrouter.ai/api/v1", "fake-key", "openai/gpt-4o-mini",
+        "system", "user", client,
+    )
+
+    assert result == "toipui"
+    assert attempts == 2
+
+
+def test_openai_compatible_retries_on_timeout(monkeypatch):
+    """Network/read timeouts should be retried."""
+    monkeypatch.setattr("agent.llm._RETRY_BASE_DELAY", 0.0)
+    attempts = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise httpx.ReadTimeout("timed out", request=request)
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": "vastattu"}}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10},
+        })
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    result, _ = _post_openai_compatible(
+        "https://openrouter.ai/api/v1", "fake-key", "openai/gpt-4o-mini",
+        "system", "user", client,
+    )
+
+    assert result == "vastattu"
+    assert attempts == 2
+
+
+def test_openai_compatible_exhausted_retries_raises(monkeypatch):
+    """When retries are exhausted on 500, HTTPStatusError is raised."""
+    monkeypatch.setattr("agent.llm._RETRY_BASE_DELAY", 0.0)
+    attempts = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(503, text="Service Unavailable")
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    with pytest.raises(httpx.HTTPStatusError):
+        _post_openai_compatible(
+            "https://openrouter.ai/api/v1", "fake-key", "openai/gpt-4o-mini",
+            "system", "user", client,
+        )
+
+    assert attempts == 6  # 1 initial + 5 retries

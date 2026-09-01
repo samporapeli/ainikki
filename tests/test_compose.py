@@ -235,3 +235,25 @@ def test_compose_retries_on_empty_code_fence():
     assert len(result.items) == 1
     assert result.items[0].headline == "Toistettu otsikko"
     assert call_count == 2
+
+
+def test_compose_retries_on_none_response():
+    """LLM returns None (e.g. content filter / empty message) on first try."""
+    items = [_make_enriched("Juttu", "Sisältö...", rank=1)]
+    call_count = 0
+
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return None, {}  # type: ignore[return-value]
+        return json.dumps({"otsikko": "Toistettu otsikko", "tiivistelmä": "Toistettu yhteenveto."}), {}
+
+    result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
+                            topic="test",
+                            target_audience="Testiyleisö",
+                            golden_examples_dir=GOLDEN_EXAMPLES_DIR)
+
+    assert len(result.items) == 1
+    assert result.items[0].headline == "Toistettu otsikko"
+    assert call_count == 2

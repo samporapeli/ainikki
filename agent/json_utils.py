@@ -18,13 +18,15 @@ _FENCE_RE = re.compile(
 )
 
 
-def strip_code_fences(text: str) -> str:
+def strip_code_fences(text: str | None) -> str:
     """Strip Markdown code fence markers from an LLM response.
 
+    - If text is None or empty, returns empty string.
     - If text starts with ``` and ends with ```, removes markers and returns content.
     - Otherwise returns text with .strip() applied.
-    - Empty/whitespace response returned as-is.
     """
+    if text is None:
+        return ""
     text = text.strip()
     if not text:
         return text
