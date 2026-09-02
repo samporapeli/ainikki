@@ -32,7 +32,7 @@ export function getSiteTopics(): SiteTopic[] {
 }
 
 export function isSiteTopic(topic: string): boolean {
-  return allTopics.some(t => t.name === topic);
+  return getSiteTopics().some(siteTopic => siteTopic.name === topic);
 }
 
 export function extractTopicFromFilename(filename: string): string | null {
