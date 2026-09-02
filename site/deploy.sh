@@ -34,24 +34,18 @@ PY
 echo "Installing dependencies..."
 npm install
 
-echo "Building..."
-rm -f public/data/output/*.json public/data/output/*.ogg public/data/pipeline/*.json public/data/pipeline/*.ogg
-AINIKKI_PUBLIC_ONLY=1 npm run build
-
 echo "Copying data files..."
-mkdir -p dist/data/output dist/data/pipeline
-rm -f dist/data/output/*.json dist/data/pipeline/*.json
+rm -rf public/data
 mkdir -p public/data/output public/data/pipeline
 while IFS=: read -r topic period; do
-  cp "$PROJECT_DIR/data/output/${topic}_${period}_"*.json dist/data/output/ 2>/dev/null || true
-  cp "$PROJECT_DIR/data/pipeline/${topic}_${period}_"*.json dist/data/pipeline/ 2>/dev/null || true
-  cp "$PROJECT_DIR/data/output/${topic}_${period}_"*.ogg   dist/data/output/ 2>/dev/null || true
-  cp "$PROJECT_DIR/data/pipeline/${topic}_${period}_"*.ogg   dist/data/pipeline/ 2>/dev/null || true
   cp "$PROJECT_DIR/data/output/${topic}_${period}_"*.json public/data/output/ 2>/dev/null || true
-  cp "$PROJECT_DIR/data/pipeline/${topic}_${period}_"*.json public/data/pipeline/ 2>/dev/null || true
   cp "$PROJECT_DIR/data/output/${topic}_${period}_"*.ogg   public/data/output/ 2>/dev/null || true
+  cp "$PROJECT_DIR/data/pipeline/${topic}_${period}_"*.json public/data/pipeline/ 2>/dev/null || true
   cp "$PROJECT_DIR/data/pipeline/${topic}_${period}_"*.ogg   public/data/pipeline/ 2>/dev/null || true
 done < <(public_topics)
+
+echo "Building..."
+AINIKKI_PUBLIC_ONLY=1 npm run build
 
 echo "Deploying to $DEPLOY_TARGET..."
 rsync -avz --delete dist/ "$DEPLOY_TARGET"
