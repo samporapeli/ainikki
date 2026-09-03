@@ -25,11 +25,15 @@ Each module has its own test file under `tests/test_*.py`.
 `--verbose` shows INFO-level logs for each step (item counts in/out) —
 recommended for first runs.
 
-A/B compare models without editing config:
+A/B compare models without editing config, or run against Ollama:
 
     ./pipeline.sh --topic ai --since 2026-07-16 --until 2026-07-16 \
-      --model-override score=openrouter:gpt-4o \
-      --model-override compose=openrouter:claude-opus-4-8
+      --model-override score=openrouter:openai/gpt-4o \
+      --model-override compose=openrouter:anthropic/claude-sonnet-5
+
+    OLLAMA_HOST="http://localhost:11434/v1" \
+      ./pipeline.sh --topic test --since 2026-07-16 --until 2026-07-16 \
+      --verbose  # runs test steps configured with local provider
 
 Run the full end-to-end test topic:
 
@@ -76,26 +80,28 @@ steps are silently skipped.
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `OPENROUTER_API_KEY` | Yes | LLM access |
+| `OPENROUTER_API_KEY` | Yes | LLM access (OpenRouter) |
+| `OLLAMA_HOST` | No | Base URL for local provider (e.g. `http://localhost:11434/v1`) |
+| `GOOGLE_CLOUD_API_TOKEN` | No | API key for Google Cloud Text-to-Speech audio synthesis |
 | `DEPLOY_TARGET` | Yes | `user@host:/path` for rsync deploy |
 | `TELEGRAM_BOT_TOKEN` | No | Bot token for Telegram notifications |
 | `TELEGRAM_CHAT_ID_AI` | No | Chat ID for daily AI digest channel |
 | `TELEGRAM_CHAT_ID_TEKNOLOGIA` | No | Chat ID for weekly Teknologia digest channel |
 | `TELEGRAM_ERROR_CHAT_ID` | No | Chat ID for error alerts (shared across topics) |
-
 ## Pipeline steps
 
 | # | Step | LLM? | In | Out | Config |
 |---|------|------|----|-----|--------|
 | 1 | **Collect** | No | source URLs, time window | `list[RawItem]` per source | `sources/{topic}.yaml` |
 | 2 | **Dedup** | No | all RawItems | `list[Candidate]` (exact-URL dedup) | — |
-| 3 | **Cluster** | Yes | deduped candidates | `list[Candidate]` grouped | — |
-| 4 | **Score** | Yes | clustered candidates | ranking + `selection_reason`, plus a backfill pool below the cutoff | `rubrics/{topic}_v*.yaml` |
-| 5 | **Enrich** | No | top N selected | extracted, truncated article text per item | — |
-| 6 | **Compose** | Yes (per item) | 1 item content + persona + guardrails | headline + summary in Finnish | `personas/*`, `guardrails/*`, `golden_examples/*` |
-| 7 | **Overview** | Yes | all composed items | 1–2 sentence daily overview | — |
-| 8 | **Validate** | No | all composed + overview | `Briefing` object, Pydantic-validated | `schema.py` |
-| 9 | **Write** | No | validated Briefing | JSON to disk | — |
+| 3 | **Filter topic** | Yes | deduped candidates | topic-relevant candidates | `topics/{topic}.yaml` |
+| 4 | **Cluster** | Yes | filtered candidates | `list[Candidate]` grouped | — |
+| 5 | **Score** | Yes | clustered candidates | ranking + `selection_reason`, plus a backfill pool below the cutoff | `rubrics/{topic}_v*.yaml` |
+| 6 | **Enrich** | No | top N selected | extracted, truncated article text per item | — |
+| 7 | **Compose** | Yes (per item) | 1 item content + persona + guardrails | headline + summary in Finnish | `personas/*`, `guardrails/*`, `golden_examples/*` |
+| 8 | **Overview** | Yes | all composed items | 1–2 sentence daily overview | — |
+| 9 | **Validate** | No | all composed + overview | `Briefing` object, Pydantic-validated | `schema.py` |
+| 10 | **Write** | No | validated Briefing | JSON to disk | — |
 
 ## Failure policies
 
@@ -117,12 +123,59 @@ under the headline on the site.
 
 | Step | Role |
 |------|------|
+| `filter_topic` | Keep stories relevant to the topic |
 | `cluster` | Group stories by topic |
 | `score` | Evaluate newsworthiness |
 | `compose` | Write headlines and summaries (journalist) |
 | `overview` | Write the daily overview |
 
-## Design principles
+### Providers
+
+Every LLM step talks the OpenAI-compatible `/v1/chat/completions` API. Provider
+**names** and provider **types** are separate concepts. Provider names are
+configuration keys; `type` controls how the response is parsed:
+
+- `openrouter` reads OpenRouter's real top-level `cost` field.
+- `openai_compatible` uses the standard format and reports cost as
+  unavailable (`N/A` on the site).
+
+Providers are defined only under `providers:` in `config/models.yaml`. Add or
+rename entries there; topic files then reference them by name in their
+`.models:` list.
+
+```yaml
+# config/models.yaml
+providers:
+  openrouter:
+    type: openrouter
+    base_url: "https://openrouter.ai/api/v1"
+    api_key_env: "OPENROUTER_API_KEY"
+  local:
+    type: openai_compatible
+    base_url_env: "OLLAMA_HOST"
+    timeout: 300
+```
+
+`base_url` and `api_key` support ``$VAR`` and ``${VAR:-default}``
+interpolation. The `*_env` fields name environment variables. Keep secrets and
+private hostnames out of the committed config.
+
+Topics override one or more step chains with a prioritized list (`first` is
+tried first, then each fallback on request failure):
+
+```yaml
+# config/topics/ai.yaml
+steps:
+  filter_topic:
+    models:
+      - provider: local
+        model: "qwen3.6:35b-a3b"
+      - provider: openrouter
+        model: "openai/gpt-4o-mini"
+```
+
+Per-run `--model-override step=provider:model` replaces one step's chain.
+
 
 ### Pipeline
 

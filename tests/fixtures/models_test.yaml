@@ -1,12 +1,36 @@
-default_provider: openrouter
-
+providers:
+  openrouter:
+    type: openrouter
+    base_url: "https://openrouter.ai/api/v1"
+    api_key_env: "OPENROUTER_PROD_API_KEY"
+  local:
+    type: openai_compatible
+    base_url_env: "OLLAMA_HOST"
+    timeout: 300
 steps:
   cluster:
-    provider: openrouter
-    model: "openai/gpt-4o-mini"
+    models:
+      - provider: local
+        model: "ornith:35b"
+      - provider: openrouter
+        model: "openai/gpt-4o-mini"
+  filter_topic:
+    models:
+      - provider: local
+        model: "ornith:35b"
+  score:
+    models:
+      - provider: local
+        model: "ornith:35b"
+      - provider: openrouter
+        model: "deepseek/deepseek-v4-flash"
   compose:
-    provider: openrouter
-    model: "anthropic/claude-sonnet-4-6"
+    models:
+      - provider: local
+        model: "ornith:35b"
+  overview:
+    models:
+      - provider: local
+        model: "ornith:35b"
   broken_step:
-    provider: openrouter
-    # model is intentionally missing - tests error handling
+    models: []

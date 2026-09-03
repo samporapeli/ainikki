@@ -37,14 +37,14 @@ from agent.compose import compose_items
 from agent.overview import generate_overview
 from agent.validate import assemble_briefing, EmptyBriefingError
 from agent.write import write_briefing, WriteRoundtripError
-from agent.llm import make_llm_call, load_models_config, resolve_step_config
+from agent.llm import make_llm_call, load_models_config
 from agent.tts import synthesize, load_tts_config
 from agent.tts_template import TtsTemplate
 
 logger = logging.getLogger(__name__)
 
 PIPELINE_VERSION = "0.1.0"
-LLM_STEPS = ["cluster", "filter_topic", "score", "compose", "overview"]
+LLM_STEPS = ["filter_topic", "cluster", "score", "compose", "overview"]
 
 
 class ConfigPaths:
@@ -104,24 +104,46 @@ def _load_sources_config(config_paths: ConfigPaths) -> list[dict]:
     return result
 
 
+def _load_topic_step_models(topic_config: dict) -> dict[str, list[dict]]:
+    """Extract per-step model chains from a topic configuration."""
+    if "models" in topic_config:
+        raise ValueError("Topic-level 'models' is not supported; use 'steps'")
+    steps = topic_config.get("steps") or {}
+    if not isinstance(steps, dict):
+        raise ValueError("Topic 'steps' must be a mapping")
+
+    result: dict[str, list[dict]] = {}
+    for step_name, step_config in steps.items():
+        if not isinstance(step_config, dict) or "models" not in step_config:
+            raise ValueError(f"Topic step '{step_name}' must define 'models'")
+        models = step_config["models"]
+        if not isinstance(models, list) or not models:
+            raise ValueError(
+                f"Topic step '{step_name}' must define a non-empty 'models' list"
+            )
+        result[step_name] = models
+    return result
+
+
 def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
                       overrides: dict[str, tuple[str | None, str | None]],
-                      client: httpx.Client | None, models_used_out: dict[str, str],
                       llm_stats_out: dict[str, dict],
+                      models_used_out: dict[str, str],
+                      topic_step_models: dict[str, list[dict]] | None = None,
+                      client: httpx.Client | None = None,
                       llm_prompts_out: dict[str, list[dict]] | None = None):
-    """Builds an LlmCall function for a step AND records which model was actually
-    used into models_used_out dict (for GenerationMeta traceability).
-
-    Also accumulates LLM usage stats into llm_stats_out dict.
-    Optionally captures prompts and raw responses into llm_prompts_out dict.
-    """
+    """Build an LLM call and collect usage and traceability metadata."""
     provider_override, model_override = overrides.get(step, (None, None))
-    cfg = resolve_step_config(step, models_config, model_override, provider_override)
-    models_used_out[step] = f"{cfg.provider}/{cfg.model}"
+    step_models_override = (topic_step_models or {}).get(step)
 
-    llm_fn = make_llm_call(step, config_path=config_paths.models,
-                           override_model=model_override, override_provider=provider_override,
-                           client=client)
+    llm_fn = make_llm_call(
+        step,
+        config_path=config_paths.models,
+        override_model=model_override,
+        override_provider=provider_override,
+        step_models_override=step_models_override,
+        client=client,
+    )
 
     step_stats = {
         "calls": 0,
@@ -132,6 +154,9 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
     }
     def _tracked_call(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         content, usage = llm_fn(system_prompt, user_prompt)
+        models_used_out[step] = (
+            f"{usage.get('provider', 'unknown')}/{usage.get('model', 'unknown')}"
+        )
         prompt_tokens = usage.get("prompt_tokens", 0) or 0
         completion_tokens = usage.get("completion_tokens", 0) or 0
         total_tokens = usage.get("total_tokens", 0) or 0
@@ -158,35 +183,6 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
     return _tracked_call
 
 
-def _load_topic_model_overrides(
-    topic_config: dict,
-    model_overrides: dict[str, tuple[str | None, str | None]],
-) -> None:
-    """Load per-topic model overrides from the topic yaml.
-
-    Mirrors ``config/models.yaml`` (nested ``steps -> step -> { provider, model, ... }``).
-    Only the steps present in the override are applied; missing steps fall back
-    to ``config/models.yaml``. CLI ``--model-override`` wins if also set.
-
-    Example (topic yaml):
-
-        models_overrides:
-          steps:
-            compose:
-              provider: openrouter
-              model: "deepseek/deepseek-v4-flash"
-    """
-    raw = topic_config.get("models_overrides") or {}
-    steps = raw.get("steps") or {}
-    for step, cfg in steps.items():
-        if step in model_overrides:
-            continue  # CLI wins
-        provider = cfg.get("provider")
-        model = cfg.get("model")
-        if provider and model:
-            model_overrides[step] = (provider.strip(), model.strip())
-
-
 def run_pipeline(
     topic: str, period: Period, since: datetime, until: datetime,
     config_dir: Path = Path("config"), data_dir: Path = Path("data"),
@@ -211,8 +207,7 @@ def run_pipeline(
             "Topic configuration must define target_audience and boolean public: "
             f"{config_paths.topic_config}"
         )
-    # Topic-level model overrides (override config/models.yaml for this topic).
-    _load_topic_model_overrides(topic_config, model_overrides)
+    topic_step_models = _load_topic_step_models(topic_config)
     target_audience = topic_config["target_audience"]
     effective_display_date = display_date or since.date()
     date_str = effective_display_date.isoformat()
@@ -268,7 +263,9 @@ def run_pipeline(
     # 3. Filter by topic relevance
     t0 = perf_counter()
     llm_filter = _resolve_llm_call("filter_topic", models_config, config_paths, model_overrides,
-                                    llm_client, models_used, llm_stats, llm_prompts)
+                                   llm_stats_out=llm_stats, models_used_out=models_used,
+                                   topic_step_models=topic_step_models, client=llm_client,
+                                   llm_prompts_out=llm_prompts)
     topic_description = topic_config.get("topic_description", topic)
     filter_result = filter_topic(candidates, topic_description, llm_filter)
     if filter_result.warning:
@@ -280,7 +277,9 @@ def run_pipeline(
     # 4. Cluster
     t0 = perf_counter()
     llm_cluster = _resolve_llm_call("cluster", models_config, config_paths, model_overrides,
-                                     llm_client, models_used, llm_stats, llm_prompts)
+                                    llm_stats_out=llm_stats, models_used_out=models_used,
+                                    topic_step_models=topic_step_models, client=llm_client,
+                                    llm_prompts_out=llm_prompts)
     cluster_result = cluster_candidates(filter_result.candidates, llm_cluster)
     if cluster_result.warning:
         all_warnings.append(cluster_result.warning)
@@ -290,7 +289,9 @@ def run_pipeline(
     # 5. Score (CRITICAL - no fallback, ScoreValidationError crashes the entire run)
     t0 = perf_counter()
     llm_score = _resolve_llm_call("score", models_config, config_paths, model_overrides,
-                                   llm_client, models_used, llm_stats, llm_prompts)
+                                  llm_stats_out=llm_stats, models_used_out=models_used,
+                                  topic_step_models=topic_step_models, client=llm_client,
+                                  llm_prompts_out=llm_prompts)
     min_items = rubric["items_per_briefing"]["min"]
     previous_stories = load_previous_stories(topic, since.date(), output_dir=out_dir)
     clusters_before = len(cluster_result.clusters)
@@ -326,7 +327,9 @@ def run_pipeline(
 
         t0_compose = perf_counter()
         llm_compose = _resolve_llm_call("compose", models_config, config_paths, model_overrides,
-                                         llm_client, models_used, llm_stats, llm_prompts)
+                                        llm_stats_out=llm_stats, models_used_out=models_used,
+                                        topic_step_models=topic_step_models, client=llm_client,
+                                        llm_prompts_out=llm_prompts)
         compose_result = compose_items(enrich_result.items, config_paths.persona,
                                         config_paths.guardrails, llm_compose,
                                         topic=topic,
@@ -362,7 +365,9 @@ def run_pipeline(
     # 7. Overview
     t0 = perf_counter()
     llm_overview = _resolve_llm_call("overview", models_config, config_paths, model_overrides,
-                                      llm_client, models_used, llm_stats, llm_prompts)
+                                     llm_stats_out=llm_stats, models_used_out=models_used,
+                                     topic_step_models=topic_step_models, client=llm_client,
+                                     llm_prompts_out=llm_prompts)
     overview_result = generate_overview(compose_result.items, llm_overview, topic,
                                          examples_path=config_paths.overview_examples)
     step_durations["overview"] = round(perf_counter() - t0, 2)

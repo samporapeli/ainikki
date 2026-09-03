@@ -241,3 +241,50 @@ def test_pipeline_captures_llm_prompts(tmp_path):
         expected = json.dumps({"otsikko": "Testiotsikko juttu",
                                "tiivistelmä": "Testiyhteenveto joka kuvaa juttua lyhyesti."})
         assert call["raw_response"] == expected, f"compose call {i} raw_response mismatch"
+
+
+# -- Topic-level step model loading -------------------------------------------
+
+def test_topic_step_model_chains_are_loaded():
+    from agent.pipeline import _load_topic_step_models
+
+    topic = {
+        "steps": {
+            "compose": {
+                "models": [
+                    {"provider": "local", "model": "ornith:35b"},
+                    {"provider": "openrouter", "model": "openai/gpt-4o-mini"},
+                ],
+            },
+        },
+    }
+    assert _load_topic_step_models(topic) == {
+        "compose": topic["steps"]["compose"]["models"]
+    }
+
+
+def test_topic_without_step_models_uses_global_defaults():
+    from agent.pipeline import _load_topic_step_models
+
+    assert _load_topic_step_models({"target_audience": "Test", "public": False}) == {}
+
+
+def test_topic_step_models_must_be_non_empty_list():
+    from agent.pipeline import _load_topic_step_models
+
+    with pytest.raises(ValueError, match="non-empty"):
+        _load_topic_step_models({"steps": {"compose": {"models": []}}})
+
+
+def test_topic_step_must_define_models():
+    from agent.pipeline import _load_topic_step_models
+
+    with pytest.raises(ValueError, match="must define 'models'"):
+        _load_topic_step_models({"steps": {"compose": {}}})
+
+
+def test_topic_level_models_block_is_rejected():
+    from agent.pipeline import _load_topic_step_models
+
+    with pytest.raises(ValueError, match="Topic-level 'models'"):
+        _load_topic_step_models({"models": {"providers": {}}})

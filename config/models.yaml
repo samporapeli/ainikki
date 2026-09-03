@@ -1,26 +1,42 @@
-# models.yaml
-# Step name -> which model runs it. CLI flag --model-override
-# (e.g. --model-override score=openrouter:gpt-4o-mini) overrides this on a
-# per-run basis, e.g. for A/B comparisons.
+# Provider definitions and default per-step model chains.
+# Provider names are arbitrary; ``type`` controls response parsing.
+# ``base_url`` and ``api_key`` support ``$VAR`` and ``${VAR:-default}``.
 
-default_provider: openrouter
+providers:
+  openrouter:
+    type: openrouter
+    base_url: "https://openrouter.ai/api/v1"
+    api_key_env: "OPENROUTER_API_KEY"
+    timeout: 60
+  local:
+    type: openai_compatible
+    base_url_env: "OLLAMA_HOST"
+    timeout: 300
 
+# Topics may replace a step's chain in their own ``steps`` block.
 steps:
-  cluster:
-    provider: openrouter
-    model: "openai/gpt-4o-mini"
-    temperature: 0
   filter_topic:
-    provider: openrouter
-    model: "openai/gpt-4o-mini"     # cheap, binary relevance check
+    models:
+      - provider: local
+        model: "qwen3.6:35b-a3b"
+        temperature: 0
+      - provider: openrouter
+        model: "openai/gpt-4o-mini"
+  cluster:
+    models:
+      - provider: openrouter
+        model: "openai/gpt-4o-mini"
   score:
-    provider: openrouter
-    model: "deepseek/deepseek-v4-flash"     # cheap, structured output is sufficient
+    models:
+      - provider: openrouter
+        model: "openai/gpt-5.6-luna"
   compose:
-    provider: openrouter
-    model: "google/gemini-3.7-flash"
-    max_tokens: 2048
+    models:
+      - provider: openrouter
+        model: "google/gemini-3.8-flash"
+        temperature: 0
   overview:
-    provider: openrouter
-    model: "anthropic/claude-sonnet-5"
-    max_tokens: 2048
+    models:
+      - provider: openrouter
+        model: "anthropic/claude-sonnet-5"
+        temperature: 0
