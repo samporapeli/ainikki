@@ -36,8 +36,6 @@ steps:
         model: "openai/gpt-4o-mini"
   overview:
     models:
-      - provider: local
-        model: "ornith:35b"
       - provider: openrouter
         model: "openai/gpt-4o-mini"
 

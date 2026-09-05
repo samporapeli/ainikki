@@ -73,8 +73,7 @@ def test_openai_compatible_request_and_parse():
         return httpx.Response(200, json={
             "choices": [{"message": {"content": "moi maailma"}}],
             "usage": {"prompt_tokens": 10, "completion_tokens": 5,
-                      "total_tokens": 15},
-            "cost": 0.0001,
+                      "total_tokens": 15, "cost": 0.0001},
         })
 
     client = httpx.Client(transport=httpx.MockTransport(handler))

@@ -206,7 +206,10 @@ def _post_openai_compatible(
                 if raw_content is not None:
                     content = str(raw_content)
             usage = dict(data.get("usage") or {})
-            usage["cost"] = data.get("cost") if provider.type == "openrouter" else None
+            if provider.type == "openrouter":
+                usage["cost"] = usage.get("cost")
+            else:
+                usage["cost"] = None
             return content, usage
         except (httpx.TimeoutException, httpx.NetworkError) as e:
             if attempt == _MAX_RETRIES:

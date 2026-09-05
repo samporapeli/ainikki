@@ -27,8 +27,9 @@ const stepRows = LLM_ORDER
     const calls = stats?.calls ?? 0;
     const promptTokens = stats?.total_prompt_tokens ?? 0;
     const completionTokens = stats?.total_completion_tokens ?? 0;
-    const cost = stats?.total_cost ?? 0;
-    return { step, label: LLM_LABELS[step] || step, model: modelShort, hasStats, calls, promptTokens, completionTokens, cost };
+    const cost = stats?.total_cost;
+    const hasCost = cost !== null && cost !== undefined && cost > 0;
+    return { step, label: LLM_LABELS[step] || step, model: modelShort, hasStats, calls, promptTokens, completionTokens, cost, hasCost };
   });
 
 let totalCalls = 0;
@@ -39,7 +40,7 @@ for (const r of stepRows) {
   totalCalls += r.calls;
   totalPromptTokens += r.promptTokens;
   totalCompletionTokens += r.completionTokens;
-  totalCost += r.cost;
+  if (r.hasCost) totalCost += r.cost;
 }
 
 const totalTokens = totalPromptTokens + totalCompletionTokens;
@@ -57,7 +58,7 @@ const hasAnyStats = stepRows.some(r => r.hasStats);
       <strong>Kielimallit</strong>
       {hasAnyStats && (
         <span class="summary-stats">
-           · {totalCalls} kutsu{totalCalls !== 1 ? "a" : ""} · {totalTokens} tokenia · {fmtDecimal(totalCost, 6)} $
+           · {totalCalls} kutsu{totalCalls !== 1 ? "a" : ""} · {totalTokens} tokenia{totalCost > 0 ? ` · ${fmtDecimal(totalCost, 6)} $` : ""}
         </span>
       )}
     </summary>
@@ -82,11 +83,11 @@ const hasAnyStats = stepRows.some(r => r.hasStats);
               <td class="num">{r.hasStats ? r.calls : "—"}</td>
               <td class="num">{r.hasStats ? r.promptTokens : "—"}</td>
               <td class="num">{r.hasStats ? r.completionTokens : "—"}</td>
-              <td class="num">{r.hasStats ? `${fmtDecimal(r.cost, 6)} $` : "—"}</td>
+              <td class="num">{r.hasStats ? (r.hasCost ? `${fmtDecimal(r.cost, 6)} $` : "—") : "—"}</td>
             </tr>
           ))}
         </tbody>
-        {hasAnyStats && (
+        {hasAnyStats && totalCost > 0 && (
         <tfoot>
           <tr>
             <td>Yhteensä</td>
