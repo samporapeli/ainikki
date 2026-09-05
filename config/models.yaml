@@ -11,7 +11,7 @@ providers:
   local:
     type: openai_compatible
     base_url_env: "OLLAMA_HOST"
-    timeout: 300
+    timeout: 500
 
 # Topics may replace a step's chain in their own ``steps`` block.
 steps:
@@ -19,7 +19,7 @@ steps:
     models:
       - provider: local
         model: "qwen3.6:35b-a3b"
-        temperature: 0
+        temperature: 0.6
       - provider: openrouter
         model: "openai/gpt-4o-mini"
   cluster:
