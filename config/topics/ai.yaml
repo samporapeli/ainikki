@@ -34,6 +34,7 @@ sources:
   - yle-politiikka
   - yle-kolumnit
   - openai
+  - blog-google
   - evanhahn
   - simonwillison
   - arstechnica-ai

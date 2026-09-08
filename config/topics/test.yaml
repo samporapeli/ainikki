@@ -48,6 +48,7 @@ tts:
 sources:
   - test-rss-a
   - test-rss-b
+  - blog-google
 
 topic_description: |
   Tekoäly ja teknologia-aiheiset testiuutiset.

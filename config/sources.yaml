@@ -97,6 +97,13 @@ sources:
     site_url: https://arstechnica.com/
     feed_url: https://arstechnica.com/tag/ai/feed/
 
+  - key: blog-google
+    type: rss
+    pretty_name: Google Blog
+    badge: Google
+    site_url: https://blog.google/
+    feed_url: https://blog.google/rss/
+
   - key: test-rss-a
     type: rss
     pretty_name: Testifeed A
