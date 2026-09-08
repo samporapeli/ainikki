@@ -34,9 +34,7 @@ steps:
     models:
       - provider: openrouter
         model: "google/gemini-3.8-flash"
-        temperature: 0
   overview:
     models:
       - provider: openrouter
         model: "anthropic/claude-sonnet-5"
-        temperature: 0
