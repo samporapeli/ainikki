@@ -13,25 +13,25 @@ steps:
   cluster:
     models:
       - provider: local
-        model: "ornith:35b"
+        model: "ornith-1.5:35b"
       - provider: openrouter
         model: "openai/gpt-4o-mini"
   filter_topic:
     models:
       - provider: local
-        model: "ornith:35b"
+        model: "ornith-1.5:35b"
       - provider: openrouter
         model: "openai/gpt-4o-mini"
   score:
     models:
       - provider: local
-        model: "ornith:35b"
+        model: "ornith-1.5:35b"
       - provider: openrouter
         model: "openai/gpt-4o-mini"
   compose:
     models:
       - provider: local
-        model: "ornith:35b"
+        model: "ornith-1.5:35b"
       - provider: openrouter
         model: "openai/gpt-4o-mini"
   overview:
