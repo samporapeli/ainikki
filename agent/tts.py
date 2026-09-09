@@ -109,13 +109,16 @@ def _synthesize_segment_ogg(
         },
     }
     endpoint = provider_cfg.get("endpoint", TTS_ENDPOINT)
+    headers = {"content-type": "application/json"}
+    if token:
+        headers["x-goog-api-key"] = token
 
     try:
         if client is not None:
-            resp = client.post(f"{endpoint}?key={token}", json=payload)
+            resp = client.post(endpoint, json=payload, headers=headers)
         else:
             with httpx.Client(timeout=90.0, follow_redirects=True) as c:
-                resp = c.post(f"{endpoint}?key={token}", json=payload)
+                resp = c.post(endpoint, json=payload, headers=headers)
         resp.raise_for_status()
         data = resp.json()
     except httpx.TimeoutException as e:
