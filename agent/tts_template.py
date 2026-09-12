@@ -145,14 +145,21 @@ class TtsTemplate:
 
     def _pronounce(self, text: str) -> str:
         """Apply phonetic pronunciation overrides configured in template."""
-        pronunciations = self.template_data.get("pronunciations")
-        if not pronunciations or not isinstance(pronunciations, dict):
-            return text
-
-        for term, phonetic in pronunciations.items():
+        for term, phonetic in self.template_data.get("pronunciations", {}).items():
             if term and phonetic:
                 text = re.sub(rf"\b{re.escape(str(term))}\b", str(phonetic), text)
-        return text
+        return self._normalize_decimals(text)
+
+    def _normalize_decimals(self, text: str) -> str:
+        """Rewrite Nordic/German decimal commas ("9,5") so the TTS engine
+        reads them as "9 pilkku 5" instead of confusing the audio model.
+
+        Only the comma between an integer and a fractional part is affected;
+        thousands separators (e.g. "1.000,5") are collapsed to keep the number
+        spelled out cleanly.
+        """
+        text = re.sub(r"(?<=\d)\.(?=\d)", "", text)
+        return re.sub(r"(?<=\d),(?=\d)", " pilkku ", text)
 
     def _process_field(self, field_name: str, data: dict[str, Any]) -> str:
         """Process a field from template data."""
