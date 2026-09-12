@@ -100,12 +100,12 @@ send_telegram() {
     if [ -n "$audio_path" ] && [ -f "$audio_path" ]; then
         response=$(curl -s --max-time 30 -w "\nHTTP_CODE:%{http_code}" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendVoice" \
             -F "voice=@${audio_path}" \
-            -F "caption=${msg}" \
-            -F "chat_id=${chat_id}" 2>&1)
+            --form-string "caption=${msg}" \
+            --form-string "chat_id=${chat_id}" 2>&1)
     else
         response=$(curl -s --max-time 30 -w "\nHTTP_CODE:%{http_code}" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -F "chat_id=${chat_id}" \
-            -F "text=${msg}")
+            --form-string "chat_id=${chat_id}" \
+            --form-string "text=${msg}")
     fi
     echo "Telegram: done."
 }
