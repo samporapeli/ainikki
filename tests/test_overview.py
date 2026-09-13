@@ -1,7 +1,7 @@
 import json
 from typing import Tuple
 
-from agent.overview import build_overview_prompt, generate_overview
+from agent.overview import build_overview_prompt, generate_overview, PreviousOverview
 from agent.schema import NewsItem, Source, SourceType
 
 
@@ -98,3 +98,41 @@ def test_code_fenced_json_is_parsed():
     assert result.overview == "Koodiblokki-yleiskatsaus."
     assert result.digest_topic == "Koodiblokin aihe"
     assert result.warning is None
+
+
+def test_previous_overviews_appear_in_system_prompt():
+    """Previous digest context should be visible in the system prompt."""
+    items = [_make_news_item("Tänään tapahtui", "Kuvaus.", rank=1)]
+    previous = [
+        PreviousOverview(display_date="perjantai 12.9.2026",
+                         digest_topic="Eilinen pääotsikko",
+                         overview="Eilinen yleiskatsaus tässä."),
+    ]
+    system_prompt, _ = build_overview_prompt(items, "testi-aihe", previous_overviews=previous)
+
+    assert "Eilinen pääotsikko" in system_prompt
+    assert "Eilinen yleiskatsaus tässä." in system_prompt
+    assert "Viimeaikaiset koosteet" in system_prompt
+    assert "uusi kulma tai käänne" in system_prompt
+
+
+def test_previous_overviews_sorted_oldest_first_in_prompt():
+    """build_overview_prompt renders in the order given; load_previous_overviews
+    provides them oldest-first, so we pass them that way here too."""
+    items = [_make_news_item("Tänään tapahtui", "Kuvaus.", rank=1)]
+    previous = [
+        PreviousOverview(display_date="perjantai 12.9.2026", digest_topic="Vanhempi", overview="..."),
+        PreviousOverview(display_date="lauantai 13.9.2026", digest_topic="Uudempi", overview="..."),
+    ]
+    system_prompt, _ = build_overview_prompt(items, "testi-aihe", previous_overviews=previous)
+
+    assert system_prompt.index("Vanhempi") < system_prompt.index("Uudempi")
+
+
+def test_no_previous_overviews_omits_context_section():
+    """With no previous overviews, the prompt should not contain the continuity instructions."""
+    items = [_make_news_item("Juttu", "Kuvaus.", rank=1)]
+    system_prompt, _ = build_overview_prompt(items, "testi-aihe", previous_overviews=None)
+
+    assert "Viimeaikaiset koosteet" not in system_prompt
+    assert "uusi kulma tai käänne" not in system_prompt

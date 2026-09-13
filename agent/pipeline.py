@@ -34,7 +34,7 @@ from agent.score import (score_clusters, load_rubric, load_previous_stories,
                           filter_previous_clusters, ScoreValidationError, ScoreResult)
 from agent.enrich import enrich_candidates
 from agent.compose import compose_items
-from agent.overview import generate_overview
+from agent.overview import generate_overview, load_previous_overviews
 from agent.validate import assemble_briefing, EmptyBriefingError
 from agent.write import write_briefing, WriteRoundtripError
 from agent.llm import make_llm_call, load_models_config
@@ -368,8 +368,10 @@ def run_pipeline(
                                      llm_stats_out=llm_stats, models_used_out=models_used,
                                      topic_step_models=topic_step_models, client=llm_client,
                                      llm_prompts_out=llm_prompts)
+    previous_overviews = load_previous_overviews(topic, since.date(), days=5, output_dir=out_dir)
     overview_result = generate_overview(compose_result.items, llm_overview, topic,
-                                         examples_path=config_paths.overview_examples)
+                                         examples_path=config_paths.overview_examples,
+                                         previous_overviews=previous_overviews or None)
     step_durations["overview"] = round(perf_counter() - t0, 2)
 
     tts_cfg = topic_config.get("tts", {})

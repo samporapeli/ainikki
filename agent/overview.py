@@ -14,6 +14,8 @@ but visibly logged and marked as a warning.
 
 import json
 import logging
+import re
+from datetime import date, timedelta
 from pathlib import Path
 from typing import NamedTuple
 
@@ -42,7 +44,37 @@ class OverviewExamplesConfig(BaseModel):
         return cls(**yaml.safe_load(path.read_text()))
 
 
-def _build_system_prompt(topic: str, examples: list[OverviewExample]) -> str:
+class PreviousOverview(NamedTuple):
+    display_date: str
+    digest_topic: str
+    overview: str
+
+
+def load_previous_overviews(topic: str, since: date, days: int = 5,
+                             output_dir: Path = Path("data/output")) -> list[PreviousOverview]:
+    results: list[PreviousOverview] = []
+    for path in output_dir.glob(f"{topic}_*.json"):
+        match = re.search(r"(\d{4}-\d{2}-\d{2})\.json$", path.name)
+        if not match:
+            continue
+        file_date = date.fromisoformat(match.group(1))
+        if file_date >= since or file_date < since - timedelta(days=days):
+            continue
+        try:
+            data = json.loads(path.read_text())
+            results.append(PreviousOverview(
+                display_date=data.get("display_date_fi") or data.get("display_date", ""),
+                digest_topic=data.get("digest_topic", ""),
+                overview=data.get("overview", ""),
+            ))
+        except Exception:
+            continue
+    results.sort(key=lambda r: r.display_date)
+    return results
+
+
+def _build_system_prompt(topic: str, examples: list[OverviewExample],
+                         previous_overviews: list[PreviousOverview] | None = None) -> str:
     examples_by_style = {"asiallinen": [], "napakka poikkeus": []}
     for example in examples:
         examples_by_style.setdefault(example.style, []).append(example)
@@ -56,8 +88,27 @@ def _build_system_prompt(topic: str, examples: list[OverviewExample]) -> str:
         example_sections.append(f"{style.capitalize()}:\n" + "\n".join(lines))
     examples_text = "\n\n".join(example_sections)
 
-    return f"""Saat listan artikkeleista aiheesta "{topic}".
+    previous_section = ""
+    if previous_overviews:
+        lines = []
+        for p in previous_overviews:
+            lines.append(f"- {p.display_date}: \"{p.digest_topic}\"\n  {p.overview}")
+        previous_section = f"""
+Viimeaikaiset koosteet (uusin viimeisenä):
+{chr(10).join(lines)}
 
+Ohjeet aiheen valinnalle ja jatkuvuudelle:
+- Jos valitset pääotsikoksi aiheen, jota on käsitelty jo aiemmin:
+  * Otsikon on toimittava itsenäisenä uutisotsikkona ja tuotava selvästi esiin, mikä on uusi kulma tai käänne suhteessa aiempaan — esimerkiksi epäilystä vahvistukseen, tapahtumasta sen seurauksiin tai raportista vastatoimiin.
+  * Myös yleiskatsauksessa on avattava nimenomaan tämän päivän uutta antia, eikä kerrattava eilistä perustietoa pääasiana.
+- Jos aihe ei tarjoa selkeää uutta käännettä tai kehitysaskelta:
+  * Anna etusija koosteessa mukana oleville tuoreille, aidosti uusille aiheille tai ilmiöille.
+- Tavoittele monipuolisuutta:
+  * Jatkotarina ansaitsee pääotsikon vain silloin, kun sen uusi käänne on aidosti päivän merkittävin tai kiinnostavin asia.
+"""
+
+    return f"""Saat listan artikkeleista aiheesta "{topic}".
+{previous_section}
 Tee kaksi asiaa:
 
 1) Tiivistelmäotsikko: kirjoita 2–12 sanan otsikko, joka kertoo,
@@ -117,11 +168,12 @@ class OverviewResult(NamedTuple):
 
 
 def build_overview_prompt(items: list[NewsItem], topic: str,
-                          examples: list[OverviewExample] | None = None) -> tuple[str, str]:
+                          examples: list[OverviewExample] | None = None,
+                          previous_overviews: list[PreviousOverview] | None = None) -> tuple[str, str]:
     ordered = sorted(items, key=lambda i: i.rank)
     lines = [f"{i.rank}. {i.headline} — {i.summary}" for i in ordered]
     user_prompt = "\n".join(lines)
-    return _build_system_prompt(topic, examples or []), user_prompt
+    return _build_system_prompt(topic, examples or [], previous_overviews), user_prompt
 
 
 def _fallback_overview(items: list[NewsItem], max_headlines: int = 3) -> str:
@@ -139,7 +191,8 @@ def _fallback_digest_topic(topic: str) -> str:
 
 
 def generate_overview(items: list[NewsItem], llm_call: LlmCall,
-                       topic: str, examples_path: Path | None = None) -> OverviewResult:
+                       topic: str, examples_path: Path | None = None,
+                       previous_overviews: list[PreviousOverview] | None = None) -> OverviewResult:
     if not items:
         return OverviewResult(overview="Ei julkaistavia juttuja tälle ajalle.",
                                digest_topic="", warning=None)
@@ -147,7 +200,7 @@ def generate_overview(items: list[NewsItem], llm_call: LlmCall,
     examples = []
     if examples_path and examples_path.exists():
         examples = OverviewExamplesConfig.load(examples_path).examples
-    system_prompt, user_prompt = build_overview_prompt(items, topic, examples)
+    system_prompt, user_prompt = build_overview_prompt(items, topic, examples, previous_overviews)
     raw_response, _usage = llm_call(system_prompt, user_prompt)
 
     try:
