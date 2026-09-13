@@ -95,8 +95,9 @@ class TestTtsSynthesize:
                 mock_post.return_value.json.return_value = {
                     "audioContent": base64.b64encode(fake_ogg).decode(),
                 }
-                result = synthesize(["Test text"], "google-cloud", "fi-FI-Chirp3-HD-Achird")
-                assert result is None
+                with patch("agent.tts._find_ffmpeg", return_value=None):
+                    result = synthesize(["Test text"], "google-cloud", "fi-FI-Chirp3-HD-Achird")
+                    assert result is None
 
     def test_synthesize_multiple_segments_with_silence(self):
         fake_ogg = b"OggS" + b"\x00" * 100  # fake OGG_OPUS

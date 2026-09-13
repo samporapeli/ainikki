@@ -75,21 +75,33 @@ def _enrich_handler(request: httpx.Request) -> httpx.Response:
     return httpx.Response(200, text=CLEAN_HTML)
 
 
+from unittest.mock import patch
+
+from agent.tts import TtsResult, synthesize
+
+
 def test_full_pipeline_happy_path(tmp_path):
+    """Full pipeline run with mock clients: Collect -> Dedup -> Cluster ->
+    Score -> Enrich -> Compose -> Overview -> TTS -> Validate -> Write.
+    Tests the complete end-to-end flow producing both digest JSON and audio."""
     tmp_out = tmp_path / "out"
     tmp_data = tmp_path / "data"
     raw_items = _load_test_raw_items()
     llm_client = httpx.Client(transport=httpx.MockTransport(_make_llm_handler()))
     enrich_client = httpx.Client(transport=httpx.MockTransport(_enrich_handler))
 
+    fake_audio = TtsResult(audio_bytes=b"OggS_test_audio_bytes", duration_ms=1200.0)
+
     since = datetime(2026, 7, 16, tzinfo=timezone.utc)
     until = since + timedelta(days=1)
 
-    path = run_pipeline(
-        topic="ai", period=Period.daily, since=since, until=until,
-        config_dir=Path("config"), data_dir=tmp_data, out_dir=tmp_out,
-        raw_items_override=raw_items, llm_client=llm_client, enrich_client=enrich_client,
-    )
+    with patch("shutil.which", return_value="/fake/ffmpeg"), \
+         patch("agent.pipeline.synthesize", return_value=fake_audio):
+        path = run_pipeline(
+            topic="ai", period=Period.daily, since=since, until=until,
+            config_dir=Path("config"), data_dir=tmp_data, out_dir=tmp_out,
+            raw_items_override=raw_items, llm_client=llm_client, enrich_client=enrich_client,
+        )
 
     assert path.exists()
     briefing = Briefing(**json.loads(path.read_text()))
@@ -104,15 +116,63 @@ def test_full_pipeline_happy_path(tmp_path):
     assert set(briefing.meta.models_used.keys()) == {"cluster", "filter_topic", "score", "compose", "overview", "tts"}
     assert briefing.meta.models_used["compose"]
     assert briefing.meta.models_used["tts"] == "google-cloud/fi-FI-Chirp3-HD-Achird"
+    assert len(briefing.warnings) == 0
 
-    # TTS warning: ffmpeg not available in test env
-    assert len(briefing.warnings) == 1
-    assert "TTS on: ffmpeg not found in PATH" in briefing.warnings[0]
+    audio_file = tmp_out / "ai_daily_2026-07-16_audio.ogg"
+    assert audio_file.exists()
+    assert audio_file.read_bytes() == b"OggS_test_audio_bytes"
 
     pipeline_file = tmp_data / "pipeline" / "ai_daily_2026-07-16.json"
     debug = json.loads(pipeline_file.read_text())
     assert debug["steps"]["tts"]["provider"] == "google-cloud"
     assert debug["steps"]["tts"]["voice"] == "fi-FI-Chirp3-HD-Achird"
+
+
+def test_pipeline_skips_audio_when_ffmpeg_missing(tmp_path):
+    """When ffmpeg is missing from PATH, audio synthesis is cleanly skipped with a warning."""
+    tmp_out = tmp_path / "out"
+    tmp_data = tmp_path / "data"
+    raw_items = _load_test_raw_items()
+    llm_client = httpx.Client(transport=httpx.MockTransport(_make_llm_handler()))
+    enrich_client = httpx.Client(transport=httpx.MockTransport(_enrich_handler))
+
+    since = datetime(2026, 7, 16, tzinfo=timezone.utc)
+    until = since + timedelta(days=1)
+
+    with patch("shutil.which", return_value=None):
+        path = run_pipeline(
+            topic="ai", period=Period.daily, since=since, until=until,
+            config_dir=Path("config"), data_dir=tmp_data, out_dir=tmp_out,
+            raw_items_override=raw_items, llm_client=llm_client, enrich_client=enrich_client,
+        )
+
+    briefing = Briefing(**json.loads(path.read_text()))
+    assert len(briefing.warnings) == 1
+    assert "TTS on: ffmpeg not found in PATH" in briefing.warnings[0]
+
+
+def test_tts_synthesis_failure_no_crash(tmp_path):
+    """When TTS synthesis returns no audio (API failure), pipeline logs warning but does not crash."""
+    tmp_out = tmp_path / "out"
+    tmp_data = tmp_path / "data"
+    raw_items = _load_test_raw_items()
+    llm_client = httpx.Client(transport=httpx.MockTransport(_make_llm_handler()))
+    enrich_client = httpx.Client(transport=httpx.MockTransport(_enrich_handler))
+
+    since = datetime(2026, 7, 16, tzinfo=timezone.utc)
+    until = since + timedelta(days=1)
+
+    with patch("shutil.which", return_value="/fake/ffmpeg"), \
+         patch("agent.pipeline.synthesize", return_value=None):
+        path = run_pipeline(
+            topic="ai", period=Period.daily, since=since, until=until,
+            config_dir=Path("config"), data_dir=tmp_data, out_dir=tmp_out,
+            raw_items_override=raw_items, llm_client=llm_client, enrich_client=enrich_client,
+        )
+
+    assert path.exists()
+    briefing = Briefing(**json.loads(path.read_text()))
+    assert any("tts: synthesis returned no result" in w for w in briefing.warnings)
 
 
 def test_pipeline_raises_on_critical_score_failure(tmp_path):
@@ -198,11 +258,13 @@ def test_pipeline_captures_llm_prompts(tmp_path):
     since = datetime(2026, 7, 16, tzinfo=timezone.utc)
     until = since + timedelta(days=1)
 
-    run_pipeline(
-        topic="ai", period=Period.daily, since=since, until=until,
-        config_dir=Path("config"), data_dir=tmp_data, out_dir=tmp_out,
-        raw_items_override=raw_items, llm_client=llm_client, enrich_client=enrich_client,
-    )
+    with patch("shutil.which", return_value="/fake/ffmpeg"), \
+         patch("agent.pipeline.synthesize", return_value=None):
+        run_pipeline(
+            topic="ai", period=Period.daily, since=since, until=until,
+            config_dir=Path("config"), data_dir=tmp_data, out_dir=tmp_out,
+            raw_items_override=raw_items, llm_client=llm_client, enrich_client=enrich_client,
+        )
 
     # Pipeline debug file
     pipeline_file = tmp_data / "pipeline" / "ai_daily_2026-07-16.json"

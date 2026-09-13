@@ -393,7 +393,7 @@ def run_pipeline(
     _silence_between_ms = _voice_cfg.get("silence_between_segments_ms", 600)
 
     tts_result = None
-    if tts_cfg.get("enabled", False) and shutil.which("ffmpeg") is not None:
+    if tts_cfg.get("enabled", False) and shutil.which("ffmpeg") is not None and compose_result.items:
         t0_tts = perf_counter()
         try:
             logger.info("tts: generating audio for overview (provider=%s, voice=%s)", provider, voice)
@@ -412,6 +412,7 @@ def run_pipeline(
 
             tts_result = synthesize(tts_text, provider, voice)
             if tts_result:
+                out_dir.mkdir(parents=True, exist_ok=True)
                 audio_path = out_dir / f"{topic}_{period.value}_{date_str}_audio.ogg"
                 audio_path.write_bytes(tts_result.audio_bytes)
                 tts_has_audio = True
@@ -521,7 +522,7 @@ def run_pipeline(
                 "voice": voice,
                 "has_audio": tts_has_audio,
                 "silence_between_ms": _silence_between_ms,
-                "n_success": tts_result.raw_data["n_success"] if tts_result else 0,
+                "n_success": tts_result.raw_data.get("n_success", 0) if (tts_result and tts_result.raw_data) else 0,
                 "segments": [
                     {"index": i, "text": s, "input_bytes": len(s.encode("utf-8"))}
                     for i, s in enumerate(tts_text)
