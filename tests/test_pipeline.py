@@ -96,7 +96,8 @@ def test_full_pipeline_happy_path(tmp_path):
     until = since + timedelta(days=1)
 
     with patch("shutil.which", return_value="/fake/ffmpeg"), \
-         patch("agent.pipeline.synthesize", return_value=fake_audio):
+         patch("agent.pipeline.synthesize", return_value=fake_audio), \
+         patch("agent.pipeline.read_audio_duration_s", return_value=12.34):
         path = run_pipeline(
             topic="ai", period=Period.daily, since=since, until=until,
             config_dir=Path("config"), data_dir=tmp_data, out_dir=tmp_out,
@@ -126,6 +127,7 @@ def test_full_pipeline_happy_path(tmp_path):
     debug = json.loads(pipeline_file.read_text())
     assert debug["steps"]["tts"]["provider"] == "google-cloud"
     assert debug["steps"]["tts"]["voice"] == "fi-FI-Chirp3-HD-Achird"
+    assert debug["steps"]["tts"]["audio_duration_s"] == 12.34
 
 
 def test_pipeline_skips_audio_when_ffmpeg_missing(tmp_path):

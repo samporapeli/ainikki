@@ -18,6 +18,7 @@ from typing import Any
 
 import httpx
 import yaml
+from tinytag import TinyTag
 
 from .schema import Briefing
 from .tts_template import TtsTemplate
@@ -65,6 +66,17 @@ def _ffmpeg_available(ffmpeg_path: str) -> bool:
         return result.returncode == 0
     except Exception:
         return False
+
+
+def read_audio_duration_s(path: Path) -> float | None:
+    """Return the exact audio duration in seconds, or None if unreadable."""
+    try:
+        tag = TinyTag.get(path)
+        if tag.duration is None:
+            return None
+        return round(float(tag.duration), 2)
+    except Exception:
+        return None
 
 
 def _decode_audio_content(content: str) -> bytes:
@@ -475,8 +487,9 @@ def test_cli():
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_bytes(result.audio_bytes)
-    print(f"Saved to {output_path} ({len(result.audio_bytes)} bytes, "
-          f"~{result.duration_ms / 1000:.1f}s)")
+    measured = read_audio_duration_s(output_path)
+    duration_label = f"{measured:.1f}s" if measured is not None else f"~{result.duration_ms / 1000:.1f}s"
+    print(f"Saved to {output_path} ({len(result.audio_bytes)} bytes, {duration_label})")
 
 
 if __name__ == "__main__":

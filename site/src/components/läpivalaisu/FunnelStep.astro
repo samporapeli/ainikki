@@ -1,8 +1,6 @@
 ---
 import type { PromptCall, TtsSegment } from '../../lib/pipeline-data';
 
-type StatItem = string | { id: string; text: string };
-
 interface Props {
   stepKey?: string;
   stepNumber: number;
@@ -11,13 +9,12 @@ interface Props {
   isTts?: boolean;
   modelName?: string | null;
   description: string;
-  stats?: StatItem[];
+  stats?: string[];
   dotsCount?: number | null;
   audioUrl?: string | null;
   ttsSegments?: Array<TtsSegment | string>;
   pausesAfter?: Set<number>;
   silenceMs?: number;
-  ttsProductionSeconds?: number | null;
   prompts?: PromptCall[];
   promptTokenTotal?: number | null;
 }
@@ -36,7 +33,6 @@ const {
   ttsSegments = [],
   pausesAfter = new Set<number>(),
   silenceMs,
-  ttsProductionSeconds = null,
   prompts = [],
   promptTokenTotal = null,
 } = Astro.props as Props;
@@ -60,9 +56,7 @@ const userPreviewLength = 300;
   <p class="step-desc">{description}</p>
   {stats.length > 0 && (
     <ul class="step-stats">
-      {stats.map(stat => typeof stat === 'string'
-        ? <li>{stat}</li>
-        : <li id={stat.id}>{stat.text}</li>)}
+      {stats.map(stat => <li>{stat}</li>)}
     </ul>
   )}
   {typeof dotsCount === 'number' && dotsCount > 0 && (
@@ -71,15 +65,7 @@ const userPreviewLength = 300;
     </div>
   )}
   {audioUrl && (
-    <audio
-      id="tts-audio"
-      controls
-      preload="metadata"
-      src={audioUrl}
-      class="audio-player"
-      aria-label="Kuunteluvalikko"
-      data-production-seconds={ttsProductionSeconds ?? undefined}
-    />
+    <audio controls preload="metadata" src={audioUrl} class="audio-player" aria-label="Kuunteluvalikko" />
   )}
   {isTts && ttsSegments.length > 0 && (
     <details class="tts-script">
@@ -136,25 +122,3 @@ const userPreviewLength = 300;
     </details>
   )}
 </div>
-
-<script>
-  import { formatDecimal, formatDuration } from '../../lib/format';
-
-  const audio = document.getElementById('tts-audio');
-  if (audio) {
-    const durationStat = document.getElementById('tts-audio-duration');
-    const speedStat = document.getElementById('tts-speed');
-    const production = audio.dataset.productionSeconds ? Number(audio.dataset.productionSeconds) : null;
-
-    const updateDuration = () => {
-      if (!Number.isFinite(audio.duration)) return;
-      if (durationStat) durationStat.textContent = `${formatDuration(audio.duration)} äänitteen kesto`;
-      if (speedStat && production != null && production > 0) {
-        speedStat.textContent = `${formatDecimal(audio.duration / production, 1)}× reaaliaikakerroin (RTF)`;
-      }
-    };
-
-    audio.addEventListener('loadedmetadata', updateDuration, { once: true });
-    if (audio.readyState >= 1) updateDuration();
-  }
-</script>

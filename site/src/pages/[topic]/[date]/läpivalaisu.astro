@@ -51,6 +51,9 @@ const modelsUsed = output.meta?.models_used ?? {};
 const displayDate = output.display_date || output.period_start;
 const topicUpper = topicLabels[topic] ?? topic.toUpperCase();
 const ttsHasAudio = pipe.tts?.has_audio === true;
+const ttsAudioSeconds = ttsHasAudio && typeof pipe.tts?.audio_duration_s === 'number'
+  ? pipe.tts.audio_duration_s
+  : null;
 const ttsSegments = normalizeTtsSegments(pipe.tts, output);
 const silenceMs = typeof pipe.tts?.silence_between_ms === 'number'
   ? pipe.tts.silence_between_ms
@@ -127,14 +130,16 @@ const steps: Step[] = [
   { stepKey: 'validate', number: 10, name: 'Validointi', isLlm: false, modelName: null, description: 'Varmistaa, että kooste on rakenteeltaan kelvollinen ennen julkaisua.' },
 ];
 
-function statsFor(step: Step): Array<string | { id: string; text: string }> {
-  const stats: Array<string | { id: string; text: string }> = [];
+function statsFor(step: Step): string[] {
+  const stats: string[] = [];
   const duration = stepDurations[step.stepKey];
   if (typeof duration === 'number') stats.push(`${formatDuration(duration)}${step.isTts ? ' tuotantoaika' : ''}`);
   if (step.isTts && ttsSegments.length > 0) {
-    if (ttsHasAudio) {
-      stats.push({ id: 'tts-audio-duration', text: '? äänitteen kesto' });
-      if (typeof duration === 'number') stats.push({ id: 'tts-speed', text: '?× reaaliaikakerroin (RTF)' });
+    if (ttsAudioSeconds != null) {
+      stats.push(`${formatDuration(ttsAudioSeconds)} äänitteen kesto`);
+      if (typeof duration === 'number' && duration > 0) {
+        stats.push(`${formatDecimal(ttsAudioSeconds / duration, 1)}× reaaliaikakerroin (RTF)`);
+      }
     }
     const parts = ttsSegments.length === 1 ? '1 osa' : `${ttsSegments.length} osaa`;
     stats.push(`${parts}, ${ttsTotalChars} merkkiä`);
@@ -206,7 +211,6 @@ const audioUrl = ttsHasAudio
           ttsSegments={step.isTts ? ttsSegments : []}
           pausesAfter={step.isTts ? pausesAfter : undefined}
           silenceMs={step.isTts ? silenceMs : undefined}
-          ttsProductionSeconds={step.isTts ? stepDurations.tts ?? null : null}
           prompts={step.isLlm ? (llmPrompts[step.stepKey] ?? []) : []}
           promptTokenTotal={
             llmStats[step.stepKey]

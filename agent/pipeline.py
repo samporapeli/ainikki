@@ -38,7 +38,7 @@ from agent.overview import generate_overview, load_previous_overviews
 from agent.validate import assemble_briefing, EmptyBriefingError
 from agent.write import write_briefing, WriteRoundtripError
 from agent.llm import make_llm_call, load_models_config
-from agent.tts import synthesize, load_tts_config
+from agent.tts import synthesize, load_tts_config, read_audio_duration_s
 from agent.tts_template import TtsTemplate
 
 logger = logging.getLogger(__name__)
@@ -378,6 +378,7 @@ def run_pipeline(
     tts_text: list[str] = []
     tts_has_audio = False
     tts_raw_data: dict | None = None
+    audio_duration_s: float | None = None
     provider = tts_cfg.get("provider", "google-cloud")
     voice = tts_cfg.get("voice", "fi-FI-Chirp3-HD-Achird")
 
@@ -415,8 +416,10 @@ def run_pipeline(
                 out_dir.mkdir(parents=True, exist_ok=True)
                 audio_path = out_dir / f"{topic}_{period.value}_{date_str}_audio.ogg"
                 audio_path.write_bytes(tts_result.audio_bytes)
+                audio_duration_s = read_audio_duration_s(audio_path)
                 tts_has_audio = True
-                logger.info("tts: audio saved to %s (%d segments)", audio_path, len(tts_text))
+                logger.info("tts: audio saved to %s (%.2fs, %d segments)",
+                            audio_path, audio_duration_s or 0.0, len(tts_text))
                 step_durations["tts"] = round(perf_counter() - t0_tts, 2)
             else:
                 total = len(tts_text)
@@ -521,6 +524,7 @@ def run_pipeline(
                 "provider": provider,
                 "voice": voice,
                 "has_audio": tts_has_audio,
+                "audio_duration_s": audio_duration_s,
                 "silence_between_ms": _silence_between_ms,
                 "n_success": tts_result.raw_data.get("n_success", 0) if (tts_result and tts_result.raw_data) else 0,
                 "segments": [
