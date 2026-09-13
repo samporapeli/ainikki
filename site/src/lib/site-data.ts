@@ -34,8 +34,3 @@ export function getSiteTopics(): SiteTopic[] {
 export function isSiteTopic(topic: string): boolean {
   return getSiteTopics().some(siteTopic => siteTopic.name === topic);
 }
-
-export function extractTopicFromFilename(filename: string): string | null {
-  const match = filename.match(/^([^_]+)_\w+_\d{4}-\d{2}-\d{2}/);
-  return match ? match[1] : null;
-}

@@ -8,7 +8,7 @@ import Colophon from '../../components/Colophon.astro';
 import Warnings from '../../components/Warnings.astro';
 import { TOPIC_META } from '../../lib/topics';
 import { fiDate } from '../../lib/date';
-import { isSiteTopic, extractTopicFromFilename } from '../../lib/site-data';
+import { isSiteTopic } from '../../lib/site-data';
 
 export function getStaticPaths() {
   const dataDir = path.resolve('../data/output');
@@ -21,12 +21,7 @@ export function getStaticPaths() {
   const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json')).sort();
   const briefings = files.map(file => {
     const data = JSON.parse(fs.readFileSync(path.join(dataDir, file), 'utf-8'));
-    // Restore topic if missing — extract from filename (e.g., "ai_daily_2026-08-28.json")
-    if (!data.topic) {
-      data.topic = extractTopicFromFilename(file) || file.replace(/_(?:daily|weekly)_\d{4}-\d{2}-\d{2}\.json$/, '');
-      data.period = data.period || (/weekly/.test(file) ? 'weekly' : 'daily');
-    }
-    const dd = data.display_date || data.period_start || file.match(/(\d{4}-\d{2}-\d{2})\.json$/)?.[1];
+    const dd = data.display_date || data.period_start;
     return { ...data, _dd: dd };
   }).filter(briefing => isSiteTopic(briefing.topic));
 
@@ -66,7 +61,7 @@ export function getStaticPaths() {
 
 const { briefing } = Astro.props;
 const topicUpper = briefing.topic.toUpperCase();
-const dateStr = briefing.display_date || briefing.period_start || Astro.params.date;
+const dateStr = briefing.display_date || briefing.period_start;
 const generatedAt = briefing.meta?.generated_at;
 const prettyDate = briefing.display_date_fi || fiDate(dateStr);
 const digestTopic = briefing.digest_topic || "";
@@ -86,7 +81,7 @@ const hasAudio = fs.existsSync(audioPath);
 
 function navUrl(b: any): string | null {
   if (!b) return null;
-  const dd = b.display_date || b.period_start || b._dd;
+  const dd = b.display_date || b.period_start;
   return `${import.meta.env.BASE_URL}/${b.topic}/${dd}/`;
 }
 

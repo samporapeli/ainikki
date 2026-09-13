@@ -34,16 +34,28 @@ PREV_1=$(date -d "$TEST_DATE - 1 day" +%F)
 PREV_2=$(date -d "$TEST_DATE - 2 days" +%F)
 cat <<EOF > "data/output/test_daily_${PREV_1}.json"
 {
+  "topic": "test",
+  "period": "daily",
+  "period_start": "$PREV_1",
+  "display_date": "$PREV_1",
   "display_date_fi": "$PREV_1",
   "digest_topic": "Testiaihe edelliseltä päivältä",
-  "overview": "Edellisen päivän yleiskatsaus testikoosteelle."
+  "overview": "Edellisen päivän yleiskatsaus testikoosteelle.",
+  "meta": {"models_used": {}, "llm_stats": {}},
+  "items": []
 }
 EOF
 cat <<EOF > "data/output/test_daily_${PREV_2}.json"
 {
+  "topic": "test",
+  "period": "daily",
+  "period_start": "$PREV_2",
+  "display_date": "$PREV_2",
   "display_date_fi": "$PREV_2",
   "digest_topic": "Toissapäiväinen testiaihe",
-  "overview": "Toissapäivän yleiskatsaus testikoosteelle."
+  "overview": "Toissapäivän yleiskatsaus testikoosteelle.",
+  "meta": {"models_used": {}, "llm_stats": {}},
+  "items": []
 }
 EOF
 
