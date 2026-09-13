@@ -1,0 +1,59 @@
+---
+interface ClusterItem {
+  url: string;
+  title?: string;
+  source_badge?: string;
+  source_type?: string;
+}
+
+interface Cluster {
+  items: ClusterItem[];
+  cluster_reason?: string;
+}
+
+interface Props {
+  clusters?: Cluster[];
+}
+
+const { clusters = [] } = Astro.props as Props;
+
+function hostname(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
+function sourceBadge(item: ClusterItem): string {
+  return item.source_badge || item.source_type?.toUpperCase() || '?';
+}
+---
+
+{clusters.length > 0 && (
+  <>
+    <h2>Uutisryhmät ({clusters.length})</h2>
+    <div class="cluster-list">
+      {clusters.map(cluster => {
+        const primary = cluster.items[0];
+        return <details class="cluster-item">
+          <summary>
+            <span class="cluster-qty">{cluster.items.length} {cluster.items.length === 1 ? 'uutinen' : 'uutista'}</span>
+            <span class="cluster-title">{primary?.title || '(tuntematon)'}</span>
+          </summary>
+          <div class="cluster-body">
+            {cluster.cluster_reason && <p class="cluster-reason">{cluster.cluster_reason}</p>}
+            <ul class="cluster-links">
+              {cluster.items.map(item => (
+                <li>
+                  <a href={item.url} target="_blank" rel="noopener">{item.title ? `${item.title} (${hostname(item.url)}) ↗` : `${hostname(item.url)} ↗`}</a>
+                  <span class="badge badge-code">{sourceBadge(item)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </details>;
+      })}
+    </div>
+  </>
+)}

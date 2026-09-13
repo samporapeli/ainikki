@@ -1,0 +1,51 @@
+---
+interface Props {
+  topicLabels: Record<string, string>;
+  topicDates: Record<string, string[]>;
+  currentTopic: string;
+  currentDate: string;
+}
+
+const { topicLabels, topicDates, currentTopic, currentDate } = Astro.props as Props;
+const baseUrl = import.meta.env.BASE_URL;
+---
+
+<div class="controls">
+  <label>Aihe
+    <select id="topic-select">
+      {Object.keys(topicDates).sort().map(topic => (
+        <option value={topic} selected={topic === currentTopic}>
+          {topicLabels[topic] ?? topic.toUpperCase()}
+        </option>
+      ))}
+    </select>
+  </label>
+  <label>Päivämäärä
+    <select id="date-select">
+      {(topicDates[currentTopic] ?? []).map(date => (
+        <option value={date} selected={date === currentDate}>{date}</option>
+      ))}
+    </select>
+  </label>
+</div>
+
+<script define:vars={{ baseUrl, topicDates }}>
+  const topicSelect = document.getElementById('topic-select');
+  const dateSelect = document.getElementById('date-select');
+
+  function navigate(topic, date) {
+    if (topic && date) {
+      window.location.href = `${baseUrl}/${topic}/${date}/läpivalaisu/`;
+    }
+  }
+
+  topicSelect?.addEventListener('change', () => {
+    const topic = topicSelect.value;
+    const dates = topicDates[topic] || [];
+    if (dates.length > 0) navigate(topic, dates[dates.length - 1]);
+  });
+
+  dateSelect?.addEventListener('change', () => {
+    navigate(topicSelect.value, dateSelect.value);
+  });
+</script>

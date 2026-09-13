@@ -1,0 +1,26 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getLapivaluisTopicDates } from '../../lib/pipeline-data';
+
+const topicDates = getLapivaluisTopicDates();
+const baseUrl = import.meta.env.BASE_URL;
+const defaultTopic = 'ai';
+const defaultDates = topicDates[defaultTopic] ?? [];
+const latestDate = defaultDates[defaultDates.length - 1];
+const destination = latestDate
+  ? `${baseUrl}/${defaultTopic}/${latestDate}/läpivalaisu/`
+  : `${baseUrl}/`;
+---
+
+<Layout title="Läpivalaisu — Ainikki" description="Tutki, miten Ainikin uutiskoosteet syntyvät.">
+  <p>Siirrytään läpivalaisuun: <a href={destination}>{destination}</a></p>
+  <script is:inline define:vars={{ topicDates, baseUrl, destination }}>
+    const params = new URLSearchParams(location.search);
+    const topic = params.get('topic');
+    const date = params.get('date');
+    const dates = topic ? topicDates[topic] : null;
+    location.replace(dates && date && dates.includes(date)
+      ? `${baseUrl}/${topic}/${date}/läpivalaisu/`
+      : destination);
+  </script>
+</Layout>

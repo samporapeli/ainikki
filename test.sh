@@ -55,9 +55,8 @@ if [ -f "$AUDIO_PATH" ]; then
 fi
 send_telegram "test" "daily" "$TEST_DATE" "$TELEGRAM_CHAT_ID_TEST" "$AUDIO_PATH"
 
-mkdir -p site/public/data/output site/public/data/pipeline
+mkdir -p site/public/data/output
 rsync -a data/output/ site/public/data/output/
-rsync -a data/pipeline/ site/public/data/pipeline/
 
 echo "Test output: data/output/test_daily_${TEST_DATE}.json"
 echo "Test pipeline data: data/pipeline/test_daily_${TEST_DATE}.json"

@@ -136,7 +136,7 @@ const nextBriefing = briefing._next || null;
     <Colophon
       modelsUsed={briefing.meta.models_used}
       llmStats={briefing.meta.llm_stats}
-      lapivalaisuUrl={hasPipelineDebug ? `${import.meta.env.BASE_URL}/läpivalaisu/?topic=${topic}&date=${dateStr}` : undefined}
+      lapivalaisuUrl={hasPipelineDebug ? `${import.meta.env.BASE_URL}/${topic}/${dateStr}/läpivalaisu/` : undefined}
     />
     <Warnings warnings={briefing.warnings} />
   </div>

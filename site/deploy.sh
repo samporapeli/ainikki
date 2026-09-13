@@ -36,12 +36,10 @@ npm install
 
 echo "Copying data files..."
 rm -rf public/data
-mkdir -p public/data/output public/data/pipeline
+mkdir -p public/data/output
 while IFS=: read -r topic period; do
   cp "$PROJECT_DIR/data/output/${topic}_${period}_"*.json public/data/output/ 2>/dev/null || true
   cp "$PROJECT_DIR/data/output/${topic}_${period}_"*.ogg   public/data/output/ 2>/dev/null || true
-  cp "$PROJECT_DIR/data/pipeline/${topic}_${period}_"*.json public/data/pipeline/ 2>/dev/null || true
-  cp "$PROJECT_DIR/data/pipeline/${topic}_${period}_"*.ogg   public/data/pipeline/ 2>/dev/null || true
 done < <(public_topics)
 
 echo "Building..."

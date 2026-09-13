@@ -1,0 +1,232 @@
+---
+import fs from 'node:fs';
+import Layout from '../../../layouts/Layout.astro';
+import ClusterSection from '../../../components/läpivalaisu/ClusterSection.astro';
+import DroppedSection from '../../../components/läpivalaisu/DroppedSection.astro';
+import FunnelStep from '../../../components/läpivalaisu/FunnelStep.astro';
+import NavigationControls from '../../../components/läpivalaisu/NavigationControls.astro';
+import StoryListSection from '../../../components/läpivalaisu/StoryListSection.astro';
+import {
+  formatDecimal,
+  formatDuration,
+  getLapivalaisuStaticPaths,
+  getLapivaluisTopicDates,
+  normalizeTtsSegments,
+  type BriefingOutput,
+  type PipelineOutput,
+} from '../../../lib/pipeline-data';
+import '../../../styles/läpivalaisu.css';
+
+const topicLabels: Record<string, string> = {
+  ai: 'AI',
+  teknologia: 'Teknologia',
+  test: 'Testi',
+};
+
+export { getLapivalaisuStaticPaths as getStaticPaths };
+
+const {
+  topic,
+  date,
+  period,
+  outputPath,
+  pipelinePath,
+  label,
+  dateFi,
+  hasPipeline,
+} = Astro.props;
+
+const baseUrl = import.meta.env.BASE_URL;
+const topicDates = getLapivaluisTopicDates();
+const output = JSON.parse(fs.readFileSync(outputPath, 'utf-8')) as BriefingOutput;
+const pipeline = hasPipeline
+  ? JSON.parse(fs.readFileSync(pipelinePath, 'utf-8')) as PipelineOutput
+  : undefined;
+const pipe = pipeline?.steps ?? {};
+const stepDurations = pipeline?.step_durations_s ?? {};
+const llmStats = pipeline?.llm_stats ?? {};
+const llmPrompts = pipeline?.llm_prompts ?? {};
+const modelsUsed = output.meta?.models_used ?? {};
+
+const displayDate = output.display_date || output.period_start;
+const topicUpper = topicLabels[topic] ?? topic.toUpperCase();
+const ttsHasAudio = pipe.tts?.has_audio === true;
+const ttsSegments = normalizeTtsSegments(pipe.tts, output);
+const silenceMs = typeof pipe.tts?.silence_between_ms === 'number'
+  ? pipe.tts.silence_between_ms
+  : typeof pipe.tts?.silence_ms === 'number'
+    ? pipe.tts.silence_ms
+    : undefined;
+const pausesRaw = pipe.tts?.pauses_after;
+const pausesAfter = Array.isArray(pausesRaw) && pausesRaw.length > 0
+  ? new Set(pausesRaw as number[])
+  : new Set(Array.from({ length: Math.max(ttsSegments.length - 1, 0) }, (_, index) => index));
+const ttsTotalChars = ttsSegments.reduce(
+  (total, segment) => total + (typeof segment === 'string' ? segment.length : (segment.text?.length ?? 0)),
+  0,
+);
+const ttsTotalWords = ttsSegments.reduce((total, segment) => {
+  const text = typeof segment === 'string' ? segment : (segment.text ?? '');
+  return total + text.trim().split(/\s+/).filter(Boolean).length;
+}, 0);
+
+function modelName(stepKey: string): string | null {
+  const model = modelsUsed[stepKey];
+  return model ? model.split('/').pop() ?? model : null;
+}
+
+const collectRaw = pipe.collect?.total_raw as number | undefined;
+const dedupCount = pipe.dedup?.candidates as number | undefined;
+const filterKept = pipe.filter_topic?.n_kept as number | undefined;
+const filterDropped = pipe.filter_topic?.n_dropped as number | undefined;
+const clusterCount = pipe.cluster?.n_clusters as number | undefined;
+const scoreCutoff = pipe.score?.cutoff_rank as number | undefined;
+const scoreCandidates = Array.isArray(pipe.score?.candidates) ? pipe.score.candidates as Array<{
+  rank: number;
+  url: string;
+  title?: string;
+  selection_reason?: string;
+}> : [];
+const enrichSuccess = pipe.enrich?.n_success as number | undefined;
+const composeWritten = (pipe.compose?.n_written as number | undefined) ?? output.items?.length;
+
+let totalCalls = 0;
+let totalPromptTokens = 0;
+let totalCompletionTokens = 0;
+let totalCost = 0;
+for (const stats of Object.values(llmStats)) {
+  totalCalls += stats.calls ?? 0;
+  totalPromptTokens += stats.total_prompt_tokens ?? 0;
+  totalCompletionTokens += stats.total_completion_tokens ?? 0;
+  totalCost += stats.total_cost ?? 0;
+}
+const hasLlmStats = totalCalls > 0;
+
+type Step = {
+  stepKey: string;
+  number: number;
+  name: string;
+  isLlm: boolean;
+  isTts?: boolean;
+  modelName: string | null;
+  description: string;
+  countText?: string;
+  dotsCount?: number | null;
+};
+
+const steps: Step[] = [
+  { stepKey: 'collect', number: 1, name: 'Keruu', isLlm: false, modelName: null, description: 'Hakee uutisia määritellyistä lähteistä (Hacker News, RSS).', countText: collectRaw == null ? undefined : `${collectRaw} raakauutista`, dotsCount: collectRaw },
+  { stepKey: 'dedup', number: 2, name: 'Duplikaattien poisto', isLlm: false, modelName: null, description: 'Normalisoi URL-osoitteet ja yhdistää samat linkit toisiinsa.', countText: dedupCount == null ? undefined : `${dedupCount} uniikkia ehdokasta`, dotsCount: dedupCount },
+  { stepKey: 'filter_topic', number: 3, name: 'Aiheen suodatus', isLlm: true, modelName: modelName('filter_topic'), description: filterDropped == null ? 'Kielimalli tarkistaa jokaisen ehdokkaan ja pudottaa aiheeseen kuulumattomat.' : `Kielimalli tarkisti uutiset ja pudotti ${filterDropped} aiheen ulkopuolista juttua.`, countText: filterKept == null ? undefined : `${filterKept} aiheeseen kuuluvaa`, dotsCount: filterKept },
+  { stepKey: 'cluster', number: 4, name: 'Ryhmittely', isLlm: true, modelName: modelName('cluster'), description: 'Kielimalli tunnistaa samasta aiheesta kertovat jutut ja ryhmittelee ne yhteen.', countText: clusterCount == null ? undefined : `${clusterCount} uutisryhmää`, dotsCount: clusterCount },
+  { stepKey: 'score', number: 5, name: 'Pisteytys', isLlm: true, modelName: modelName('score'), description: scoreCandidates.length > 0 ? `Kielimalli arvioi ${scoreCandidates.length} ehdokasta ja valitsi kärkijutut arviointikriteerien perusteella.` : 'Kielimalli valitsee ja järjestää uutiset arviointikriteerien perusteella.', countText: scoreCutoff == null ? undefined : `${scoreCutoff} valittu`, dotsCount: scoreCutoff ?? scoreCandidates.length },
+  { stepKey: 'enrich', number: 6, name: 'Rikastaminen', isLlm: false, modelName: null, description: 'Lataa pisteytyksessä valittujen artikkeleiden sivut ja erottaa varsinaisen leipätekstin.', countText: enrichSuccess == null ? undefined : `${enrichSuccess} noudettu`, dotsCount: enrichSuccess },
+  { stepKey: 'compose', number: 7, name: 'Kirjoitus', isLlm: true, modelName: modelName('compose'), description: 'Kielimalli kirjoittaa jokaisesta uutisesta otsikon ja suomenkielisen tiivistelmän.', countText: composeWritten == null ? undefined : `${composeWritten} tiivistelmää`, dotsCount: composeWritten },
+  { stepKey: 'overview', number: 8, name: 'Yleiskuva', isLlm: true, modelName: modelName('overview'), description: 'Kielimalli kirjoittaa lyhyen yhteenvedon päivän koosteesta.' },
+  { stepKey: 'tts', number: 9, name: 'Puhesynteesi', isLlm: false, isTts: true, modelName: modelName('tts'), description: 'Muuntaa koosteen tekstin puheeksi.', countText: ttsHasAudio && ttsTotalChars > 0 ? `${ttsTotalChars} merkkiä äänitetty` : 'Ei äänitettä tuotettu', dotsCount: null },
+  { stepKey: 'validate', number: 10, name: 'Validointi', isLlm: false, modelName: null, description: 'Varmistaa, että kooste on rakenteeltaan kelvollinen ennen julkaisua.' },
+];
+
+function statsFor(step: Step): Array<string | { id: string; text: string }> {
+  const stats: Array<string | { id: string; text: string }> = [];
+  const duration = stepDurations[step.stepKey];
+  if (typeof duration === 'number') stats.push(`${formatDuration(duration)}${step.isTts ? ' tuotantoaika' : ''}`);
+  if (step.isTts && ttsSegments.length > 0) {
+    if (ttsHasAudio) {
+      stats.push({ id: 'tts-audio-duration', text: '? äänitteen kesto' });
+      if (typeof duration === 'number') stats.push({ id: 'tts-speed', text: '?× reaaliaikakerroin (RTF)' });
+    }
+    const parts = ttsSegments.length === 1 ? '1 osa' : `${ttsSegments.length} osaa`;
+    stats.push(`${parts}, ${ttsTotalChars} merkkiä`);
+    stats.push(`${ttsTotalWords} sanaa`);
+  } else if (step.countText) {
+    stats.push(step.countText);
+  }
+  const llm = llmStats[step.stepKey];
+  if (step.isLlm && llm) {
+    const calls = llm.calls ?? 0;
+    stats.push(`${calls} LLM-${calls === 1 ? 'kutsu' : 'kutsua'}`);
+    stats.push(`${llm.total_prompt_tokens ?? 0} tokenia sisään, ${llm.total_completion_tokens ?? 0} ulos`);
+    if (llm.total_cost) stats.push(`${formatDecimal(llm.total_cost, 6)} $`);
+  }
+  return stats;
+}
+
+const clusters = Array.isArray(pipe.cluster?.clusters) ? pipe.cluster.clusters : [];
+const includedUrls = new Set((output.items ?? []).flatMap(item => (item.sources ?? []).map(source => String(source.url))));
+const droppedCandidates = scoreCandidates.filter(candidate => typeof scoreCutoff === 'number' && candidate.rank > scoreCutoff && !includedUrls.has(candidate.url));
+const audioUrl = ttsHasAudio
+  ? `${baseUrl}/data/output/${topic}_${period}_${displayDate}_audio.ogg`
+  : null;
+---
+
+<Layout title={`Läpivalaisu — ${topicUpper} — ${label}`} description="Tutki, miten kooste on syntynyt: mitä uutisia kerättiin, miten ne ryhmiteltiin ja miksi juuri nämä valikoituivat mukaan.">
+  <nav class="back">
+    <a id="backlink" href={`${baseUrl}/${topic}/${displayDate}/`}>← {topicUpper} — {dateFi || displayDate}</a>
+  </nav>
+
+  <header>
+    <h1>Läpivalaisu</h1>
+    <p class="subtitle">Tutki, miten kooste on syntynyt: mitä uutisia kerättiin, miten ne ryhmiteltiin ja miksi juuri nämä valikoituivat mukaan.</p>
+  </header>
+
+  <NavigationControls topicLabels={topicLabels} topicDates={topicDates} currentTopic={topic} currentDate={date} />
+
+  {!hasPipeline && (
+    <div class="notice">
+      <p class="notice-text">Tälle päivämäärälle ei ole tallennettu yksityiskohtaista vaihedataa (kuten raakauutisten määrää tai ryhmittelyä). Alla näkyy koosteen lopputulos.</p>
+    </div>
+  )}
+
+  <section id="funnel" class="section">
+    <h2>Prosessi</h2>
+    {(hasLlmStats || pipeline?.total_duration_s != null) && (
+      <div class="funnel-summary">
+        <ul>
+          {pipeline?.total_duration_s != null && <li><strong>{formatDuration(pipeline.total_duration_s)}</strong></li>}
+          {hasLlmStats && <li><strong>{totalCalls}</strong> LLM-{totalCalls === 1 ? 'kutsu' : 'kutsua'}</li>}
+          {hasLlmStats && <li><strong>{totalPromptTokens + totalCompletionTokens}</strong> tokenia ({totalPromptTokens} sisään, {totalCompletionTokens} ulos)</li>}
+          {hasLlmStats && <li><strong>{totalCost ? `${formatDecimal(totalCost, 6)} $` : '—'}</strong></li>}
+        </ul>
+      </div>
+    )}
+    <div class="flow">
+      {steps.map(step => (
+        <FunnelStep
+          stepKey={step.stepKey}
+          stepNumber={step.number}
+          stepName={step.name}
+          isLlm={step.isLlm}
+          isTts={step.isTts}
+          modelName={step.modelName}
+          description={step.description}
+          stats={statsFor(step)}
+          dotsCount={step.dotsCount}
+          audioUrl={step.isTts ? audioUrl : null}
+          ttsSegments={step.isTts ? ttsSegments : []}
+          pausesAfter={step.isTts ? pausesAfter : undefined}
+          silenceMs={step.isTts ? silenceMs : undefined}
+          ttsProductionSeconds={step.isTts ? stepDurations.tts ?? null : null}
+          prompts={step.isLlm ? (llmPrompts[step.stepKey] ?? []) : []}
+          promptTokenTotal={
+            llmStats[step.stepKey]
+              ? (llmStats[step.stepKey].total_prompt_tokens ?? 0) + (llmStats[step.stepKey].total_completion_tokens ?? 0)
+              : null
+          }
+        />
+      ))}
+    </div>
+  </section>
+
+  <section id="clusters" class="section">
+    <ClusterSection clusters={clusters} />
+  </section>
+
+  <section id="stories" class="section">
+    <StoryListSection items={output.items ?? []} scoredCandidates={droppedCandidates} cutoffRank={scoreCutoff} />
+  </section>
+
+  <section id="dropped" class="section">
+    <DroppedSection droppedStories={output.dropped_stories as Array<{ url: string; title?: string }> | undefined} warnings={output.warnings} />
+  </section>
+</Layout>

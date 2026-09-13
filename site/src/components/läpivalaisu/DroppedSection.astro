@@ -1,0 +1,42 @@
+---
+interface DroppedStory {
+  url: string;
+  title?: string;
+}
+
+interface Props {
+  droppedStories?: DroppedStory[];
+  warnings?: string[];
+}
+
+const { droppedStories = [], warnings = [] } = Astro.props as Props;
+
+function hostname(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+---
+
+{(droppedStories.length > 0 || warnings.length > 0) && (
+  <>
+    {droppedStories.length > 0 && (
+      <div class="dropped">
+        <h3>Ei voitu sisällyttää</h3>
+        <ul class="dropped-list">
+          {droppedStories.map(story => (
+            <li><a href={story.url} target="_blank" rel="noopener">{story.title ? `${story.title} (${hostname(story.url)}) ↗` : `${hostname(story.url)} ↗`}</a></li>
+          ))}
+        </ul>
+      </div>
+    )}
+    {warnings.length > 0 && (
+      <details class="warnings">
+        <summary>{warnings.length} {warnings.length === 1 ? 'vika' : 'vikaa'}</summary>
+        <ul>{warnings.map(warning => <li>{warning}</li>)}</ul>
+      </details>
+    )}
+  </>
+)}
