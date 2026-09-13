@@ -29,6 +29,24 @@ for _ in $(seq 1 20); do
     sleep 0.1
 done
 
+mkdir -p data/output
+PREV_1=$(date -d "$TEST_DATE - 1 day" +%F)
+PREV_2=$(date -d "$TEST_DATE - 2 days" +%F)
+cat <<EOF > "data/output/test_daily_${PREV_1}.json"
+{
+  "display_date_fi": "$PREV_1",
+  "digest_topic": "Testiaihe edelliseltä päivältä",
+  "overview": "Edellisen päivän yleiskatsaus testikoosteelle."
+}
+EOF
+cat <<EOF > "data/output/test_daily_${PREV_2}.json"
+{
+  "display_date_fi": "$PREV_2",
+  "digest_topic": "Toissapäiväinen testiaihe",
+  "overview": "Toissapäivän yleiskatsaus testikoosteelle."
+}
+EOF
+
 echo "== Collect and process test news ($TEST_DATE) =="
 run_pipeline "test" "daily" "$TEST_DATE" "$TEST_DATE" "$TEST_DATE"
 AUDIO_PATH="data/output/test_daily_${TEST_DATE}_audio.ogg"
