@@ -41,7 +41,7 @@ def _make_llm_handler(score_min=3, score_max=10):
         n = len(candidate_lines)
 
         if '"clusters":' in system_prompt and '"candidate_indices"' in system_prompt:
-            clusters = [{"candidate_indices": [i], "primary_position": 0, "reason": None} for i in range(n)]
+            clusters = [{"candidate_indices": [i], "reason": None} for i in range(n)]
             content = json.dumps({"clusters": clusters})
         elif "ehdokaslistaa" in system_prompt:
             k = max(score_min, min(n, score_max))
@@ -195,7 +195,7 @@ def test_pipeline_raises_on_critical_score_failure(tmp_path):
             user_content = body["messages"][0]["content"] if is_anthropic else body["messages"][1]["content"]
             n = len([line for line in user_content.splitlines() if line.strip().startswith("[")])
             content = json.dumps({"clusters": [
-                {"candidate_indices": [i], "primary_position": 0, "reason": None} for i in range(n)
+                {"candidate_indices": [i], "reason": None} for i in range(n)
             ]})
         else:
             content = "{}"

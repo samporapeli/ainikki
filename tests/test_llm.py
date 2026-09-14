@@ -318,8 +318,7 @@ def test_make_llm_call_end_to_end_with_cluster():
     candidates = dedup_candidates(hn_items)  # 8 candidates
 
     def handler(request: httpx.Request) -> httpx.Response:
-        clusters = [{"candidate_indices": [i], "primary_position": 0,
-                     "reason": None} for i in range(8)]
+        clusters = [{"candidate_indices": [i], "reason": None} for i in range(8)]
         content = json.dumps({"clusters": clusters})
         return httpx.Response(200, json={
             "choices": [{"message": {"content": content}}],

@@ -40,10 +40,10 @@ def _mock_llm_group_anthropic_stories(system_prompt: str, user_prompt: str) -> t
     all_indices = set(range(len(lines)))
     remaining = all_indices - {anthropic_idx, techcrunch_idx}
 
-    clusters = [{"candidate_indices": [anthropic_idx, techcrunch_idx], "primary_position": 0,
+    clusters = [{"candidate_indices": [anthropic_idx, techcrunch_idx],
                  "reason": "molemmat käsittelevät Fable/Mythos-julkaisua"}]
     for idx in remaining:
-        clusters.append({"candidate_indices": [idx], "primary_position": 0, "reason": None})
+        clusters.append({"candidate_indices": [idx], "reason": None})
 
     return json.dumps({"clusters": clusters}), {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150, "cost": 0.0001}
 
@@ -86,7 +86,7 @@ def test_recovery_on_incomplete_coverage():
 
     def partial_response(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         # only first 5 candidates mentioned out of 9
-        clusters = [{"candidate_indices": [i], "primary_position": 0, "reason": None} for i in range(5)]
+        clusters = [{"candidate_indices": [i], "reason": None} for i in range(5)]
         return json.dumps({"clusters": clusters}), {"prompt_tokens": 50, "completion_tokens": 25, "total_tokens": 75, "cost": 0.00005}
 
     result = cluster_candidates(candidates, partial_response)
@@ -102,9 +102,9 @@ def test_recovery_rejects_unsupported_merge():
     candidates = _build_test_candidates()
 
     def partial_response(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
-        clusters = [{"candidate_indices": [0, 1], "primary_position": 1,
+        clusters = [{"candidate_indices": [0, 1],
                      "reason": "sama tapahtuma"}]
-        clusters.extend({"candidate_indices": [i], "primary_position": 0, "reason": None}
+        clusters.extend({"candidate_indices": [i], "reason": None}
                         for i in range(2, len(candidates) - 1))
         return json.dumps({"clusters": clusters}), {}
 
@@ -127,8 +127,12 @@ def test_prompt_stays_lightweight():
     """Verifies that full article content doesn't leak into the prompt —
     only headline, source type, and signal per candidate."""
     candidates = _build_test_candidates()
-    _, user_prompt = build_cluster_prompt(candidates)
+    system_prompt, user_prompt = build_cluster_prompt(candidates)
     assert "story_text" not in user_prompt
+    assert "candidate_indices" in system_prompt
+    assert "listan ensimmäinen ehdokas on päälähde" in system_prompt
+    assert "[19, 20, 3]" in system_prompt
+    assert "Aurora-mallin julkaisua paikalliseen ajoon" in system_prompt
     assert len(user_prompt) < 2000, f"prompt unexpectedly long ({len(user_prompt)} chars) - context growing?"
 
 
@@ -137,7 +141,7 @@ def test_code_fenced_json_is_parsed():
     candidates = _build_test_candidates()
 
     def mock_llm_code_fence(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
-        clusters = [{"candidate_indices": [i], "primary_position": 0, "reason": None}
+        clusters = [{"candidate_indices": [i], "reason": None}
                     for i in range(len(candidates))]
         inner = json.dumps({"clusters": clusters})
         return f"```json\n{inner}\n```", {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15, "cost": 0.00001}

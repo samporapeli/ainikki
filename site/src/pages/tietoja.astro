@@ -68,7 +68,7 @@ const steps = [
   {
     name: 'Ryhmittely',
     llm: true,
-    description: 'Kielimalli tunnistaa samasta asiasta kertovat jutut eri lähteistä ja ryhmittelee ne yhteen.',
+    description: 'Kielimalli tunnistaa samasta asiasta kertovat jutut eri lähteistä, ryhmittelee ne yhteen ja järjestää lähteet ensisijaisesta varalähteisiin.',
   },
   {
     name: 'Pisteytys',
@@ -78,7 +78,7 @@ const steps = [
   {
     name: 'Rikastaminen',
     llm: false,
-    description: 'Lataa pisteytyksessä valittujen artikkeleiden sivut ja erottaa niistä varsinaisen artikkelitekstin sivun rakenteesta (valikot, mainokset, evästeilmoitukset).',
+    description: 'Lataa pisteytyksessä valittujen juttujen lähteet tärkeysjärjestyksessä ja erottaa ensimmäisestä toimivasta lähteestä varsinaisen artikkelitekstin sivun rakenteesta (valikot, mainokset, evästeilmoitukset).',
   },
   {
     name: 'Kirjoitus',

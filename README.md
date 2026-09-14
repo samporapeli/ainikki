@@ -217,7 +217,7 @@ Set `OPENROUTER_API_KEY` in the environment or in the cron entry.
 
 - Cluster step is title-based, not fully reliable.
 - Enrich uses trafilatura, doesn't work on JS-rendered pages.
-- Compose uses only the primary source, multi-source synthesis is v2.
+- Compose uses content from the first usable source in each cluster's priority order; multi-source synthesis is v2.
 - No async — Compose runs items sequentially.
 - Weekly topic currently only has HN + Yle Tiede feeds — more sources
   would improve coverage.

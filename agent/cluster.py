@@ -48,7 +48,6 @@ class ClusterResult(NamedTuple):
 
 class ClusterAssignment(BaseModel):
     candidate_indices: list[int]
-    primary_position: int  # zero-based position within candidate_indices
     reason: str | None = None
 
 
@@ -103,15 +102,17 @@ tarvitse palauttaa: koodi käsittelee kaikki puuttuvat ehdokkaat automaattisesti
 erillisinä ryhminä. Jos et löydä varmasti samaa tarinaa käsitteleviä ehdokkaita,
 palauta tyhjä lista.
 
-Valitse jokaiselle ryhmälle päälähde (primary_position): ilmoita sen nollapohjainen
-paikka candidate_indices-listassa. Suosi alkuperäistä julkaisijaa
-ja suoraa lähdettä aggregaattorin, keskustelulangan tai myöhemmän kommentaarin sijaan.
+Järjestä jokaisen ryhmän candidate_indices-lista lähteiden tärkeysjärjestykseen:
+listan ensimmäinen ehdokas on päälähde. Suosi alkuperäistä julkaisijaa ja suoraa
+lähdettä aggregaatin, keskustelulangan tai myöhemmän kommentaarin sijaan.
+Käytä candidate_indices-kentässä Ehdokkaat-listan alkuperäisiä globaaleja indeksejä sellaisinaan.
+
 Kirjoita reason-kenttään konkreettinen perustelu: mainitse yhteinen tuote, julkaisu,
 tapahtuma tai päätös ja kerro, miksi eri URL:t käsittelevät samaa tarinaa. Älä käytä
 pelkkää ilmausta kuten "sama julkaisu" tai "sama aihe".
 
 Vastaa VAIN JSON-muodossa, ei muuta tekstiä:
-{"clusters": [{"candidate_indices": [2, 7], "primary_position": 0, "reason": "Molemmat käsittelevät Aurora-mallin samaa julkaisua eri URL:eilla."}]}
+{"clusters": [{"candidate_indices": [19, 20, 3], "reason": "Kaikki kolme käsittelevät Aurora-mallin julkaisua paikalliseen ajoon: ehdokas 19 kertoo julkaisusta ja ehdokkaat 20 ja 3 mallin saatavuudesta omilla laitteilla eri URL:eilla."}]}
 Jos sopivia ryhmiä ei ole:
 {"clusters": []}"""
 
@@ -131,12 +132,10 @@ def build_cluster_prompt(candidates: list[Candidate]) -> tuple[str, str]:
 
 
 def _validate_assignments(response: ClusterResponse, n_candidates: int) -> bool:
-    """Validates the indices in explicitly returned multi-item groups."""
+    """Validates candidate indices in the returned groups."""
     seen: set[int] = set()
     for cluster in response.clusters:
         if not cluster.candidate_indices:
-            return False
-        if cluster.primary_position < 0 or cluster.primary_position >= len(cluster.candidate_indices):
             return False
         for index in cluster.candidate_indices:
             if index < 0 or index >= n_candidates or index in seen:
@@ -161,8 +160,7 @@ def _recover_missing(response: ClusterResponse, n_candidates: int,
             seen.add(i)
         groups = _evidence_groups(clean_indices, candidates)
         rejected_merges += max(0, len(groups) - 1)
-        primary = min(max(cluster.primary_position, 0), len(clean_indices) - 1)
-        primary_idx = clean_indices[primary]
+        primary_idx = clean_indices[0]
         for group in groups:
             group_primary = primary_idx if primary_idx in group else group[0]
             ordered_indices = [group_primary] + [idx for idx in group if idx != group_primary]
@@ -230,7 +228,7 @@ def cluster_candidates(candidates: list[Candidate], llm_call: LlmCall) -> Cluste
         if len(groups) > 1:
             rejected_merges += len(groups) - 1
         for group in groups:
-            primary_idx = cluster.candidate_indices[cluster.primary_position]
+            primary_idx = cluster.candidate_indices[0]
             if primary_idx not in group:
                 primary_idx = group[0]
             ordered_indices = [primary_idx] + [idx for idx in group if idx != primary_idx]

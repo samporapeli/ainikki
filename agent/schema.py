@@ -52,8 +52,9 @@ class Candidate(BaseModel):
 
 class ClusteredCandidate(BaseModel):
     """RawItems for one story after clustering, possibly from different URLs.
-    items[0] = model-suggested primary source. This is still provisional —
-    Score step makes the final editorial judgment, this only groups.
+    Items are ordered by source priority; items[0] is the preferred source.
+    This is still provisional — Score step makes the final editorial judgment,
+    this only groups.
     """
     items: list[RawItem]
     cluster_reason: str | None = None  # short model rationale for clustering, debug/transparency
