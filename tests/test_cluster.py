@@ -81,7 +81,7 @@ def test_fallback_on_malformed_json():
 
 
 def test_recovery_on_incomplete_coverage():
-    """Model forgot some candidates — recovered as singletons with a warning."""
+    """Model forgot some candidates — recovered as singletons."""
     candidates = _build_test_candidates()
 
     def partial_response(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
@@ -98,7 +98,9 @@ def test_recovery_on_incomplete_coverage():
     assert len(missing) == 4
 
 
-def test_recovery_rejects_unsupported_merge():
+def test_recovery_accepts_model_merge_in_partial_coverage():
+    """A model-proposed merge is a semantic decision: code trusts it and
+    keeps the model's reason even in the partial-coverage recovery path."""
     candidates = _build_test_candidates()
 
     def partial_response(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
@@ -110,7 +112,9 @@ def test_recovery_rejects_unsupported_merge():
 
     result = cluster_candidates(candidates, partial_response)
 
-    assert not any(len(cluster.items) > 1 for cluster in result.clusters[:2])
+    assert result.clusters[0].items[0] == candidates[0].items[0]
+    assert len(result.clusters[0].items) == 2
+    assert result.clusters[0].cluster_reason == "sama tapahtuma"
     assert result.warning is None
 
 
@@ -120,6 +124,41 @@ def test_empty_cluster_response_creates_singletons_without_warning():
     result = cluster_candidates(candidates, lambda s, u: (json.dumps({"clusters": []}), {}))
 
     assert len(result.clusters) == len(candidates)
+    assert result.warning is None
+
+
+def test_cross_language_merge_not_split_by_tokens():
+    """An LLM-confirmed cluster with semantically equivalent titles in
+    English and Finnish must be kept together despite different wording."""
+    en_raw = RawItem(
+        title="OpenAI considers slowing advanced AI development",
+        url="https://www.bloomberg.com/news/openai-slowing",
+        source_type=SourceType.other,
+        published_at=datetime.now(timezone.utc),
+        raw_signal={"outlet": "bloomberg"},
+        origin_id="bloomberg_1",
+        fetched_at=datetime.now(timezone.utc),
+    )
+    fi_raw = RawItem(
+        title="Bloomberg: Open AI:n toimitusjohtaja Altman valmis hidastamaan tehokkaimpien tekoälymallien kehitystä",
+        url="https://yle.fi/a/openai-hidastama",
+        source_type=SourceType.rss,
+        published_at=datetime.now(timezone.utc),
+        raw_signal={"outlet": "yle"},
+        origin_id="yle_1",
+        fetched_at=datetime.now(timezone.utc),
+    )
+    candidates = dedup_candidates([en_raw, fi_raw])
+
+    def response(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
+        clusters = [{"candidate_indices": [0, 1],
+                     "reason": "sama OpenAI:n hidastamispäätös English and Finnish"}]
+        return json.dumps({"clusters": clusters}), {}
+
+    result = cluster_candidates(candidates, response)
+    assert len(result.clusters) == 1
+    assert len(result.clusters[0].items) == 2
+    assert result.clusters[0].n_urls == 2
     assert result.warning is None
 
 
