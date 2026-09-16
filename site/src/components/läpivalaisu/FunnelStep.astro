@@ -99,11 +99,11 @@ const userPreviewLength = 300;
         return <div class="prompt-call">
           <h3>Kutsu {prompts.length > 1 ? `${index + 1}/${prompts.length}` : index + 1}</h3>
           <details class="prompt-block">
-            <summary class="prompt-summary">System prompt <span class="prompt-size">{systemPrompt.length} merkkiä</span></summary>
+            <summary class="prompt-summary">Järjestelmäkehote <span class="prompt-size">{systemPrompt.length} merkkiä</span></summary>
             <pre class="prompt-text">{systemPrompt}</pre>
           </details>
           <details class="prompt-block">
-            <summary class="prompt-summary">User prompt <span class="prompt-size">{userPrompt.length} merkkiä</span></summary>
+            <summary class="prompt-summary">Käyttäjäkehote <span class="prompt-size">{userPrompt.length} merkkiä</span></summary>
             <pre class={`prompt-text${userIsLong ? ' prompt-truncated' : ''}`} id={`user-${stepKey}-${index}`}>{userPreview}</pre>
             {userIsLong && (
               <button
