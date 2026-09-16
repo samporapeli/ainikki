@@ -445,11 +445,86 @@
     font-size: 0.85rem;
   }
 
+  .prompt-call-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
   .prompt-call h3 {
     margin: 0 0 0.5rem;
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--fg-muted);
+  }
+
+  .prompt-menu {
+    flex: 0 0 auto;
+  }
+
+  .prompt-menu-trigger {
+    appearance: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--fg-muted);
+    cursor: pointer;
+    font: inherit;
+    font-size: 1.25rem;
+    line-height: 1;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .prompt-menu-trigger:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+
+  .prompt-menu-panel[popover] {
+    position: fixed;
+    inset: auto;
+    z-index: 2;
+    display: none;
+    flex-direction: column;
+    min-width: 12rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+  }
+
+  @supports selector(:popover-open) {
+    .prompt-menu-panel[popover]:popover-open {
+      display: flex;
+    }
+  }
+
+  .prompt-copy-option {
+    display: block;
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8rem;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .prompt-copy-option:hover,
+  .prompt-copy-option:focus-visible {
+    background: var(--link);
+    color: var(--bg);
+    outline: none;
   }
 
   .prompt-block {
@@ -458,12 +533,50 @@
   }
 
   .prompt-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-right: 0.25rem;
+  }
+
+  .prompt-label {
+    min-width: 0;
+    flex: 1;
   }
 
   .prompt-size {
+    margin-left: 0.35rem;
     font-size: 0.75rem;
     color: var(--fg-muted);
     font-weight: 400;
+  }
+
+  .prompt-copy {
+    flex: 0 0 auto;
+    padding: 0.2rem 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--fg-muted);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+
+  .prompt-copy:hover {
+    border-color: var(--link);
+    color: var(--link);
+  }
+
+  .prompt-copy.copied {
+    border-color: var(--link);
+    color: var(--link);
+  }
+
+  .prompt-copy:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
   }
 
   .prompt-text {

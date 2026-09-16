@@ -56,7 +56,7 @@ Collect → Dedup → Cluster → Score → Enrich → Compose → Overview → 
 
 ## Site
 
-Astro, static HTML, zero JS. Script `pipeline.sh` = data pipeline, not site build.
+Static HTML first. JavaScript is acceptable when it provides clear value: prefer build-time JavaScript, and allow small runtime scripts when interaction requires it, especially in `läpivalaisu`. Script `pipeline.sh` = data pipeline, not site build.
 - Page `/tietoja/` describes the pipeline and its steps. Keep it up to date when modifying collection or composition logic.
 
 ## Commits

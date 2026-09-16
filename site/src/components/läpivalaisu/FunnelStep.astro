@@ -45,6 +45,9 @@ const badgeText = isTts
     ? modelName ? `Kielimalli · ${modelName}` : 'Kielimalli'
     : 'Koodi';
 const userPreviewLength = 300;
+const ttsScriptText = ttsSegments
+  .map(segment => typeof segment === 'string' ? segment : (segment.text ?? ''))
+  .join('\n\n');
 ---
 
 <div class={`step ${stepClass}`}>
@@ -69,7 +72,10 @@ const userPreviewLength = 300;
   )}
   {isTts && ttsSegments.length > 0 && (
     <details class="tts-script">
-      <summary>Käsikirjoitus ({ttsSegments.length} {ttsSegments.length === 1 ? 'osa' : 'osaa'})</summary>
+      <summary class="prompt-summary tts-summary">
+        <span class="prompt-label">Käsikirjoitus ({ttsSegments.length} {ttsSegments.length === 1 ? 'osa' : 'osaa'})</span>
+        <button type="button" class="prompt-copy tts-copy" data-text={ttsScriptText}>Kopioi</button>
+      </summary>
       {ttsSegments.map((segment, index) => {
         const objectSegment = typeof segment === 'string' ? null : segment;
         const segmentIndex = objectSegment?.index ?? index;
@@ -88,7 +94,7 @@ const userPreviewLength = 300;
   {isLlm && prompts.length > 0 && (
     <details class="prompt-step">
       <summary>
-        Kielimallin syöte ja vastaus — {prompts.length} {prompts.length === 1 ? 'kutsu' : 'kutsua'}{promptTokenTotal != null ? `, ${promptTokenTotal} tokenia` : ''}
+        {prompts.length} {prompts.length === 1 ? 'kielimallikutsu' : 'kielimallikutsua'}{promptTokenTotal != null ? `, ${promptTokenTotal} tokenia` : ''}
       </summary>
       {prompts.map((prompt, index) => {
         const systemPrompt = prompt.system_prompt ?? '';
@@ -96,15 +102,36 @@ const userPreviewLength = 300;
         const response = prompt.raw_response ?? '';
         const userIsLong = userPrompt.length > userPreviewLength;
         const userPreview = userIsLong ? `${userPrompt.slice(0, userPreviewLength)}...` : userPrompt;
+        const menuId = `prompt-menu-${stepKey}-${index}`;
         return <div class="prompt-call">
-          <h3>Kutsu {prompts.length > 1 ? `${index + 1}/${prompts.length}` : index + 1}</h3>
+          <div class="prompt-call-head">
+            <h3>Kutsu {prompts.length > 1 ? `${index + 1}/${prompts.length}` : index + 1}</h3>
+            <div class="prompt-menu">
+              <button
+                type="button"
+                class="prompt-menu-trigger"
+                popovertarget={menuId}
+                aria-controls={menuId}
+                aria-label="Muut kopiointitavat">⋮</button>
+              <div id={menuId} class="prompt-menu-panel" popover="auto">
+                <button type="button" class="prompt-copy-option" data-copy-format="all">Kopioi kaikki</button>
+                <button type="button" class="prompt-copy-option" data-copy-format="openai">Kopioi syötteet (JSON)</button>
+              </div>
+            </div>
+          </div>
           <details class="prompt-block">
-            <summary class="prompt-summary">Järjestelmäkehote <span class="prompt-size">{systemPrompt.length} merkkiä</span></summary>
+            <summary class="prompt-summary">
+              <span class="prompt-label">Järjestelmäkehote <span class="prompt-size">{systemPrompt.length} merkkiä</span></span>
+              <button type="button" class="prompt-copy" data-prompt-part="system" data-text={systemPrompt}>Kopioi</button>
+            </summary>
             <pre class="prompt-text">{systemPrompt}</pre>
           </details>
           <details class="prompt-block">
-            <summary class="prompt-summary">Käyttäjäkehote <span class="prompt-size">{userPrompt.length} merkkiä</span></summary>
-            <pre class={`prompt-text${userIsLong ? ' prompt-truncated' : ''}`} id={`user-${stepKey}-${index}`}>{userPreview}</pre>
+            <summary class="prompt-summary">
+              <span class="prompt-label">Käyttäjäkehote <span class="prompt-size">{userPrompt.length} merkkiä</span></span>
+              <button type="button" class="prompt-copy" data-prompt-part="user" data-text={userPrompt}>Kopioi</button>
+            </summary>
+            <pre class={`prompt-text${userIsLong ? ' prompt-truncated' : ''}`}>{userPreview}</pre>
             {userIsLong && (
               <button
                 class="prompt-expand"
@@ -115,14 +142,20 @@ const userPreviewLength = 300;
           </details>
           {typeof prompt.reasoning === 'string' ? (
             <details class="prompt-block">
-              <summary class="prompt-summary">Päättely <span class="prompt-size">{prompt.reasoning.length} merkkiä</span></summary>
+              <summary class="prompt-summary">
+                <span class="prompt-label">Päättely <span class="prompt-size">{prompt.reasoning.length} merkkiä</span></span>
+                <button type="button" class="prompt-copy" data-prompt-part="reasoning" data-text={prompt.reasoning}>Kopioi</button>
+              </summary>
               <pre class="prompt-text">{prompt.reasoning}</pre>
             </details>
           ) : prompt.reasoning === null ? (
             <p class="prompt-no-reasoning">Ei päättelyä</p>
           ) : null}
           <details class="prompt-block">
-            <summary class="prompt-summary">Vastaus <span class="prompt-size">{response.length} merkkiä</span></summary>
+            <summary class="prompt-summary">
+              <span class="prompt-label">Vastaus <span class="prompt-size">{response.length} merkkiä</span></span>
+              <button type="button" class="prompt-copy" data-prompt-part="response" data-text={response}>Kopioi</button>
+            </summary>
             <pre class="prompt-text">{response}</pre>
           </details>
         </div>;
@@ -130,3 +163,104 @@ const userPreviewLength = 300;
     </details>
   )}
 </div>
+
+<script>
+  const copyButtons = document.querySelectorAll('button.prompt-copy');
+  const copyOptions = document.querySelectorAll('button.prompt-copy-option');
+  const promptMenus = document.querySelectorAll('.prompt-menu-panel[popover]');
+
+  function showCopyResult(button, label) {
+    const originalLabel = button.textContent;
+    button.textContent = label;
+    button.classList.add('copied');
+    setTimeout(() => {
+      button.textContent = originalLabel;
+      button.classList.remove('copied');
+    }, 1500);
+  }
+
+  async function copyText(text, button) {
+    try {
+      if (!text || !navigator.clipboard) {
+        throw new Error('Clipboard unavailable');
+      }
+      await navigator.clipboard.writeText(text);
+      showCopyResult(button, 'Kopioitu!');
+    } catch {
+      showCopyResult(button, 'Kopiointi epäonnistui');
+    }
+  }
+
+  function promptParts(call) {
+    const value = part => call.querySelector(`[data-prompt-part="${part}"]`)?.getAttribute('data-text') ?? '';
+    return {
+      system: value('system'),
+      user: value('user'),
+      reasoning: value('reasoning'),
+      response: value('response'),
+    };
+  }
+
+  function copyAll(parts) {
+    const sections = [
+      ['system-prompt', parts.system],
+      ['user-prompt', parts.user],
+      ['reasoning', parts.reasoning],
+      ['response', parts.response],
+    ].filter(([, text]) => text !== '');
+    return `<llm-call>\n${sections.map(([tag, text]) => `<${tag}>\n${text}\n</${tag}>`).join('\n')}\n</llm-call>`;
+  }
+
+  function copyOpenAiMessages(parts) {
+    return JSON.stringify({
+      messages: [
+        ...(parts.system !== '' ? [{ role: 'system', content: parts.system }] : []),
+        ...(parts.user !== '' ? [{ role: 'user', content: parts.user }] : []),
+      ],
+    }, null, 2);
+  }
+
+  function positionMenu(menu) {
+    const trigger = document.querySelector(`[popovertarget="${menu.id}"]`);
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const left = Math.max(8, Math.min(
+      rect.right - menu.offsetWidth,
+      window.innerWidth - menu.offsetWidth - 8,
+    ));
+    menu.style.top = `${Math.max(8, rect.bottom + 4)}px`;
+    menu.style.left = `${left}px`;
+  }
+
+  promptMenus.forEach(menu => {
+    menu.addEventListener('toggle', () => {
+      if (menu.matches(':popover-open')) {
+        requestAnimationFrame(() => positionMenu(menu));
+      }
+    });
+  });
+
+  copyButtons.forEach(button => {
+    button.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      copyText(button.getAttribute('data-text') ?? '', button);
+    });
+  });
+
+  copyOptions.forEach(button => {
+    button.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const call = button.closest('.prompt-call');
+      const menu = button.closest('.prompt-menu-panel');
+      if (!call) return;
+      const parts = promptParts(call);
+      const text = button.dataset.copyFormat === 'openai'
+        ? copyOpenAiMessages(parts)
+        : copyAll(parts);
+      copyText(text, button);
+      if (menu?.matches(':popover-open')) menu.hidePopover();
+    });
+  });
+</script>
