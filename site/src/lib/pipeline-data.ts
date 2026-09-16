@@ -24,6 +24,7 @@ export type PromptCall = {
   system_prompt?: string;
   user_prompt?: string;
   raw_response?: string;
+  reasoning?: string | null;
 };
 
 export type TtsSegment = {

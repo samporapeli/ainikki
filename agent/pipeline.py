@@ -172,6 +172,7 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
                 "system_prompt": system_prompt,
                 "user_prompt": user_prompt,
                 "raw_response": content,
+                "reasoning": usage.get("reasoning"),
             })
         return content, usage
 

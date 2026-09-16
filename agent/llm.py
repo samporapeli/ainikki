@@ -210,6 +210,7 @@ def _post_openai_compatible(
                 usage["cost"] = usage.get("cost")
             else:
                 usage["cost"] = None
+            usage["reasoning"] = message.get("reasoning") if choices else None
             return content, usage
         except (httpx.TimeoutException, httpx.NetworkError) as e:
             if attempt == _MAX_RETRIES:

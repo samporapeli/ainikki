@@ -113,6 +113,14 @@ const userPreviewLength = 300;
             )}
             {userIsLong && <pre class="prompt-text prompt-full" id={`user-full-${stepKey}-${index}`} style="display:none">{userPrompt}</pre>}
           </details>
+          {typeof prompt.reasoning === 'string' ? (
+            <details class="prompt-block">
+              <summary class="prompt-summary">Päättely <span class="prompt-size">{prompt.reasoning.length} merkkiä</span></summary>
+              <pre class="prompt-text">{prompt.reasoning}</pre>
+            </details>
+          ) : prompt.reasoning === null ? (
+            <p class="prompt-no-reasoning">Ei päättelyä</p>
+          ) : null}
           <details class="prompt-block">
             <summary class="prompt-summary">Vastaus <span class="prompt-size">{response.length} merkkiä</span></summary>
             <pre class="prompt-text">{response}</pre>

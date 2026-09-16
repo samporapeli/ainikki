@@ -102,6 +102,84 @@ def test_openai_compatible_request_and_parse():
     assert body["response_format"] == {"type": "json_object"}
 
 
+def test_openai_compatible_extracts_reasoning_field():
+    """Reasoning content is extracted from message.reasoning into usage."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={
+            "choices": [{
+                "message": {
+                    "content": "moi",
+                    "reasoning": "Ensiksi mietin..."
+                }
+            }],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 10,
+                      "total_tokens": 15},
+        })
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    provider = ProviderEndpoint(
+        provider="openrouter", base_url="https://openrouter.ai/api/v1",
+        auth_headers=[{"Authorization": "Bearer fake-key"}],
+    )
+    result, usage = _post_openai_compatible(
+        provider=provider,
+        model="openai/gpt-4o-mini",
+        system_prompt="system",
+        user_prompt="user",
+        client=client,
+    )
+    assert result == "moi"
+    assert usage["reasoning"] == "Ensiksi mietin..."
+
+
+def test_openai_compatible_reasoning_is_none_when_missing():
+    """When no reasoning field in response, usage.reasoning is None."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": "ok"}}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 3,
+                      "total_tokens": 8},
+        })
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    provider = ProviderEndpoint(
+        provider="openrouter", base_url="https://openrouter.ai/api/v1",
+        auth_headers=[{"Authorization": "Bearer fake-key"}],
+    )
+    _, usage = _post_openai_compatible(
+        provider=provider,
+        model="openai/gpt-4o-mini",
+        system_prompt="system",
+        user_prompt="user",
+        client=client,
+    )
+    assert usage["reasoning"] is None
+
+
+def test_openai_compatible_reasoning_is_none_when_empty_choices():
+    """Empty choices array yields None reasoning."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={
+            "choices": [],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 0,
+                      "total_tokens": 5},
+        })
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    provider = ProviderEndpoint(
+        provider="openrouter", base_url="https://openrouter.ai/api/v1",
+        auth_headers=[{"Authorization": "Bearer fake-key"}],
+    )
+    _, usage = _post_openai_compatible(
+        provider=provider,
+        model="openai/gpt-4o-mini",
+        system_prompt="system",
+        user_prompt="user",
+        client=client,
+    )
+    assert usage["reasoning"] is None
+
+
 def test_openai_compatible_no_json_format_when_disabled():
     """expect_json=False removes the response_format parameter."""
     captures = {}
