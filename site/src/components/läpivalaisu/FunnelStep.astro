@@ -149,7 +149,10 @@ const ttsScriptText = ttsSegments
               <pre class="prompt-text">{prompt.reasoning}</pre>
             </details>
           ) : prompt.reasoning === null ? (
-            <p class="prompt-no-reasoning">Ei päättelyä</p>
+            <p class="prompt-no-reasoning">
+              <span class="prompt-label">Päättely</span>
+              <span class="prompt-size">Ei päättelyä</span>
+            </p>
           ) : null}
           <details class="prompt-block">
             <summary class="prompt-summary">
