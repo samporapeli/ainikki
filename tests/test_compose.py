@@ -11,7 +11,7 @@ from agent.schema import RawItem, SourceType, EnrichedCandidate
 
 PERSONA_PATH = Path("config/personas/ainikki_v1.yaml")
 GUARDRAILS_PATH = Path("config/guardrails/guardrails_v1.yaml")
-GOLDEN_EXAMPLES_DIR = Path("config/golden_examples")
+GOLDEN_EXAMPLES_PATH = Path("config/golden_examples/golden_examples_v2.yaml")
 
 
 def _make_enriched(title: str, content: str, rank: int) -> EnrichedCandidate:
@@ -27,7 +27,7 @@ def _make_enriched(title: str, content: str, rank: int) -> EnrichedCandidate:
 
 def test_system_prompt_includes_all_three_configs():
     persona = Persona.load(PERSONA_PATH)
-    golden_examples = GoldenExamplesConfig.load(GOLDEN_EXAMPLES_DIR / persona.golden_examples_ref)
+    golden_examples = GoldenExamplesConfig.load(GOLDEN_EXAMPLES_PATH)
     guardrails = GuardrailsConfig.load(GUARDRAILS_PATH)
 
     prompt = build_compose_system_prompt(
@@ -77,7 +77,7 @@ def test_compose_items_happy_path():
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
                             target_audience="Testiyleisö",
-                            golden_examples_dir=GOLDEN_EXAMPLES_DIR)
+                            golden_examples_path=GOLDEN_EXAMPLES_PATH)
 
     assert len(result.items) == 2
     assert len(result.warnings) == 0
@@ -107,7 +107,7 @@ def test_partial_failure_drops_only_bad_item():
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
                             target_audience="Testiyleisö",
-                            golden_examples_dir=GOLDEN_EXAMPLES_DIR)
+                            golden_examples_path=GOLDEN_EXAMPLES_PATH)
 
     assert len(result.items) == 1, "only the successful item should remain"
     assert result.items[0].headline == "Toimiva otsikko"
@@ -124,7 +124,7 @@ def test_empty_headline_is_rejected():
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
                             target_audience="Testiyleisö",
-                            golden_examples_dir=GOLDEN_EXAMPLES_DIR)
+                            golden_examples_path=GOLDEN_EXAMPLES_PATH)
 
     assert len(result.items) == 0
     assert len(result.warnings) == 1
@@ -141,7 +141,7 @@ def test_code_fenced_json_is_parsed():
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm_code_fence,
                             topic="test",
                             target_audience="Testiyleisö",
-                            golden_examples_dir=GOLDEN_EXAMPLES_DIR)
+                            golden_examples_path=GOLDEN_EXAMPLES_PATH)
 
     assert len(result.items) == 1
     assert result.items[0].headline == "Koodiblokkiotsikko"
@@ -161,7 +161,7 @@ def test_compose_retries_on_empty_response():
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
                             target_audience="Testiyleisö",
-                            golden_examples_dir=GOLDEN_EXAMPLES_DIR)
+                            golden_examples_path=GOLDEN_EXAMPLES_PATH)
 
     assert len(result.items) == 1
     assert result.items[0].headline == "Toistettu otsikko"
@@ -188,7 +188,7 @@ def test_compose_retries_on_overlong_output():
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
                             target_audience="Testiyleisö",
-                            golden_examples_dir=GOLDEN_EXAMPLES_DIR)
+                            golden_examples_path=GOLDEN_EXAMPLES_PATH)
 
     assert len(result.items) == 1
     assert result.items[0].headline == "Korjattu otsikko"
@@ -207,7 +207,7 @@ def test_compose_gives_up_after_retry():
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
                             target_audience="Testiyleisö",
-                            golden_examples_dir=GOLDEN_EXAMPLES_DIR)
+                            golden_examples_path=GOLDEN_EXAMPLES_PATH)
 
     assert len(result.items) == 0
     assert len(result.warnings) == 1
@@ -230,7 +230,7 @@ def test_compose_retries_on_empty_code_fence():
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
                             target_audience="Testiyleisö",
-                            golden_examples_dir=GOLDEN_EXAMPLES_DIR)
+                            golden_examples_path=GOLDEN_EXAMPLES_PATH)
 
     assert len(result.items) == 1
     assert result.items[0].headline == "Toistettu otsikko"
@@ -252,7 +252,7 @@ def test_compose_retries_on_none_response():
     result = compose_items(items, PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
                             topic="test",
                             target_audience="Testiyleisö",
-                            golden_examples_dir=GOLDEN_EXAMPLES_DIR)
+                            golden_examples_path=GOLDEN_EXAMPLES_PATH)
 
     assert len(result.items) == 1
     assert result.items[0].headline == "Toistettu otsikko"

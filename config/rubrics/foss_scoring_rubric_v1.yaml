@@ -1,0 +1,83 @@
+version: v1
+topic: foss
+
+criteria:
+  - name: "FOSS-aiheen ydinolennaisuus"
+    description: >
+      Onko avoin ohjelmisto, avoin laitteisto, avoin standardi tai FOSS-yhteisö
+      jutun varsinainen aihe tai merkittävä osa sitä? Pelkkä Linuxin käyttö,
+      avoimen lähdekoodin riippuvuus tai muu sivumaininta ei riitä.
+    weight: high
+
+  - name: "uutuusarvo"
+    description: >
+      Onko kyseessä uusi julkaisu, merkittävä päivitys, päätös, haavoittuvuus,
+      yhteisömuutos tai muu ajankohtainen tapahtuma eikä vain vanhan asian
+      uudelleen käsittely?
+    weight: high
+
+  - name: "vaikutuksen laajuus"
+    description: >
+      Vaikuttaako asia laajasti Linux- tai FOSS-käyttäjiin, kehittäjiin,
+      organisaatioihin, jakeluihin tai avoimen teknologian suuntaan? Pieni
+      yksittäisen projektin muutos voi silti olla merkittävä, jos projektilla
+      on suuri käyttäjä- tai kehittäjäkunta.
+    weight: high
+
+  - name: "yhteisö- ja ekosysteemivaikutus"
+    description: >
+      Muuttaako asia projektin hallintoa, rahoitusta, lisensointia,
+      yhteentoimivuutta, kehittäjäyhteisöä tai riippuvuutta suljetuista
+      alustoista? Arvioi vaikutusta, älä pelkkää projektin tunnettuutta.
+    weight: high
+
+  - name: "lähteiden riippumattomuus"
+    description: >
+      Tukeeko uutista useampi riippumaton lähde, vai perustuuko se vain
+      projektin omaan tiedotteeseen tai yhteen viraaliin keskusteluun?
+      Yksi ensisijainen lähde voi riittää, jos tapahtuma on selkeä ja lähde
+      on siihen pätevä.
+    weight: medium
+
+  - name: "yhteisösignaali"
+    description: >
+      HN-pisteet, keskustelu, julkaisun käyttäjämäärä tai muu yhteisösignaali
+      tukee muita kriteerejä, mutta ei yksin tee pienestä muutoksesta
+      viikkokoosteen aihetta.
+    weight: low
+
+  - name: "aihepiirien monipuolisuus"
+    description: >
+      Viikkokoosteen pitäisi kattaa Linux-jakelut, työpöytä, kehitystyökalut,
+      avoimet sovellukset, yhteisöt, avoin laitteisto ja FOSS-politiikkaa
+      mahdollisuuksien mukaan. Älä valitse useita lähes samoja juttuja.
+    weight: high
+
+examples:
+  good:
+    - title: "Linux 6.17 tuo laajan tuen uudelle laitteistolle"
+      reason: "Linux-ekosysteemin merkittävä tekninen julkaisu"
+    - title: "GNOME Foundation muuttaa projektin hallintomallia"
+      reason: "FOSS-yhteisöön ja projektin suuntaan vaikuttava päätös"
+    - title: "LibreOffice parantaa yhteensopivuutta uusimmassa julkaisussa"
+      reason: "laajasti käytetyn avoimen ohjelmiston merkittävä julkaisu"
+    - title: "Firefox korjaa vakavan tietoturva-aukon"
+      reason: "avoimen selainekosysteemin käyttäjiin kohdistuva vaikutus"
+  bad:
+    - title: "Apple julkaisee uuden suljetun kannettavan tietokoneen"
+      reason: "ei avointa teknologiaa koskevaa näkökulmaa"
+    - title: "Yritys käyttää Linuxia uuden palvelun taustalla"
+      reason: "Linux on vain toteutustapa, ei jutun aihe"
+    - title: "Avoimen lähdekoodin riippuvuus lisätään yrityksen sisäiseen palveluun"
+      reason: "FOSS on vain sivumaininta"
+    - title: "Pienen projektin vähäinen korjausjulkaisu"
+      reason: "liian vähän vaikutusta viikkokoosteeseen ilman laajempaa merkitystä"
+
+exclude:
+  - "puhtaasti markkinointisisältö ilman uutisarvoa"
+  - "duplikaatit jotka eivät tuo uutta näkökulmaa jo valittuun juttuun"
+  - "suljetun tuotteen uutiset ilman olennaista FOSS-yhteyttä"
+
+items_per_briefing:
+  min: 4
+  max: 8

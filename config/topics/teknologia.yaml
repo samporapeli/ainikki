@@ -5,6 +5,7 @@ target_audience: >
   Ei tarvitse peruskäsitteiden selityksiä (esim. mikä on suoritin,
   mikä on käyttöjärjestelmä, mitä on HTTP).
 period: weekly
+golden_examples_ref: teknologia_golden_examples_v1.yaml
 
 topic_description: |
   Teknologia-aiheeseen kuuluvat laitteisto (esim. tietokoneet,
@@ -64,3 +65,13 @@ sources:
   - simonwillison
   - arstechnica
   - blog-google
+  - arstechnica-linux
+  - arstechnica-open-source
+  - arstechnica-android
+  - arstechnica-hardware
+  - arstechnica-privacy
+  - arstechnica-security
+  - arstechnica-firefox
+  - arstechnica-raspberry-pi
+  - arstechnica-steam-deck
+  - arstechnica-steam

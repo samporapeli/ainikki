@@ -1,0 +1,34 @@
+version: v1
+examples:
+  - headline: "Linux-ytimen uusi versio tuo tukea RISC-V-suorittimille"
+    summary: >
+      Linux 6.10 tuo laajan tuen RISC-V-arkkitehtuurille ja parantaa
+      Bcachefs-tiedostojärjestelmän vakautta. Päivitys helpottaa avoimen
+      laitteistostandardin käyttöönottoa palvelin- ja sulautetuissa järjestelmissä.
+
+  - headline: "Firefox jää ainoaksi suureksi selaimeksi joka tukee uBlock Originia"
+    summary: >
+      Chromium-pohjaiset selaimet siirtyvät Manifest V3 -arkkitehtuuriin,
+      joka rajoittaa uBlock Originin toimintaa. Firefox ilmoitti jatkavansa
+      tuen tarjoamista, joten selaimen valinnalla on merkitystä mainosteneston
+      ja yksityisyyden kannalta.
+
+  - headline: "GNOME Foundation muuttaa projektin hallintomallia"
+    summary: >
+      GNOME Foundation ilmoitti muutoksista projektin hallintoon ja
+      päätöksentekoon. Muutokset vaikuttavat siihen, miten työpöytäympäristön
+      kehitystä ohjataan ja miten yhteisö osallistuu päätöksiin.
+
+  - headline: "LibreOffice parantaa yhteensopivuutta uusimmassa julkaisussa"
+    summary: >
+      LibreOfficen uusi versio parantaa yhteensopivuutta yleisten
+      tiedostomuotojen kanssa ja tuo muutoksia toimisto-ohjelmiston
+      keskeisiin työkaluihin. Julkaisu vahvistaa avoimen vaihtoehdon asemaa
+      organisaatioissa, jotka käsittelevät eri ohjelmistoilla luotuja asiakirjoja.
+
+  - headline: "Fedora julkaisi uuden version työpöytä- ja kehittäjätyökaluineen"
+    summary: >
+      Fedora julkaisi uuden version, joka päivittää työpöytäympäristön,
+      järjestelmäkomponentit ja kehittäjätyökalut. Julkaisu tuo Linux-käyttäjille
+      uuden vakaan kokonaisuuden ja toimii samalla suunnannäyttäjänä tuleville
+      avoimen ekosysteemin ratkaisuille.

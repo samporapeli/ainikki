@@ -8,6 +8,7 @@ target_audience: >
   Testiajoa varten koottu uutisyleisö, joka tuntee teknologian ja
   tekoälyn peruskäsitteet.
 period: daily
+golden_examples_ref: golden_examples_v2.yaml
 
 steps:
   cluster:

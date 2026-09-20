@@ -96,6 +96,67 @@ sources:
     badge: Ars Technica
     site_url: https://arstechnica.com/
     feed_url: https://arstechnica.com/tag/ai/feed/
+  - key: arstechnica-linux
+    type: rss
+    pretty_name: Ars Technica (Linux)
+    badge: Ars Technica
+    site_url: https://arstechnica.com/tag/linux-2/
+    feed_url: https://arstechnica.com/tag/linux-2/feed/
+  - key: arstechnica-open-source
+    type: rss
+    pretty_name: Ars Technica (Open Source)
+    badge: Ars Technica
+    site_url: https://arstechnica.com/tag/open-source/
+    feed_url: https://arstechnica.com/tag/open-source/feed/
+  - key: arstechnica-android
+    type: rss
+    pretty_name: Ars Technica (Android)
+    badge: Ars Technica
+    site_url: https://arstechnica.com/tag/android-2/
+    feed_url: https://arstechnica.com/tag/android-2/feed/
+  - key: arstechnica-hardware
+    type: rss
+    pretty_name: Ars Technica (Hardware)
+    badge: Ars Technica
+    site_url: https://arstechnica.com/tag/hardware/
+    feed_url: https://arstechnica.com/tag/hardware/feed/
+  - key: arstechnica-privacy
+    type: rss
+    pretty_name: Ars Technica (Privacy)
+    badge: Ars Technica
+    site_url: https://arstechnica.com/tag/privacy/
+    feed_url: https://arstechnica.com/tag/privacy/feed/
+  - key: arstechnica-security
+    type: rss
+    pretty_name: Ars Technica (Security)
+    badge: Ars Technica
+    site_url: https://arstechnica.com/tag/security/
+    feed_url: https://arstechnica.com/tag/security/feed/
+  - key: arstechnica-firefox
+    type: rss
+    pretty_name: Ars Technica (Firefox)
+    badge: Ars Technica
+    site_url: https://arstechnica.com/tag/firefox-2/
+    feed_url: https://arstechnica.com/tag/firefox-2/feed/
+  - key: arstechnica-raspberry-pi
+    type: rss
+    pretty_name: Ars Technica (Raspberry Pi)
+    badge: Ars Technica
+    site_url: https://arstechnica.com/tag/raspberry-pi/
+    feed_url: https://arstechnica.com/tag/raspberry-pi/feed/
+  - key: arstechnica-steam-deck
+    type: rss
+    pretty_name: Ars Technica (Steam Deck)
+    badge: Ars Technica
+    site_url: https://arstechnica.com/tag/steam-deck/
+    feed_url: https://arstechnica.com/tag/steam-deck/feed/
+  - key: arstechnica-steam
+    type: rss
+    pretty_name: Ars Technica (Steam)
+    badge: Ars Technica
+    site_url: https://arstechnica.com/tag/steam/
+    feed_url: https://arstechnica.com/tag/steam/feed/
+
 
   - key: blog-google
     type: rss
@@ -103,6 +164,180 @@ sources:
     badge: Google
     site_url: https://blog.google/
     feed_url: https://blog.google/rss/
+  - key: lwn
+    type: rss
+    pretty_name: LWN.net
+    badge: LWN
+    site_url: https://lwn.net/
+    feed_url: https://lwn.net/headlines/rss
+  - key: phoronix
+    type: rss
+    pretty_name: Phoronix
+    badge: Phoronix
+    site_url: https://www.phoronix.com/
+    feed_url: https://www.phoronix.com/rss.php
+  - key: omgubuntu
+    type: rss
+    pretty_name: OMG! Ubuntu
+    badge: OMG Ubuntu
+    site_url: https://www.omgubuntu.co.uk/
+    feed_url: https://www.omgubuntu.co.uk/feed
+  - key: fedoramagazine
+    type: rss
+    pretty_name: Fedora Magazine
+    badge: Fedora
+    site_url: https://fedoramagazine.org/
+    feed_url: https://fedoramagazine.org/feed/
+  - key: archlinux-news
+    type: rss
+    pretty_name: Arch Linux News
+    badge: Arch
+    site_url: https://archlinux.org/news/
+    feed_url: https://archlinux.org/feeds/news/
+  - key: debian-micronews
+    type: rss
+    pretty_name: Debian Micronews
+    badge: Debian
+    site_url: https://micronews.debian.org/
+    feed_url: https://micronews.debian.org/feeds/atom.xml
+  - key: opensuse-news
+    type: rss
+    pretty_name: openSUSE News
+    badge: openSUSE
+    site_url: https://news.opensuse.org/
+    feed_url: https://news.opensuse.org/feed/
+  - key: linuxmint-blog
+    type: rss
+    pretty_name: Linux Mint Blog
+    badge: Mint
+    site_url: https://blog.linuxmint.com/
+    feed_url: https://blog.linuxmint.com/?feed=rss2
+  - key: gnome-planet
+    type: rss
+    pretty_name: Planet GNOME
+    badge: GNOME
+    site_url: https://planet.gnome.org/
+    feed_url: https://planet.gnome.org/rss20.xml
+  - key: gnome-foundation
+    type: rss
+    pretty_name: GNOME Foundation
+    badge: GNOME
+    site_url: https://foundation.gnome.org/
+    feed_url: https://foundation.gnome.org/news/feed/
+  - key: kde-planet
+    type: rss
+    pretty_name: Planet KDE
+    badge: KDE
+    site_url: https://planet.kde.org/
+    feed_url: https://planet.kde.org/rss20.xml
+  - key: mozilla-blog
+    type: rss
+    pretty_name: Mozilla Blog
+    badge: Mozilla
+    site_url: https://blog.mozilla.org/
+    feed_url: https://blog.mozilla.org/feed/
+  - key: mozilla-hacks
+    type: rss
+    pretty_name: Mozilla Hacks
+    badge: Mozilla
+    site_url: https://hacks.mozilla.org/
+    feed_url: https://hacks.mozilla.org/feed/
+  - key: blender
+    type: rss
+    pretty_name: Blender Foundation
+    badge: Blender
+    site_url: https://www.blender.org/
+    feed_url: https://www.blender.org/feed/
+  - key: documentfoundation
+    type: rss
+    pretty_name: The Document Foundation (LibreOffice)
+    badge: LibreOffice
+    site_url: https://blog.documentfoundation.org/
+    feed_url: https://blog.documentfoundation.org/feed/
+  - key: eff-deeplinks
+    type: rss
+    pretty_name: EFF Deeplinks
+    badge: EFF
+    site_url: https://www.eff.org/deeplinks
+    feed_url: https://www.eff.org/rss/updates.xml
+  - key: fsf-news
+    type: rss
+    pretty_name: Free Software Foundation
+    badge: FSF
+    site_url: https://www.fsf.org/news
+    feed_url: https://static.fsf.org/fsforg/rss/news.xml
+  - key: rust-blog
+    type: rss
+    pretty_name: Rust Blog
+    badge: Rust
+    site_url: https://blog.rust-lang.org/
+    feed_url: https://blog.rust-lang.org/feed.xml
+  - key: rust-inside
+    type: rss
+    pretty_name: Inside Rust
+    badge: Rust
+    site_url: https://blog.rust-lang.org/inside-rust/
+    feed_url: https://blog.rust-lang.org/inside-rust/feed.xml
+  - key: linuxfoundation-press
+    type: rss
+    pretty_name: Linux Foundation (Press)
+    badge: LF
+    site_url: https://www.linuxfoundation.org/press
+    feed_url: https://www.linuxfoundation.org/press/rss.xml
+  - key: apache-blog
+    type: rss
+    pretty_name: The ASF Blog
+    badge: Apache
+    site_url: https://news.apache.org/
+    feed_url: https://news.apache.org/feed/
+  - key: cncf-blog
+    type: rss
+    pretty_name: CNCF Blog
+    badge: CNCF
+    site_url: https://www.cncf.io/blog/
+    feed_url: https://www.cncf.io/feed/
+  - key: kubernetes-blog
+    type: rss
+    pretty_name: Kubernetes Blog
+    badge: K8s
+    site_url: https://kubernetes.io/blog/
+    feed_url: https://kubernetes.io/feed.xml
+  - key: this-week-in-rust
+    type: rss
+    pretty_name: This Week in Rust
+    badge: Rust
+    site_url: https://this-week-in-rust.org/
+    feed_url: https://this-week-in-rust.org/atom.xml
+  - key: kubeweekly
+    type: rss
+    pretty_name: KubeWeekly
+    badge: CNCF
+    site_url: https://www.cncf.io/kubeweekly/
+    feed_url: https://www.cncf.io/feed/?post_type=lf_kubeweekly
+  - key: distrowatch-weekly
+    type: rss
+    pretty_name: DistroWatch Weekly
+    badge: DistroWatch
+    site_url: https://distrowatch.com/weekly.php
+    feed_url: https://distrowatch.com/news/dww.xml
+  - key: distrowatch-daily
+    type: rss
+    pretty_name: DistroWatch (all news)
+    badge: DistroWatch
+    site_url: https://distrowatch.com/
+    feed_url: https://distrowatch.com/news/dw.xml
+  - key: rebble
+    type: rss
+    pretty_name: Rebel blog
+    badge: Rebel
+    site_url: https://repebble.com/
+    feed_url: https://repebble.com/blog/rss
+  - key: framework
+    type: rss
+    pretty_name: Framework
+    badge: Framework
+    site_url: https://frame.work/
+    feed_url: https://frame.work/fi/en/blog.rss
 
   - key: test-rss-a
     type: rss

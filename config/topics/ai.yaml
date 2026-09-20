@@ -5,6 +5,7 @@ target_audience: >
   ei ehdi lukea kaikkea itse. Ei tarvitse peruskäsitteiden selityksiä
   (esim. mitä on LLM, mitä on RAG).
 period: daily
+golden_examples_ref: golden_examples_v2.yaml
 
 topic_description: |
   Tekoäly

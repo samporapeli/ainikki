@@ -53,10 +53,12 @@ class ConfigPaths:
         self.models = config_dir / "models.yaml"
         self.topics_dir = config_dir / "topics"
         self.topic_config = self.topics_dir / f"{topic}.yaml"
-        path = config_dir / "personas" / f"{topic}_v1.yaml"
-        self.persona = path if path.exists() else config_dir / "personas" / "ainikki_v1.yaml"
+        self.persona = config_dir / "personas" / "ainikki_v1.yaml"
         self.guardrails = config_dir / "guardrails" / "guardrails_v1.yaml"
         self.golden_examples_dir = config_dir / "golden_examples"
+        topic_data = yaml.safe_load(self.topic_config.read_text()) or {}
+        golden_examples_ref = topic_data.get("golden_examples_ref", "golden_examples_v2.yaml")
+        self.golden_examples_path = self.golden_examples_dir / golden_examples_ref
         topic_overview_examples = config_dir / "overview_examples" / f"{topic}_v1.yaml"
         self.overview_examples = (
             topic_overview_examples if topic_overview_examples.exists()
@@ -335,7 +337,7 @@ def run_pipeline(
                                         config_paths.guardrails, llm_compose,
                                         topic=topic,
                                         target_audience=target_audience,
-                                        golden_examples_dir=config_paths.golden_examples_dir)
+                                        golden_examples_path=config_paths.golden_examples_path)
         all_warnings.extend(compose_result.warnings)
         step_durations["compose"] = round(perf_counter() - t0_compose, 2)
         logger.info("compose: %d items written (%.2fs)", len(compose_result.items), step_durations["compose"])
@@ -356,7 +358,7 @@ def run_pipeline(
                                                config_paths.guardrails, llm_compose,
                                                topic=topic,
                                                target_audience=target_audience,
-                                               golden_examples_dir=config_paths.golden_examples_dir)
+                                               golden_examples_path=config_paths.golden_examples_path)
                 all_warnings.extend(batch_compose.warnings)
                 compose_result.items.extend(batch_compose.items)
     finally:

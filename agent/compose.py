@@ -41,7 +41,6 @@ class Persona(BaseModel):
     tone_description: str
     voice_traits: list[str]
     avoid: list[str]
-    golden_examples_ref: str
 
     @classmethod
     def load(cls, path: Path) -> "Persona":
@@ -172,9 +171,9 @@ def compose_items(enriched: list[EnrichedCandidate], persona_path: Path,
                    guardrails_path: Path, llm_call: LlmCall,
                    topic: str = "",
                    target_audience: str = "",
-                   golden_examples_dir: Path = Path("config/golden_examples")) -> ComposeResult:
+                   golden_examples_path: Path = Path("config/golden_examples/golden_examples_v2.yaml")) -> ComposeResult:
     persona = Persona.load(persona_path)
-    golden_examples = GoldenExamplesConfig.load(golden_examples_dir / persona.golden_examples_ref)
+    golden_examples = GoldenExamplesConfig.load(golden_examples_path)
     guardrails = GuardrailsConfig.load(guardrails_path)
 
     system_prompt = build_compose_system_prompt(persona, golden_examples, guardrails, topic,

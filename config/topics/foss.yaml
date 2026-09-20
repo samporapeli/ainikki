@@ -1,0 +1,118 @@
+# Sources to use for the FOSS topic (keys from config/sources.yaml).
+public: true
+target_audience: >
+  Avoimista ohjelmistoista kiinnostunut harrastelija, joka haluaa seurata erityisesti Linux-maailmaa ja mitä FOSS-ekosysteemissä tapahtuu. Lukijalla on valmiiksi harrastuneisuutta — ei tarvitse selittää, mikä on Linux tai distro.
+period: weekly
+golden_examples_ref: foss_golden_examples_v1.yaml
+
+topic_description: |
+  Kaikki FOSS-aiheeseen kuuluvat julkaisut liittyvät avoimen lähdekoodin ohjelmistoihin ja laitteisiin.
+  Näitä ovat esimerkiksi uudet avoimen koodin ohjelmisto- ja laitejulkaisut, merkittävät tapahtumat, avoimen teknologian käyttöönotto, arviot, vaikutus yhteiskuntaan, nimitykset, kiistat, ongelmat ja muut mielenkiintoiset aiheeseen liittyvät uutiset.
+
+  Pidä ehdokas mukana, jos avoin teknologia on jutun pääaihe tai merkittävä
+  mahdollistaja, kohde, sovellus tai yhteiskunnallisen muutoksen aiheuttaja.
+
+  Esimerkkejä:
+  - PIDÄ: "Linux kernel 6.17 brings new hardware support and security fixes"
+    (Avoimen käyttöjärjestelmäytimen kehitys on jutun pääaihe.)
+  - PIDÄ: "Fedora releases a new version with major desktop and tooling updates"
+    (Avoimen Linux-jakelun julkaisu koskee suoraan FOSS-ekosysteemiä.)
+  - PIDÄ: "GNOME Foundation announces changes to project governance"
+    (FOSS-projektin yhteisöä ja päätöksentekoa koskeva muutos on jutun aihe.)
+  - PIDÄ: "LibreOffice adds new interoperability features in its latest release"
+    (Avoimen ohjelmiston merkittävä julkaisu on jutun pääaihe.)
+  - PIDÄ: "Mozilla publishes a new Firefox security and privacy feature"
+    (Avoimen selainekosysteemin kehitys on jutun pääaihe.)
+  - JÄTÄ POIS: "Apple unveils a new generation of proprietary laptop hardware"
+    (Laiteuutinen ei liity avoimeen teknologiaan.)
+  - JÄTÄ POIS: "A company adds an open-source dependency to its internal service"
+    (Avoin ohjelmisto on jutussa vain sivuseikka.)
+  - JÄTÄ POIS: "Food delivery company expands to three new cities"
+    (Kyseessä on liiketoiminnan laajentuminen, eikä jutussa käsitellä FOSSia.)
+
+  Älä arvioi uutisen merkittävyyttä liian tiukasti tässä vaiheessa.
+  Pisteytysvaihe arvioi myöhemmin uutisarvon ja vaikutuksen laajuuden.
+steps:
+  filter_topic:
+    models:
+      - provider: local
+        model: "gemma4:12b"
+        temperature: 0.6
+      - provider: openrouter
+        model: "google/gemma-4-31b-it"
+  cluster:
+    models:
+      - provider: local
+        model: "gemma4:12b"
+      - provider: openrouter
+        model: "google/gemma-4-31b-it"
+  score:
+    models:
+      - provider: local
+        model: "qwen3.6:35b-a3b"
+      - provider: openrouter
+        model: "google/gemma-4-31b-it"
+  compose:
+    models:
+      - provider: local
+        model: "gemma4:26b"
+      - provider: openrouter
+        model: "google/gemma-4-31b-it"
+  overview:
+    models:
+      - provider: local
+        model: "gemma4:26b"
+      - provider: openrouter
+        model: "google/gemma-4-31b-it"
+
+tts:
+  enabled: true
+  provider: google-cloud
+  voice: fi-FI-Chirp3-HD-Kore
+sources:
+  - hn
+  - yle-tiede
+  - yle-internet
+  - yle-mot
+  - yle-talous
+  - yle-kotimaa
+  - yle-ulkomaat
+  - yle-politiikka
+  - yle-kolumnit
+  - evanhahn
+  - simonwillison
+  - arstechnica
+  - blog-google
+  - lwn
+  - phoronix
+  - omgubuntu
+  - fedoramagazine
+  - archlinux-news
+  - debian-micronews
+  - opensuse-news
+  - linuxmint-blog
+  - gnome-planet
+  - gnome-foundation
+  - kde-planet
+  - mozilla-blog
+  - mozilla-hacks
+  - blender
+  - documentfoundation
+  - eff-deeplinks
+  - fsf-news
+  - rust-blog
+  - rust-inside
+  - linuxfoundation-press
+  - apache-blog
+  - cncf-blog
+  - kubernetes-blog
+  - this-week-in-rust
+  - kubeweekly
+  - distrowatch-weekly
+  - distrowatch-daily
+  - rebble
+  - framework
+  - arstechnica-linux
+  - arstechnica-open-source
+  - arstechnica-firefox
+  - arstechnica-raspberry-pi

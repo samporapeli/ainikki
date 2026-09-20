@@ -1,0 +1,17 @@
+version: v1
+examples:
+  - style: asiallinen
+    source: "Linux-ytimen uusi versio, GNOMEn hallinto ja Firefoxin tietoturvapäivitys"
+    digest_topic: "Linux-ytimen kehitys ja FOSS-projektien ajankohtaiset muutokset"
+  - style: asiallinen
+    source: "Fedora, openSUSE ja Linux Mint julkaisivat päivityksiä"
+    digest_topic: "Linux-jakelut uudistuvat eri painotuksin"
+  - style: asiallinen
+    source: "LibreOffice parantaa yhteensopivuutta ja Mozilla vahvistaa Firefoxin yksityisyyttä"
+    digest_topic: "Avoimet sovellukset keskittyvät yhteentoimivuuteen ja yksityisyyteen"
+  - style: asiallinen
+    source: "Rustin kehitys, avoimet työkalut ja projektien rahoitus nousivat viikon aiheiksi"
+    digest_topic: "FOSS-ekosysteemissä kehitetään työkaluja ja etsitään kestävää rahoitusta"
+  - style: napakka poikkeus
+    source: "Linux-ytimen kehittäjät torjuivat laitteistovalmistajan ehdotuksen"
+    digest_topic: "Ytimen ylläpitäjät eivät hyväksyneet valmistajan oikopolkua"
