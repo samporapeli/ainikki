@@ -60,18 +60,27 @@ all topics, while `site/deploy.sh` publishes only topics with `public: true`.
 
 ## Automation
 
-### Daily digest (AI, daily at 06:30)
+### Scheduled digests
+
+Use the topic name as the only scheduler argument:
 
     OPENROUTER_API_KEY='sk-...' DEPLOY_TARGET='user@host:/var/www/ainikki' \
-      TELEGRAM_BOT_TOKEN='...' TELEGRAM_CHAT_ID_AI='...' TELEGRAM_ERROR_CHAT_ID='...' \
-      /path/to/ainikki/daily.sh >> /path/to/ainikki-cron.log 2>&1
+      TELEGRAM_BOT_TOKEN='...' TELEGRAM_ERROR_CHAT_ID='...' \
+      /path/to/ainikki/run_digest.sh foss >> /path/to/ainikki-cron.log 2>&1
 
-### Weekly digest (Teknologia, Monday at 06:30)
+The runner reads the topic's `period` from `config/topics/{topic}.yaml`.
+That controls the lookback window and output label; cron controls how often
+the topic runs. A weekly topic therefore uses the seven calendar days ending
+yesterday, even if cron runs it more frequently.
 
-    OPENROUTER_API_KEY='sk-...' DEPLOY_TARGET='user@host:/var/www/ainikki' \
-      TELEGRAM_BOT_TOKEN='...' TELEGRAM_CHAT_ID_TEKNOLOGIA='...' TELEGRAM_ERROR_CHAT_ID='...' \
-      /path/to/ainikki/weekly.sh >> /path/to/ainikki-cron.log 2>&1
+For example, separate weekly topics can run on separate days:
 
+    30 08 * * 0 /path/to/ainikki/run_digest.sh foss
+    30 08 * * 1 /path/to/ainikki/run_digest.sh teknologia
+
+Each topic declares its Telegram chat environment variable in its topic
+configuration, for example `TELEGRAM_CHAT_ID_FOSS`. `daily.sh` and
+`weekly.sh` remain compatibility wrappers for the AI and Teknologia topics.
 Set keys and target directly in the cron entry, not in profile files.
 Telegram is optional: if bot token and chat ID are missing, Telegram
 steps are silently skipped.
@@ -85,8 +94,9 @@ steps are silently skipped.
 | `GOOGLE_CLOUD_API_TOKEN` | No | API key for Google Cloud Text-to-Speech audio synthesis |
 | `DEPLOY_TARGET` | Yes | `user@host:/path` for rsync deploy |
 | `TELEGRAM_BOT_TOKEN` | No | Bot token for Telegram notifications |
-| `TELEGRAM_CHAT_ID_AI` | No | Chat ID for daily AI digest channel |
-| `TELEGRAM_CHAT_ID_TEKNOLOGIA` | No | Chat ID for weekly Teknologia digest channel |
+| `TELEGRAM_CHAT_ID_AI` | No | Chat ID for the AI digest channel |
+| `TELEGRAM_CHAT_ID_TEKNOLOGIA` | No | Chat ID for the Teknologia digest channel |
+| `TELEGRAM_CHAT_ID_FOSS` | No | Chat ID for the FOSS digest channel |
 | `TELEGRAM_ERROR_CHAT_ID` | No | Chat ID for error alerts (shared across topics) |
 ## Pipeline steps
 

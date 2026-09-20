@@ -9,6 +9,7 @@ target_audience: >
   tekoälyn peruskäsitteet.
 period: daily
 golden_examples_ref: golden_examples_v2.yaml
+telegram_channel_id_env: TELEGRAM_CHAT_ID_TEST
 
 steps:
   cluster:

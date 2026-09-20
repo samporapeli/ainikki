@@ -1,4 +1,4 @@
-# Shared helpers for daily.sh and weekly.sh.
+# Shared helpers for run_digest.sh and compatibility wrappers.
 # Source with: source "$(dirname "$0")/lib.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

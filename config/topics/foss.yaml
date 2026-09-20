@@ -4,6 +4,7 @@ target_audience: >
   Avoimista ohjelmistoista kiinnostunut harrastelija, joka haluaa seurata erityisesti Linux-maailmaa ja mitä FOSS-ekosysteemissä tapahtuu. Lukijalla on valmiiksi harrastuneisuutta — ei tarvitse selittää, mikä on Linux tai distro.
 period: weekly
 golden_examples_ref: foss_golden_examples_v1.yaml
+telegram_channel_id_env: TELEGRAM_CHAT_ID_FOSS
 
 topic_description: |
   Kaikki FOSS-aiheeseen kuuluvat julkaisut liittyvät avoimen lähdekoodin ohjelmistoihin ja laitteisiin.

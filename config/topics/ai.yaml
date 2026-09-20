@@ -6,6 +6,7 @@ target_audience: >
   (esim. mitä on LLM, mitä on RAG).
 period: daily
 golden_examples_ref: golden_examples_v2.yaml
+telegram_channel_id_env: TELEGRAM_CHAT_ID_AI
 
 topic_description: |
   Tekoäly
