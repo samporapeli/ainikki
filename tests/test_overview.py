@@ -26,6 +26,14 @@ def test_build_overview_prompt_uses_only_headline_and_summary():
     assert user_prompt.index("1. Tutkimus yllättää") < user_prompt.index("2. Uusi malli julkaistu")
 
 
+def test_overview_prompt_does_not_infer_unprovided_context():
+    items = [_make_news_item("Työkalu julkaistiin", "Lisenssistä ei kerrota.", rank=1)]
+    system_prompt, _ = build_overview_prompt(items, "testi-aihe")
+
+    assert "Älä päättele otsikoiden tai yhteenvetojen ulkopuolelta asioiden" in system_prompt
+    assert "älä nosta sitä aiheen pääesimerkiksi" in system_prompt
+
+
 def test_generate_overview_happy_path():
     items = [_make_news_item("Juttu A", "Kuvaus A.", rank=1),
              _make_news_item("Juttu B", "Kuvaus B.", rank=2)]

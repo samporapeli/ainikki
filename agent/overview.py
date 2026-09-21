@@ -87,7 +87,6 @@ def _build_system_prompt(topic: str, examples: list[OverviewExample],
                  for e in style_examples]
         example_sections.append(f"{style.capitalize()}:\n" + "\n".join(lines))
     examples_text = "\n\n".join(example_sections)
-
     previous_section = ""
     if previous_overviews:
         lines = []
@@ -148,6 +147,12 @@ Tee kaksi asiaa:
    - Käytä vain annettuja otsikoita ja yhteenvetoja. Älä lisää tietoa,
      jota niissä ei ole, äläkä arvaile lähteissä mainitsemattomia syitä
      tai seurauksia.
+   - Älä päättele otsikoiden tai yhteenvetojen ulkopuolelta asioiden
+     ominaisuuksia, luokituksia, syy-seuraussuhteita tai niiden yhteyttä
+     koosteaiheeseen.
+   - Jos jutun yhteys koosteaiheeseen ei käy annetusta sisällöstä ilmi,
+     älä nosta sitä aiheen pääesimerkiksi tai rakenna sen varaan yhteistä
+     teemaa.
 
 Esimerkkejä (asiallinen oletus ja harvinainen napakka poikkeus):
 {examples_text}

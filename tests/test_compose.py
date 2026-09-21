@@ -38,11 +38,79 @@ def test_system_prompt_includes_all_three_configs():
     assert "clickbait" in prompt  # persona.avoid
     assert "Käytä VAIN annetussa lähdemateriaalissa mainittuja faktoja." in prompt  # guardrails rule
     assert "AGENTS.md yleistyy koodausagenttien yhteisenä tiedostomuotona" in prompt  # golden example
-    assert '{"otsikko"' in prompt  # JSON format requirement
+    assert '"otsikko"' in prompt  # JSON format requirement
     # v2: Finnish language rules
     assert "yhdyssanat" in prompt
     assert "desimaalipilkku" in prompt or "desimaalierottimena" in prompt
     assert "Oxford" in prompt
+
+
+def test_compose_prompt_avoids_unverified_contextual_claims():
+    persona = Persona.load(PERSONA_PATH)
+    golden_examples = GoldenExamplesConfig.load(GOLDEN_EXAMPLES_PATH)
+    guardrails = GuardrailsConfig.load(GUARDRAILS_PATH)
+
+    prompt = build_compose_system_prompt(
+        persona, golden_examples, guardrails, "testi-aihe", "Testiyleisö"
+    )
+
+    assert "Älä päättele lähteen ulkopuolelta asioiden ominaisuuksia" in prompt
+    assert "neutraali" in prompt
+    assert "sopivuus" in prompt
+    assert "perustelu" in prompt
+
+
+def test_compose_drops_topic_irrelevant_item():
+    item = _make_enriched("Uusi macOS julkaistu", "Apple julkaisi uuden käyttöjärjestelmän.", rank=1)
+
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
+        return json.dumps({
+            "sopivuus": {
+                "sopii": False,
+                "perustelu": "Juttu käsittelee suljettua käyttöjärjestelmää.",
+            },
+            "otsikko": "Uusi macOS julkaistu",
+            "tiivistelmä": "Apple julkaisi uuden käyttöjärjestelmän.",
+        }), {}
+
+    result = compose_items(
+        [item], PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
+        topic="foss",
+        target_audience="FOSS-harrastaja",
+        topic_description="Avoimet ohjelmistot ja laitteet.",
+        golden_examples_path=GOLDEN_EXAMPLES_PATH,
+    )
+
+    assert result.items == []
+    assert result.warnings == []
+    assert len(result.off_topic_stories) == 1
+    story = result.off_topic_stories[0]
+    assert story.title == "Uusi macOS julkaistu"
+    assert story.summary == "Apple julkaisi uuden käyttöjärjestelmän."
+    assert story.reason == "Juttu käsittelee suljettua käyttöjärjestelmää."
+    assert story.url
+
+
+def test_compose_relevant_item_gets_empty_off_topic_list():
+    item = _make_enriched("Fedora julkaisu", "Fedora julkaisi uuden version.", rank=1)
+
+    def mock_llm(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
+        return json.dumps({
+            "sopivuus": {"sopii": True, "perustelu": None},
+            "otsikko": "Fedora julkaisi uuden version",
+            "tiivistelmä": "Fedora julkaisi uuden version.",
+        }), {}
+
+    result = compose_items(
+        [item], PERSONA_PATH, GUARDRAILS_PATH, mock_llm,
+        topic="foss",
+        target_audience="FOSS-harrastaja",
+        topic_description="Avoimet ohjelmistot ja laitteet.",
+        golden_examples_path=GOLDEN_EXAMPLES_PATH,
+    )
+
+    assert len(result.items) == 1
+    assert result.off_topic_stories == []
 
 
 def test_compose_uses_fallback_content_source():

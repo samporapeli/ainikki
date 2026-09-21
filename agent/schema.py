@@ -99,6 +99,16 @@ class DroppedStory(BaseModel):
     url: str
 
 
+class OffTopicStory(BaseModel):
+    """Story that passed enrich but was judged to be outside the topic at
+    the compose step. Carries the neutral summary and the rejection reason
+    so the reader can see what was excluded and why."""
+    title: str
+    url: str
+    summary: str
+    reason: str
+
+
 class NewsItem(BaseModel):
     headline: str
     summary: str
@@ -140,6 +150,7 @@ class Briefing(BaseModel):
     items: list[NewsItem]
     meta: GenerationMeta
     dropped_stories: list[DroppedStory] = Field(default_factory=list)
+    off_topic_stories: list[OffTopicStory] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     tts_text: list[str] = Field(default_factory=list)
 

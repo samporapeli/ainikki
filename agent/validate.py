@@ -60,6 +60,8 @@ def assemble_briefing(topic: str, period: Period, period_start: date, period_end
         digest_topic=overview_result.digest_topic,
         overview=overview_result.overview,
         items=compose_result.items, meta=meta,
-        dropped_stories=dropped_stories or [], warnings=all_warnings,
+        dropped_stories=dropped_stories or [],
+        off_topic_stories=compose_result.off_topic_stories,
+        warnings=all_warnings,
         tts_text=tts_text or [],
     )

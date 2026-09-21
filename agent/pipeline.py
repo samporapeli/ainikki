@@ -337,6 +337,7 @@ def run_pipeline(
                                         config_paths.guardrails, llm_compose,
                                         topic=topic,
                                         target_audience=target_audience,
+                                        topic_description=topic_config.get("topic_description", topic),
                                         golden_examples_path=config_paths.golden_examples_path)
         all_warnings.extend(compose_result.warnings)
         step_durations["compose"] = round(perf_counter() - t0_compose, 2)
@@ -358,6 +359,7 @@ def run_pipeline(
                                                config_paths.guardrails, llm_compose,
                                                topic=topic,
                                                target_audience=target_audience,
+                                               topic_description=topic_config.get("topic_description", topic),
                                                golden_examples_path=config_paths.golden_examples_path)
                 all_warnings.extend(batch_compose.warnings)
                 compose_result.items.extend(batch_compose.items)

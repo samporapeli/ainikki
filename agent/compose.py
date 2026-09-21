@@ -23,7 +23,7 @@ import yaml
 from pydantic import BaseModel, Field, ValidationError
 
 from agent.json_utils import strip_code_fences
-from agent.schema import EnrichedCandidate, NewsItem, RawItem, Source
+from agent.schema import EnrichedCandidate, NewsItem, OffTopicStory, RawItem, Source
 from agent.cluster import LlmCall
 from random import choice
 
@@ -78,7 +78,8 @@ class GuardrailsConfig(BaseModel):
 
 def build_compose_system_prompt(persona: Persona, golden_examples: GoldenExamplesConfig,
                                  guardrails: GuardrailsConfig, topic: str,
-                                 target_audience: str) -> str:
+                                 target_audience: str,
+                                 topic_description: str = "") -> str:
     voice = "\n".join(f"- {t}" for t in persona.voice_traits)
     avoid = "\n".join(f"- {a}" for a in persona.avoid)
     rules = "\n".join(f"- {r}" for r in guardrails.rules)
@@ -87,6 +88,9 @@ def build_compose_system_prompt(persona: Persona, golden_examples: GoldenExample
     return f"""Kirjoitat {topic}-aiheiselle uutiskoosteelle tekstiä persoonan "{persona.name}" äänellä.
 
 Kohdeyleisö: {target_audience}
+
+Aiheen kuvaus ja rajaus:
+{topic_description.strip() or topic}
 
 Sävy: {persona.tone_description}
 
@@ -103,21 +107,40 @@ Esimerkkejä aiemmista julkaisuistasi (pidä sama ääni):
 {examples}
 
 Tehtävä:
+- tarkista otsikon, URL:n ja sisällön perusteella, kuuluuko juttu annettuun
+  aiheeseen ja sen rajaukseen
+- sopivuus.sopii: true, jos jutun pääaihe kuuluu rajaukseen; muuten false
+- sopivuus.perustelu: jos sopii on false, kirjoita lyhyt suomenkielinen perustelu
+  hylkäykselle annetun sisällön perusteella; muuten null
 - otsikko: suomenkielinen otsikko, enintään 12 sanaa
 - tiivistelmä: suomenkielinen tiivistelmä, 2–4 virkettä
 
+Arvioi aiheeseen kuulumista otsikon, URL:n ja sisällön yhteiskuvan perusteella.
+Selkeä aiheeseen viittaava signaali otsikossa tai URL:ssa riittää, vaikka itse
+sisältö olisi niukka. Niukka sisältö ei yksin ole syy hylätä juttua: kirjoita
+tällöin tiivistelmä vain siitä, mitä on saatavilla, ja mainitse tarvittaessa,
+että lähde tarjoaa niukasti lisätietoa. Hylkää juttu vain, jos se käsittelee
+selvästi aiheen ulkopuolista asiaa.
+
+Jos sopii on false, älä keksi jutulle yhteyttä aiheeseen. Täytä silti otsikko
+ja tiivistelmä neutraalisti lähteen perusteella, jotta hylkäyksen syy voidaan
+kirjata.
+
 Käytä vain annettua sisältöä. Älä lisää tietoa, jota lähde ei mainitse.
+Älä päättele lähteen ulkopuolelta asioiden ominaisuuksia, luokituksia,
+syy-seuraussuhteita tai niiden yhteyttä koosteen aiheeseen.
 Tekninen enimmäispituus on otsikolle {MAX_HEADLINE_CHARS} merkkiä ja
 tiivistelmälle {MAX_SUMMARY_CHARS} merkkiä.
 
 Vastaa VAIN JSON-muodossa, ei muuta tekstiä:
-{{"otsikko": "...", "tiivistelmä": "..."}}"""
+{{"sopivuus": {{"sopii": true, "perustelu": null}}, "otsikko": "...", "tiivistelmä": "..."}}"""
 
 
 
 def build_compose_user_prompt(item: EnrichedCandidate) -> str:
     content_source = item.content_source or item.items[0]
     return f"""Alkuperäinen otsikko: {content_source.title}
+Alkuperäinen URL: {content_source.url}
 
 Sisältö:
 {item.content}"""
@@ -125,7 +148,13 @@ Sisältö:
 
 # --- Execution ----------------------------------------------------------
 
+class Sopivuus(BaseModel):
+    sopii: bool = True
+    perustelu: str | None = None
+
+
 class ComposeResponse(BaseModel):
+    sopivuus: Sopivuus = Field(default_factory=Sopivuus)
     headline: str = Field(validation_alias="otsikko")
     summary: str = Field(validation_alias="tiivistelmä")
 
@@ -136,6 +165,7 @@ class ComposeResult(NamedTuple):
     persona_id: str
     guardrails_version: str
     golden_examples_version: str
+    off_topic_stories: list[OffTopicStory] = []
     persona_path: Optional[Path] = None
 
 
@@ -171,16 +201,18 @@ def compose_items(enriched: list[EnrichedCandidate], persona_path: Path,
                    guardrails_path: Path, llm_call: LlmCall,
                    topic: str = "",
                    target_audience: str = "",
+                   topic_description: str = "",
                    golden_examples_path: Path = Path("config/golden_examples/golden_examples_v2.yaml")) -> ComposeResult:
     persona = Persona.load(persona_path)
     golden_examples = GoldenExamplesConfig.load(golden_examples_path)
     guardrails = GuardrailsConfig.load(guardrails_path)
 
     system_prompt = build_compose_system_prompt(persona, golden_examples, guardrails, topic,
-                                                 target_audience)
+                                                 target_audience, topic_description)
 
     news_items: list[NewsItem] = []
     warnings: list[str] = []
+    off_topic_stories: list[OffTopicStory] = []
 
     for item in enriched:
         content_source = item.content_source or item.items[0]
@@ -219,6 +251,17 @@ def compose_items(enriched: list[EnrichedCandidate], persona_path: Path,
                 warnings.append(msg)
                 continue
 
+        if not response.sopivuus.sopii:
+            reason = (response.sopivuus.perustelu or "").strip() or "Juttu ei kuulu aiheen rajaukseen."
+            logger.warning("compose: aiheeseen sopimaton juttu '%s' - %s", response.headline, reason)
+            off_topic_stories.append(OffTopicStory(
+                title=response.headline,
+                url=str(content_source.url),
+                summary=response.summary,
+                reason=reason,
+            ))
+            continue
+
         news_items.append(NewsItem(
             headline=response.headline,
             summary=response.summary,
@@ -232,6 +275,7 @@ def compose_items(enriched: list[EnrichedCandidate], persona_path: Path,
         items=news_items, warnings=warnings,
         persona_id=persona.id, guardrails_version=guardrails.version,
         golden_examples_version=golden_examples.version,
+        off_topic_stories=off_topic_stories,
         persona_path=persona_path,
     )
 
