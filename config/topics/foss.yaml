@@ -37,16 +37,20 @@ steps:
   filter_topic:
     models:
       - provider: local
-        model: "gemma4:12b"
+        model: "qwen3.5:9b"
+        thinking: false
         temperature: 0.6
       - provider: openrouter
         model: "google/gemma-4-31b-it"
+        thinking: false
   cluster:
     models:
       - provider: local
-        model: "gemma4:12b"
+        model: "qwen3.5:9b"
+        thinking: false
       - provider: openrouter
         model: "google/gemma-4-31b-it"
+        thinking: false
   score:
     models:
       - provider: local
@@ -57,14 +61,18 @@ steps:
     models:
       - provider: local
         model: "gemma4:26b"
+        thinking: false
       - provider: openrouter
-        model: "google/gemma-4-31b-it"
+        model: "mistralai/mistral-medium-3-5"
+        thinking: false
   overview:
     models:
       - provider: local
         model: "gemma4:26b"
+        thinking: false
       - provider: openrouter
-        model: "google/gemma-4-31b-it"
+        model: "mistralai/mistral-medium-3-5"
+        thinking: false
 
 tts:
   enabled: true
@@ -72,14 +80,6 @@ tts:
   voice: fi-FI-Chirp3-HD-Kore
 sources:
   - hn
-  - yle-tiede
-  - yle-internet
-  - yle-mot
-  - yle-talous
-  - yle-kotimaa
-  - yle-ulkomaat
-  - yle-politiikka
-  - yle-kolumnit
   - evanhahn
   - simonwillison
   - arstechnica
