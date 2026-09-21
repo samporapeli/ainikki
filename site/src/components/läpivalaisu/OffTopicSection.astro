@@ -1,0 +1,27 @@
+---
+import StoryCard from '../StoryCard.astro';
+
+interface OffTopicStory {
+  url: string;
+  title: string;
+  summary: string;
+  reason: string;
+}
+
+const { stories = [] } = Astro.props as { stories?: OffTopicStory[] };
+---
+
+<h2>Aiheeseen kuulumattomat</h2>
+<div class="story-list">
+  {stories.map(story => (
+    <StoryCard
+      item={{
+        headline: story.title,
+        summary: story.summary,
+        sources: [{ url: story.url, title: story.title }],
+        rank: 0,
+        reason: story.reason,
+      }}
+    />
+  ))}
+</div>

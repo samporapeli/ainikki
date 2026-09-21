@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import Layout from '../../../layouts/Layout.astro';
 import ClusterSection from '../../../components/läpivalaisu/ClusterSection.astro';
 import DroppedSection from '../../../components/läpivalaisu/DroppedSection.astro';
+import OffTopicSection from '../../../components/läpivalaisu/OffTopicSection.astro';
+import WarningsSection from '../../../components/läpivalaisu/WarningsSection.astro';
 import FunnelStep from '../../../components/läpivalaisu/FunnelStep.astro';
 import NavigationControls from '../../../components/läpivalaisu/NavigationControls.astro';
 import StoryListSection from '../../../components/läpivalaisu/StoryListSection.astro';
@@ -230,7 +232,21 @@ const audioUrl = ttsHasAudio
     <StoryListSection items={output.items ?? []} scoredCandidates={droppedCandidates} cutoffRank={scoreCutoff} />
   </section>
 
-  <section id="dropped" class="section">
-    <DroppedSection droppedStories={output.dropped_stories as Array<{ url: string; title?: string }> | undefined} warnings={output.warnings} />
-  </section>
+  {(output.dropped_stories?.length ?? 0) > 0 && (
+    <section id="dropped" class="section">
+      <DroppedSection droppedStories={output.dropped_stories as Array<{ url: string; title?: string }> | undefined} />
+    </section>
+  )}
+
+  {(output.off_topic_stories?.length ?? 0) > 0 && (
+    <section id="off-topic" class="section">
+      <OffTopicSection stories={output.off_topic_stories as Array<{ url: string; title: string; summary: string; reason: string }>} />
+    </section>
+  )}
+
+  {(output.warnings?.length ?? 0) > 0 && (
+    <section id="warnings" class="section">
+      <WarningsSection warnings={output.warnings} />
+    </section>
+  )}
 </Layout>

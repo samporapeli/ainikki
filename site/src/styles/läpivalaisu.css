@@ -291,20 +291,6 @@
     margin-right: 0.25rem;
   }
 
-  .story-summary-details {
-    margin-bottom: 0.75rem;
-  }
-
-  .story-summary-details summary {
-  }
-
-  .story-summary-text {
-    color: var(--fg-muted);
-    font-size: 0.95rem;
-    line-height: 1.65;
-    margin: 0.5rem 0 0;
-  }
-
   .story-reason {
     font-size: 0.85rem;
     color: var(--fg-subtle);
@@ -349,34 +335,6 @@
     color: var(--fg-muted);
   }
 
-  .story-sources {
-    font-size: 0.85rem;
-    color: var(--fg-subtle);
-  }
-
-  .sources-label {
-    font-size: 0.85rem;
-    color: var(--fg-muted);
-    font-weight: 600;
-    display: block;
-    margin-bottom: 0.35rem;
-  }
-
-  .source-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  .source-list li {
-    font-size: 0.85rem;
-    margin-bottom: 0.25rem;
-    display: flex;
-    align-items: baseline;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-  }
-
   /* Dropped & Warnings styles matching Warnings.astro */
   .dropped {
     margin-top: 2rem;
@@ -400,6 +358,7 @@
   .dropped-list li {
     margin-bottom: 0.35rem;
   }
+
 
   .warnings {
     margin-top: 1.5rem;

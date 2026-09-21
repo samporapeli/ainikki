@@ -2,7 +2,8 @@
 interface Source {
   url: string;
   title: string;
-  source_type: string;
+  source_badge?: string;
+  source_type?: string;
 }
 
 interface NewsItem {
@@ -10,22 +11,41 @@ interface NewsItem {
   summary: string;
   sources: Source[];
   rank: number;
+  selection_reason?: string;
+  reason?: string;
 }
 
-const { item } = Astro.props as { item: NewsItem };
+const { item, showRank = false, showAllSources = false } = Astro.props as {
+  item: NewsItem;
+  showRank?: boolean;
+  showAllSources?: boolean;
+};
 
-const primarySource = item.sources[0];
-const sourceHost = primarySource ? new URL(primarySource.url).hostname : null;
+const sources = showAllSources ? item.sources : item.sources.slice(0, 1);
+
+function hostname(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
 ---
 
 <article class="story">
-  <h2>{item.headline}</h2>
+  <h2>{showRank && <span class="rank">#{item.rank}</span>}{item.headline}</h2>
   <p class="summary">{item.summary}</p>
-  {primarySource && (
-    <p class="source">
-      <a href={primarySource.url} target="_blank" rel="noopener">{sourceHost} ↗</a>
-    </p>
+  {item.selection_reason && (
+    <p class="selection-reason"><span class="reason-label">Valinnan peruste:</span> {item.selection_reason}</p>
   )}
+  {item.reason && (
+    <p class="reason"><span class="reason-label">Perustelu:</span> <em>{item.reason}</em></p>
+  )}
+  {sources.map(source => (
+    <p class="source">
+      <a href={source.url} target="_blank" rel="noopener">{hostname(source.url)} ↗</a>
+    </p>
+  ))}
 </article>
 
 <style>
@@ -41,10 +61,37 @@ const sourceHost = primarySource ? new URL(primarySource.url).hostname : null;
     margin-bottom: 0.5rem;
   }
 
+  .rank {
+    color: var(--fg-subtle);
+    font-weight: 500;
+    margin-right: 0.35rem;
+  }
+
   .summary {
     color: var(--fg-muted);
     font-size: 0.95rem;
     line-height: 1.65;
+    margin-bottom: 0.5rem;
+  }
+
+  .reason {
+    color: var(--fg-subtle);
+    font-size: 0.85rem;
+    font-style: italic;
+    line-height: 1.5;
+    padding: 0.4rem 0 0.4rem 0.75rem;
+    border-left: 2px solid var(--border);
+    margin-bottom: 0.75rem;
+  }
+
+  .reason-label {
+    font-weight: 600;
+  }
+
+  .selection-reason {
+    color: var(--fg-subtle);
+    font-size: 0.85rem;
+    line-height: 1.55;
     margin-bottom: 0.5rem;
   }
 

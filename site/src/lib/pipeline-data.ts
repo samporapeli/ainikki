@@ -65,6 +65,7 @@ export type BriefingOutput = {
   items?: BriefingItem[];
   tts_text?: string | string[];
   dropped_stories?: unknown[];
+  off_topic_stories?: unknown[];
   warnings?: string[];
 };
 

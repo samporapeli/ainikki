@@ -126,6 +126,24 @@ const nextBriefing = briefing._next || null;
       .map((item: any) => <StoryCard item={item} />)}
   </section>
 
+  {(briefing.off_topic_stories ?? []).length > 0 && (
+    <>
+      <p class="stories-label">Aiheeseen kuulumattomat</p>
+      <hr class="stories-rule" />
+      <section class="stories">
+        {(briefing.off_topic_stories as any[]).map((s: any) => (
+          <StoryCard item={{
+            headline: s.title,
+            summary: s.summary,
+            sources: [{ url: s.url, title: s.title }],
+            rank: 0,
+            reason: s.reason,
+          }} />
+        ))}
+      </section>
+    </>
+  )}
+
   <Warnings droppedStories={briefing.dropped_stories} />
 
   <div class="digest-meta">
