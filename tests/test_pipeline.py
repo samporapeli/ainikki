@@ -63,6 +63,12 @@ def _make_llm_handler(score_min=3, score_max=10):
         if is_anthropic:
             return httpx.Response(200, json={"content": [{"type": "text", "text": content}]},
                                    headers={"x-request-id": "test"})
+        if request.url.path.endswith("/api/chat"):
+            return httpx.Response(200, json={
+                "message": {"role": "assistant", "content": content},
+                "prompt_eval_count": 100,
+                "eval_count": 50,
+            })
         return httpx.Response(200, json={
             "choices": [{"message": {"content": content}}],
             "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150, "cost": 0.0002},
@@ -203,6 +209,12 @@ def test_pipeline_raises_on_critical_score_failure(tmp_path):
         if is_anthropic:
             return httpx.Response(200, json={"content": [{"type": "text", "text": content}]},
                                    headers={"x-request-id": "test"})
+        if request.url.path.endswith("/api/chat"):
+            return httpx.Response(200, json={
+                "message": {"role": "assistant", "content": content},
+                "prompt_eval_count": 100,
+                "eval_count": 50,
+            })
         return httpx.Response(200, json={
             "choices": [{"message": {"content": content}}],
             "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150, "cost": 0.0002},

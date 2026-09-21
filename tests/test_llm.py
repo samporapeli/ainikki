@@ -1,6 +1,6 @@
 """Tests for ``agent/llm.py``.
 
-Every test that exercises HTTP (``_post_openai_compatible`` or
+Every test that exercises HTTP (``_post_chat_completion`` or
 ``make_llm_call``) uses ``httpx.MockTransport`` — no real network or API keys.
 """
 
@@ -12,7 +12,7 @@ import pytest
 
 from agent.llm import (
     ProviderEndpoint,
-    _post_openai_compatible,
+    _post_chat_completion,
     _resolve_provider,
     make_llm_call,
     resolve_step_config,
@@ -55,7 +55,7 @@ def test_resolve_step_config_missing_model_raises():
         resolve_step_config("broken_step", config)
 
 
-# -- _post_openai_compatible tests -------------------------------------------
+# -- _post_chat_completion tests -------------------------------------------
 
 def _make_capture(request: httpx.Request) -> dict[str, str | dict]:
     return {
@@ -64,7 +64,7 @@ def _make_capture(request: httpx.Request) -> dict[str, str | dict]:
     }
 
 
-def test_openai_compatible_request_and_parse():
+def test_ollama_request_and_parse():
     """An OpenRouter response includes its real top-level cost."""
     captures = {}
 
@@ -78,11 +78,10 @@ def test_openai_compatible_request_and_parse():
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     provider = ProviderEndpoint(
-        provider="openrouter", base_url="https://openrouter.ai/api/v1",
+        provider="openrouter", type="openrouter", base_url="https://openrouter.ai/api/v1",
         auth_headers=[{"Authorization": "Bearer fake-key"}],
-        type="openrouter",
     )
-    result, usage = _post_openai_compatible(
+    result, usage = _post_chat_completion(
         provider=provider,
         model="openai/gpt-4o-mini",
         system_prompt="system-ohje",
@@ -102,7 +101,65 @@ def test_openai_compatible_request_and_parse():
     assert body["response_format"] == {"type": "json_object"}
 
 
-def test_openai_compatible_extracts_reasoning_field():
+def test_thinking_false_uses_ollama_wire_parameter():
+    captures = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captures["body"] = _make_capture(request)
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": "ok"}}],
+            "usage": {},
+        })
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    provider = ProviderEndpoint(
+        provider="local", base_url="http://ollama/v1",
+        auth_headers=None, type="ollama",
+    )
+    _post_chat_completion(
+        provider=provider,
+        model="gemma4:12b",
+        system_prompt="system",
+        user_prompt="user",
+        client=client,
+        thinking=False,
+    )
+
+    body = captures["body"]["body"]
+    assert body["think"] is False
+    assert "reasoning" not in body
+
+
+def test_thinking_false_uses_openrouter_reasoning_parameter():
+    captures = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captures["body"] = _make_capture(request)
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": "ok"}}],
+            "usage": {},
+        })
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    provider = ProviderEndpoint(
+        provider="openrouter", type="openrouter", base_url="https://openrouter.ai/api/v1",
+        auth_headers=None,
+    )
+    _post_chat_completion(
+        provider=provider,
+        model="google/gemma-4-31b-it",
+        system_prompt="system",
+        user_prompt="user",
+        client=client,
+        thinking=False,
+    )
+
+    body = captures["body"]["body"]
+    assert body["reasoning"] == {"effort": "none"}
+    assert "think" not in body
+
+
+def test_ollama_extracts_reasoning_field():
     """Reasoning content is extracted from message.reasoning into usage."""
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={
@@ -118,10 +175,10 @@ def test_openai_compatible_extracts_reasoning_field():
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     provider = ProviderEndpoint(
-        provider="openrouter", base_url="https://openrouter.ai/api/v1",
+        provider="openrouter", type="openrouter", base_url="https://openrouter.ai/api/v1",
         auth_headers=[{"Authorization": "Bearer fake-key"}],
     )
-    result, usage = _post_openai_compatible(
+    result, usage = _post_chat_completion(
         provider=provider,
         model="openai/gpt-4o-mini",
         system_prompt="system",
@@ -132,7 +189,7 @@ def test_openai_compatible_extracts_reasoning_field():
     assert usage["reasoning"] == "Ensiksi mietin..."
 
 
-def test_openai_compatible_reasoning_is_none_when_missing():
+def test_ollama_reasoning_is_none_when_missing():
     """When no reasoning field in response, usage.reasoning is None."""
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={
@@ -143,10 +200,10 @@ def test_openai_compatible_reasoning_is_none_when_missing():
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     provider = ProviderEndpoint(
-        provider="openrouter", base_url="https://openrouter.ai/api/v1",
+        provider="openrouter", type="openrouter", base_url="https://openrouter.ai/api/v1",
         auth_headers=[{"Authorization": "Bearer fake-key"}],
     )
-    _, usage = _post_openai_compatible(
+    _, usage = _post_chat_completion(
         provider=provider,
         model="openai/gpt-4o-mini",
         system_prompt="system",
@@ -156,7 +213,7 @@ def test_openai_compatible_reasoning_is_none_when_missing():
     assert usage["reasoning"] is None
 
 
-def test_openai_compatible_reasoning_is_none_when_empty_choices():
+def test_ollama_reasoning_is_none_when_empty_choices():
     """Empty choices array yields None reasoning."""
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={
@@ -167,10 +224,10 @@ def test_openai_compatible_reasoning_is_none_when_empty_choices():
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     provider = ProviderEndpoint(
-        provider="openrouter", base_url="https://openrouter.ai/api/v1",
+        provider="openrouter", type="openrouter", base_url="https://openrouter.ai/api/v1",
         auth_headers=[{"Authorization": "Bearer fake-key"}],
     )
-    _, usage = _post_openai_compatible(
+    _, usage = _post_chat_completion(
         provider=provider,
         model="openai/gpt-4o-mini",
         system_prompt="system",
@@ -180,7 +237,7 @@ def test_openai_compatible_reasoning_is_none_when_empty_choices():
     assert usage["reasoning"] is None
 
 
-def test_openai_compatible_no_json_format_when_disabled():
+def test_ollama_no_json_format_when_disabled():
     """expect_json=False removes the response_format parameter."""
     captures = {}
 
@@ -194,10 +251,10 @@ def test_openai_compatible_no_json_format_when_disabled():
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     provider = ProviderEndpoint(
-        provider="openrouter", base_url="https://openrouter.ai/api/v1",
+        provider="openrouter", type="openrouter", base_url="https://openrouter.ai/api/v1",
         auth_headers=[{"Authorization": "Bearer fake-key"}],
     )
-    result, usage = _post_openai_compatible(
+    result, usage = _post_chat_completion(
         provider=provider,
         model="openai/gpt-4o-mini",
         system_prompt="system-ohje",
@@ -210,25 +267,25 @@ def test_openai_compatible_no_json_format_when_disabled():
     assert usage["total_tokens"] == 8
 
 
-def test_openai_compatible_ignores_cost_field():
-    """OpenAI-compatible endpoints do not report provider cost."""
+def test_ollama_ignores_cost_field():
+    """Ollama responses do not report provider cost."""
     captures = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
         captures["url"] = str(request.url)
         return httpx.Response(200, json={
-            "choices": [{"message": {"content": "ei kustannusta"}}],
-            "usage": {"prompt_tokens": 20, "completion_tokens": 10,
-                      "total_tokens": 30},
+            "message": {"role": "assistant", "content": "ei kustannusta"},
+            "prompt_eval_count": 20,
+            "eval_count": 10,
             "cost": 0.123,
         })
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     provider = ProviderEndpoint(
         provider="local", base_url="https://local.invalid/v1",
-        auth_headers=None, type="openai_compatible",
+        auth_headers=None, type="ollama",
     )
-    result, usage = _post_openai_compatible(
+    result, usage = _post_chat_completion(
         provider=provider,
         model="openai/gpt-4o-mini",
         system_prompt="system-ohje",
@@ -240,10 +297,10 @@ def test_openai_compatible_ignores_cost_field():
     assert usage["completion_tokens"] == 10
     assert usage["total_tokens"] == 30
     assert usage.get("cost") is None
-    assert captures["url"] == "https://local.invalid/v1/chat/completions"
+    assert captures["url"] == "https://local.invalid/api/chat"
 
 
-def test_openai_compatible_null_content_returns_empty_string():
+def test_ollama_null_content_returns_empty_string():
     """Safety blocks or filter triggers returning ``null`` yield empty
     string, not ``"None"``."""
     def handler(request: httpx.Request) -> httpx.Response:
@@ -255,10 +312,10 @@ def test_openai_compatible_null_content_returns_empty_string():
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     provider = ProviderEndpoint(
-        provider="openrouter", base_url="https://openrouter.ai/api/v1",
+        provider="openrouter", type="openrouter", base_url="https://openrouter.ai/api/v1",
         auth_headers=[{"Authorization": "Bearer fake-key"}],
     )
-    result, _ = _post_openai_compatible(
+    result, _ = _post_chat_completion(
         provider=provider,
         model="openai/gpt-4o-mini",
         system_prompt="system",
@@ -269,7 +326,7 @@ def test_openai_compatible_null_content_returns_empty_string():
     assert isinstance(result, str)
 
 
-def test_openai_compatible_empty_choices_returns_empty_string():
+def test_ollama_empty_choices_returns_empty_string():
     """Responses with empty ``choices`` array yield empty string."""
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={
@@ -280,10 +337,10 @@ def test_openai_compatible_empty_choices_returns_empty_string():
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     provider = ProviderEndpoint(
-        provider="openrouter", base_url="https://openrouter.ai/api/v1",
+        provider="openrouter", type="openrouter", base_url="https://openrouter.ai/api/v1",
         auth_headers=[{"Authorization": "Bearer fake-key"}],
     )
-    result, _ = _post_openai_compatible(
+    result, _ = _post_chat_completion(
         provider=provider,
         model="openai/gpt-4o-mini",
         system_prompt="system",
@@ -294,7 +351,7 @@ def test_openai_compatible_empty_choices_returns_empty_string():
     assert isinstance(result, str)
 
 
-def test_openai_compatible_retries_on_502(monkeypatch):
+def test_ollama_retries_on_502(monkeypatch):
     """502 Bad Gateway should be retried with backoff."""
     monkeypatch.setattr("agent.llm._RETRY_BASE_DELAY", 0.0)
     attempts = 0
@@ -312,10 +369,10 @@ def test_openai_compatible_retries_on_502(monkeypatch):
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     provider = ProviderEndpoint(
-        provider="openrouter", base_url="https://openrouter.ai/api/v1",
+        provider="openrouter", type="openrouter", base_url="https://openrouter.ai/api/v1",
         auth_headers=[{"Authorization": "Bearer fake-key"}],
     )
-    result, _ = _post_openai_compatible(
+    result, _ = _post_chat_completion(
         provider=provider,
         model="openai/gpt-4o-mini",
         system_prompt="system",
@@ -326,7 +383,7 @@ def test_openai_compatible_retries_on_502(monkeypatch):
     assert attempts == 2
 
 
-def test_openai_compatible_retries_on_timeout(monkeypatch):
+def test_ollama_retries_on_timeout(monkeypatch):
     """Network/read timeouts should be retried."""
     monkeypatch.setattr("agent.llm._RETRY_BASE_DELAY", 0.0)
     attempts = 0
@@ -344,10 +401,10 @@ def test_openai_compatible_retries_on_timeout(monkeypatch):
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     provider = ProviderEndpoint(
-        provider="openrouter", base_url="https://openrouter.ai/api/v1",
+        provider="openrouter", type="openrouter", base_url="https://openrouter.ai/api/v1",
         auth_headers=[{"Authorization": "Bearer fake-key"}],
     )
-    result, _ = _post_openai_compatible(
+    result, _ = _post_chat_completion(
         provider=provider,
         model="openai/gpt-4o-mini",
         system_prompt="system",
@@ -358,8 +415,33 @@ def test_openai_compatible_retries_on_timeout(monkeypatch):
     assert attempts == 2
 
 
-def test_openai_compatible_exhausted_retries_raises(monkeypatch):
-    """When retries are exhausted on 500, ``HTTPStatusError`` is raised."""
+def test_read_timeout_only_retries_once(monkeypatch):
+    monkeypatch.setattr("agent.llm._RETRY_BASE_DELAY", 0.0)
+    attempts = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    provider = ProviderEndpoint(
+        provider="openrouter", type="openrouter", base_url="https://openrouter.ai/api/v1",
+        auth_headers=[{"Authorization": "Bearer fake-key"}],
+    )
+    with pytest.raises(httpx.ReadTimeout):
+        _post_chat_completion(
+            provider=provider,
+            model="openai/gpt-4o-mini",
+            system_prompt="system",
+            user_prompt="user",
+            client=client,
+        )
+    assert attempts == 2
+
+
+def test_ollama_exhausted_retries_raises(monkeypatch):
+    """When three transient HTTP attempts fail, ``HTTPStatusError`` is raised."""
     monkeypatch.setattr("agent.llm._RETRY_BASE_DELAY", 0.0)
     attempts = 0
 
@@ -370,18 +452,18 @@ def test_openai_compatible_exhausted_retries_raises(monkeypatch):
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     provider = ProviderEndpoint(
-        provider="openrouter", base_url="https://openrouter.ai/api/v1",
+        provider="openrouter", type="openrouter", base_url="https://openrouter.ai/api/v1",
         auth_headers=[{"Authorization": "Bearer fake-key"}],
     )
     with pytest.raises(httpx.HTTPStatusError):
-        _post_openai_compatible(
+        _post_chat_completion(
             provider=provider,
             model="openai/gpt-4o-mini",
             system_prompt="system",
             user_prompt="user",
             client=client,
         )
-    assert attempts == 6  # 1 initial + 5 retries
+    assert attempts == 3  # 1 initial + 2 retries
 
 
 # -- make_llm_call test --------------------------------------------------------
@@ -398,6 +480,12 @@ def test_make_llm_call_end_to_end_with_cluster():
     def handler(request: httpx.Request) -> httpx.Response:
         clusters = [{"candidate_indices": [i], "reason": None} for i in range(8)]
         content = json.dumps({"clusters": clusters})
+        if request.url.path.endswith("/api/chat"):
+            return httpx.Response(200, json={
+                "message": {"role": "assistant", "content": content},
+                "prompt_eval_count": 100,
+                "eval_count": 50,
+            })
         return httpx.Response(200, json={
             "choices": [{"message": {"content": content}}],
             "usage": {"prompt_tokens": 100, "completion_tokens": 50,
@@ -469,7 +557,7 @@ def test_resolve_local_provider_url_from_env(monkeypatch):
     cfg = resolve_step_config("compose", config)
     prov = _resolve_provider(cfg, config)
     assert prov.provider == "local"
-    assert prov.type == "openai_compatible"
+    assert prov.type == "ollama"
     assert prov.base_url == "http://test.local:11434/v1"
     assert prov.auth_headers is None
 

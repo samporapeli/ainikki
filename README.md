@@ -141,13 +141,16 @@ under the headline on the site.
 
 ### Providers
 
-Every LLM step talks the OpenAI-compatible `/v1/chat/completions` API. Provider
-**names** and provider **types** are separate concepts. Provider names are
-configuration keys; `type` controls how the response is parsed:
+LLM providers share a chat-request interface, but their request and response
+semantics are provider-specific. Provider **names** and provider **types** are
+separate concepts. Provider names are configuration keys; `type` selects the
+provider flavor:
 
-- `openrouter` reads OpenRouter's real top-level `cost` field.
-- `openai_compatible` uses the standard format and reports cost as
-  unavailable (`N/A` on the site).
+- `ollama` uses Ollama's native `/api/chat` endpoint and maps `thinking: false`
+  to `think: false`.
+- `openrouter` uses OpenRouter's `/v1/chat/completions` endpoint, reads its
+  real top-level `cost` field, and maps `thinking: false` to
+  `reasoning: {effort: none}`.
 
 Providers are defined only under `providers:` in `config/models.yaml`. Add or
 rename entries there; topic files then reference them by name in their
@@ -161,7 +164,7 @@ providers:
     base_url: "https://openrouter.ai/api/v1"
     api_key_env: "OPENROUTER_API_KEY"
   local:
-    type: openai_compatible
+    type: ollama
     base_url_env: "OLLAMA_HOST"
     timeout: 300
 ```

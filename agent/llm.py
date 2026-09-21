@@ -6,8 +6,9 @@ interface expected by cluster.py (and later score.py/compose.py):
 
 Named providers are configured via ``config/models.yaml`` under
 ``providers:``. Each provider can use any supported endpoint and its own
-authentication scheme (env var, literal key, or no auth). The adapter speaks
-the OpenAI-compatible ``/v1/chat/completions`` interface for all providers.
+authentication scheme (env var, literal key, or no auth). The adapter
+normalizes provider-specific chat APIs behind one internal interface:
+Ollama uses ``/api/chat`` and OpenRouter uses ``/v1/chat/completions``.
 
 HTTP call and request construction are separate for testability — same
 principle as in hn.py. Tests (tests/test_llm.py) use httpx.MockTransport,
@@ -26,7 +27,8 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-_MAX_RETRIES = 5
+_MAX_RETRIES = 2
+_TIMEOUT_RETRIES = 1
 _RETRY_BASE_DELAY = 10.0
 
 _INTERP_PATTERN = re.compile(
@@ -39,6 +41,7 @@ class StepModelConfig:
     provider: str
     model: str
     temperature: float = 0.2
+    thinking: bool | None = None
 
 
 @dataclass
@@ -47,7 +50,7 @@ class ProviderEndpoint:
     provider: str
     base_url: str
     auth_headers: list[dict[str, str]] | None
-    type: str = "openai_compatible"
+    type: str = "ollama"
     timeout: float = 60.0
 
 
@@ -101,6 +104,7 @@ def resolve_step_configs(
             provider=provider,
             model=model,
             temperature=first.get("temperature", 0.2),
+            thinking=first.get("thinking"),
         )]
 
     entries = model_entries
@@ -123,6 +127,7 @@ def resolve_step_configs(
             provider=str(provider).strip(),
             model=str(model).strip(),
             temperature=entry.get("temperature", 0.2),
+            thinking=entry.get("thinking"),
         ))
     return result
 
@@ -143,7 +148,7 @@ def resolve_step_config(
     )[0]
 
 
-def _post_openai_compatible(
+def _post_chat_completion(
     provider: ProviderEndpoint,
     model: str,
     system_prompt: str,
@@ -151,28 +156,41 @@ def _post_openai_compatible(
     client: httpx.Client,
     expect_json: bool = True,
     temperature: float = 0.2,
+    thinking: bool | None = None,
 ) -> tuple[str, dict]:
-    """Sends a chat completion request to the configured endpoint.
-
-    Retries on 429, 5xx server errors, and network timeouts/transport errors
-    with exponential backoff (_MAX_RETRIES attempts).
-    If expect_json=True, adds response_format: {"type": "json_object"}
-    to the request, forcing the model to return valid JSON.
-
-    Returns (content, usage) where usage is a dict with keys:
-    prompt_tokens, completion_tokens, total_tokens, cost.
-    """
+    """Send a provider-specific chat request with shared retry behavior."""
     base_url = provider.base_url.rstrip("/")
-    payload: dict = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        "temperature": temperature,
-    }
-    if expect_json:
-        payload["response_format"] = {"type": "json_object"}
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    if provider.type == "ollama":
+        if base_url.endswith("/v1"):
+            base_url = base_url[:-3]
+        endpoint = f"{base_url}/api/chat"
+        payload: dict = {
+            "model": model,
+            "messages": messages,
+            "stream": False,
+            "options": {"temperature": temperature},
+        }
+        if expect_json:
+            payload["format"] = "json"
+        if thinking is not None:
+            payload["think"] = thinking
+    else:
+        endpoint = f"{base_url}/chat/completions"
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+        }
+        if expect_json:
+            payload["response_format"] = {"type": "json_object"}
+        if thinking is False:
+            payload["reasoning"] = {"effort": "none"}
+
     headers: dict[str, str] = {}
     for h in provider.auth_headers or []:
         for k, v in h.items():
@@ -180,7 +198,7 @@ def _post_openai_compatible(
 
     for attempt in range(_MAX_RETRIES + 1):
         try:
-            resp = client.post(f"{base_url}/chat/completions", json=payload, headers=headers)
+            resp = client.post(endpoint, json=payload, headers=headers)
             if resp.status_code == 429 or resp.status_code >= 500 or resp.status_code == 408:
                 if attempt == _MAX_RETRIES:
                     resp.raise_for_status()
@@ -198,26 +216,33 @@ def _post_openai_compatible(
 
             resp.raise_for_status()
             data = resp.json()
-            choices = data.get("choices") or []
-            content = ""
-            if choices:
-                message = choices[0].get("message") or {}
-                raw_content = message.get("content")
-                if raw_content is not None:
-                    content = str(raw_content)
-            usage = dict(data.get("usage") or {})
-            if provider.type == "openrouter":
-                usage["cost"] = usage.get("cost")
+            if provider.type == "ollama":
+                message = data.get("message") or {}
+                content = str(message.get("content") or "")
+                prompt_tokens = data.get("prompt_eval_count") or 0
+                completion_tokens = data.get("eval_count") or 0
+                usage = {
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": prompt_tokens + completion_tokens,
+                    "cost": None,
+                    "reasoning": message.get("thinking") or message.get("reasoning"),
+                }
             else:
-                usage["cost"] = None
-            usage["reasoning"] = message.get("reasoning") if choices else None
+                choices = data.get("choices") or []
+                message = choices[0].get("message") or {} if choices else {}
+                content = str(message.get("content") or "")
+                usage = dict(data.get("usage") or {})
+                usage["cost"] = usage.get("cost")
+                usage["reasoning"] = message.get("reasoning")
             return content, usage
         except (httpx.TimeoutException, httpx.NetworkError) as e:
-            if attempt == _MAX_RETRIES:
+            retry_limit = _TIMEOUT_RETRIES if isinstance(e, httpx.TimeoutException) else _MAX_RETRIES
+            if attempt >= retry_limit:
                 raise
             delay = _RETRY_BASE_DELAY * (2 ** attempt)
             logger.warning("LLM request failed with %s (attempt %d/%d), retrying in %.0fs...",
-                           type(e).__name__, attempt + 1, _MAX_RETRIES + 1, delay)
+                           type(e).__name__, attempt + 1, retry_limit + 1, delay)
             time.sleep(delay)
 
     raise RuntimeError("Retries exhausted")  # unreachable, but satisfies mypy
@@ -236,8 +261,8 @@ def _resolve_provider(
             f"Unknown provider '{step_config.provider}' (existing: {names})"
         )
 
-    provider_type = cfg.get("type", "openai_compatible")
-    if provider_type not in {"openrouter", "openai_compatible"}:
+    provider_type = cfg.get("type", "ollama")
+    if provider_type not in {"ollama", "openrouter"}:
         raise ValueError(
             f"Unknown provider type '{provider_type}' for '{step_config.provider}'"
         )
@@ -299,13 +324,14 @@ def make_llm_call(
             owns_client = client is None
             c = client or httpx.Client(timeout=provider.timeout)
             try:
-                content, usage = _post_openai_compatible(
+                content, usage = _post_chat_completion(
                     provider=provider,
                     model=step_cfg.model,
                     system_prompt=system_prompt,
                     user_prompt=user_prompt,
                     client=c,
                     temperature=step_cfg.temperature,
+                    thinking=step_cfg.thinking,
                 )
                 usage = dict(usage)
                 usage["provider"] = provider.provider

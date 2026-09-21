@@ -9,7 +9,7 @@ providers:
     api_key_env: "OPENROUTER_API_KEY"
     timeout: 60
   local:
-    type: openai_compatible
+    type: ollama
     base_url_env: "OLLAMA_HOST"
     timeout: 500
 
