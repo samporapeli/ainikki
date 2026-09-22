@@ -32,6 +32,9 @@
   (e.g. `ScoreValidationError`) just exits and gets logged to
   `ainikki-cron.log`; nobody is notified. Send a Telegram/email message
   on failure, not just on success.
+- **Pipeline observability** — improve structured logging and metadata so
+  each step records its status, duration, actual provider/model attempts,
+  fallback and retry outcomes, and useful failure context.
 - **Multi-source collection** — currently HN-only, which limits topic
   diversity and weakens the rubric's "source independence" criterion
   (multiple HN submissions of the same link aren't independent sources).
