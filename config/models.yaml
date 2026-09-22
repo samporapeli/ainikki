@@ -18,12 +18,15 @@ steps:
   filter_topic:
     models:
       - provider: local
-        model: "qwen3.6:35b-a3b"
-        temperature: 0.6
+        model: "qwen3.5:9b"
+        temperature: 0.2
+        thinking: false
       - provider: openrouter
         model: "openai/gpt-4o-mini"
   cluster:
     models:
+      - provider: local
+        model: "qwen3.6:35b-a3b"
       - provider: openrouter
         model: "openai/gpt-4o-mini"
   score:

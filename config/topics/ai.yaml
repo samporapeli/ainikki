@@ -22,15 +22,6 @@ topic_description: |
   - teknologiajuttu, jossa AI on vain taustalla tai sivumaininta
   - juttu, jossa AI:ta käytetään tutkimuksen työkaluna mutta se ei ole jutun aihe
 
-steps:
-  cluster:
-    models:
-      - provider: local
-        model: "qwen3.5:9b"
-        thinking: false
-      - provider: openrouter
-        model: "openai/gpt-4o-mini"
-
 tts:
   enabled: true
   provider: google-cloud
