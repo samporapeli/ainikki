@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { load } from 'js-yaml';
 import Layout from '../layouts/Layout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
 import { TOPIC_META } from '../lib/topics';
 import { getSiteTopics } from '../lib/site-data';
 import { getDigestCostStatsByTopic } from '../lib/cost';
@@ -105,9 +106,7 @@ const steps = [
 ---
 
 <Layout title="Tietoja — Ainikki" description="Miten Ainikki toimii: uutisten keruu, valinta ja koosteen tuottaminen.">
-  <nav class="back">
-    <a href="../">← Ainikki</a>
-  </nav>
+  <Breadcrumb crumbs={[{ label: 'Ainikki', href: `${import.meta.env.BASE_URL}/` }, { label: 'Tietoja' }]} />
 
   <header>
     <h1>Miten Ainikki toimii</h1>

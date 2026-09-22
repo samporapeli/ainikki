@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import Overview from '../../components/Overview.astro';
 import StoryCard from '../../components/StoryCard.astro';
 import Colophon from '../../components/Colophon.astro';
@@ -70,6 +71,7 @@ const ogUrl = `${import.meta.env.BASE_URL}/${briefing.topic}/${dateStr}/`;
 
 const topic = briefing.topic;
 const meta = TOPIC_META[topic];
+const topicName = meta?.name ?? topicUpper;
 const TIETOJA_URL = `${import.meta.env.BASE_URL}/tietoja/`;
 const period = briefing.period || "daily";
 const pipelinePath = path.resolve(`../data/pipeline/${topic}_${period}_${dateStr}.json`);
@@ -91,11 +93,8 @@ const nextBriefing = briefing._next || null;
 
 <Layout title={`${topicUpper} — ${prettyDate}`} description={briefing.overview}
         ogTitle={ogTitle} ogDescription={briefing.overview} ogUrl={ogUrl}>
-  <nav class="back">
-    <a href="../">{topicUpper}</a>
-  </nav>
-
-  <nav class="page-nav page-nav--top">
+  <Breadcrumb crumbs={[{ label: 'Ainikki', href: `${import.meta.env.BASE_URL}/` }, { label: topicName, href: `${import.meta.env.BASE_URL}/${topic}/` }]} />
+  <nav class="page-nav page-nav--top" aria-label="Koosteen aikaisemmat ja seuraavat numerot">
     <span class="page-nav__prev">{prevBriefing && <a href={navUrl(prevBriefing)}>← Edellinen</a>}</span>
     <span class="page-nav__next">{nextBriefing && <a href={navUrl(nextBriefing)}>Seuraava →</a>}</span>
   </nav>
@@ -106,6 +105,7 @@ const nextBriefing = briefing._next || null;
     <p class="byline">
       Kirjoittanut Ainikki (tekoäly){generatedAt && <span> · klo {new Date(generatedAt).toLocaleTimeString('fi-FI', { hour: 'numeric', minute: '2-digit' })}</span>}
       {meta?.telegramUrl && <span> · <a href={meta.telegramUrl} target="_blank" rel="noopener noreferrer">Telegram</a></span>}
+      {hasPipelineDebug && <span> · <a href={`${import.meta.env.BASE_URL}/${topic}/${dateStr}/läpivalaisu/`}>Läpivalaisu</a></span>}
       <span> · <a href={TIETOJA_URL}>Lisätietoja Ainikista</a></span>
     </p>
   </header>
@@ -162,23 +162,14 @@ const nextBriefing = briefing._next || null;
 </Layout>
 
 <style>
-  .back {
-    margin-bottom: 2rem;
-    font-size: 0.85rem;
-    color: var(--fg-muted);
-  }
-
-  .back a {
-    color: var(--fg-muted);
-  }
-
   .page-nav {
     display: flex;
     font-size: 0.85rem;
   }
 
   .page-nav--top {
-    margin-bottom: 2rem;
+    margin-top: 0.5rem;
+    margin-bottom: 1.25rem;
   }
 
   .page-nav__prev {

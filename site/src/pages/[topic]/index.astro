@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { TOPIC_META } from '../../lib/topics';
 import { fiDate } from '../../lib/date';
 import { isSiteTopic } from '../../lib/site-data';
@@ -44,9 +45,7 @@ const info = TOPIC_META[topic] ?? { name: topic.toUpperCase(), period: '', teleg
 ---
 
 <Layout title={`${info.name} — Ainikki`}>
-  <nav class="back">
-    <a href="../">Ainikki</a>
-  </nav>
+  <Breadcrumb crumbs={[{ label: 'Ainikki', href: `${import.meta.env.BASE_URL}/` }]} />
 
   <header>
     <h1>{info.name}</h1>
@@ -76,17 +75,8 @@ const info = TOPIC_META[topic] ?? { name: topic.toUpperCase(), period: '', teleg
 </Layout>
 
 <style>
-  .back {
-    margin-bottom: 2rem;
-    font-size: 0.85rem;
-    color: var(--fg-muted);
-  }
-
-  .back a {
-    color: var(--fg-muted);
-  }
-
   header {
+    margin-top: 0.8rem;
     margin-bottom: 2rem;
   }
 

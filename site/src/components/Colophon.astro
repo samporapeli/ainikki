@@ -101,15 +101,13 @@ const hasAnyStats = stepRows.some(r => r.hasStats);
         )}
       </table>
 
-      {lapivalaisuUrl && (
-        <p class="lapivalaisu-link">
-          <a href={lapivalaisuUrl}>
-            Tutki tarkemmin läpivalaisussa
-          </a>
-        </p>
-      )}
     </div>
   </details>
+)}
+{lapivalaisuUrl && (
+  <p class="lapivalaisu-link">
+    <a href={lapivalaisuUrl}>Tutki tarkemmin läpivalaisussa</a>
+  </p>
 )}
 
 <style>

@@ -1,6 +1,8 @@
 ---
 import fs from 'node:fs';
 import Layout from '../../../layouts/Layout.astro';
+import Breadcrumb from '../../../components/Breadcrumb.astro';
+import { TOPIC_META } from '../../../lib/topics';
 import ClusterSection from '../../../components/läpivalaisu/ClusterSection.astro';
 import DroppedSection from '../../../components/läpivalaisu/DroppedSection.astro';
 import OffTopicSection from '../../../components/läpivalaisu/OffTopicSection.astro';
@@ -19,11 +21,9 @@ import {
 } from '../../../lib/pipeline-data';
 import '../../../styles/läpivalaisu.css';
 
-const topicLabels: Record<string, string> = {
-  ai: 'AI',
-  teknologia: 'Teknologia',
-  test: 'Testi',
-};
+const topicLabels: Record<string, string> = Object.fromEntries(
+  Object.entries(TOPIC_META).map(([key, value]) => [key, value.name]),
+);
 
 export { getLapivalaisuStaticPaths as getStaticPaths };
 
@@ -168,9 +168,11 @@ const audioUrl = ttsHasAudio
 ---
 
 <Layout title={`Läpivalaisu — ${topicUpper} — ${label}`} description="Tutki, miten kooste on syntynyt: mitä uutisia kerättiin, miten ne ryhmiteltiin ja miksi juuri nämä valikoituivat mukaan.">
-  <nav class="back">
-    <a id="backlink" href={`${baseUrl}/${topic}/${displayDate}/`}>← {topicUpper} — {dateFi || displayDate}</a>
-  </nav>
+  <Breadcrumb crumbs={[
+    { label: 'Ainikki', href: `${baseUrl}/` },
+    { label: topicLabels[topic] ?? topicUpper, href: `${baseUrl}/${topic}/` },
+    { label: dateFi || displayDate, href: `${baseUrl}/${topic}/${displayDate}/` },
+  ]} />
 
   <header>
     <h1>Läpivalaisu</h1>
