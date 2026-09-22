@@ -1,5 +1,6 @@
 ---
 import type { PromptCall, TtsSegment } from '../../lib/pipeline-data';
+import { formatDurationMs } from '../../lib/format';
 
 interface Props {
   stepKey?: string;
@@ -100,12 +101,17 @@ const ttsScriptText = ttsSegments
         const systemPrompt = prompt.system_prompt ?? '';
         const userPrompt = prompt.user_prompt ?? '';
         const response = prompt.raw_response ?? '';
+        const attempts = prompt.attempts ?? [];
+        const showAttempts = attempts.length > 1 || attempts[0]?.status !== 'success';
         const userIsLong = userPrompt.length > userPreviewLength;
         const userPreview = userIsLong ? `${userPrompt.slice(0, userPreviewLength)}...` : userPrompt;
         const menuId = `prompt-menu-${stepKey}-${index}`;
         return <div class="prompt-call">
           <div class="prompt-call-head">
-            <h3>Kutsu {prompts.length > 1 ? `${index + 1}/${prompts.length}` : index + 1}</h3>
+            <h3>
+              Kutsu {prompts.length > 1 ? `${index + 1}/${prompts.length}` : index + 1}
+              {typeof prompt.duration_ms === 'number' && ` (${formatDurationMs(prompt.duration_ms)})`}
+            </h3>
             <div class="prompt-menu">
               <button
                 type="button"
@@ -119,6 +125,9 @@ const ttsScriptText = ttsSegments
               </div>
             </div>
           </div>
+          {prompt.status === 'failed' && (
+            <p class="prompt-no-reasoning">Kutsu epäonnistui{prompt.error ? `: ${prompt.error}` : ''}</p>
+          )}
           <details class="prompt-block">
             <summary class="prompt-summary">
               <span class="prompt-label">Järjestelmäkehote <span class="prompt-size">{systemPrompt.length} merkkiä</span></span>
@@ -161,6 +170,25 @@ const ttsScriptText = ttsSegments
             </summary>
             <pre class="prompt-text">{response}</pre>
           </details>
+          {showAttempts && attempts.length > 0 && (
+            <details class="prompt-block">
+              <summary class="prompt-summary">
+                <span class="prompt-label">Yritykset <span class="prompt-size">{attempts.length} {attempts.length === 1 ? 'kutsu' : 'kutsua'}</span></span>
+              </summary>
+              {attempts.map((attempt, attemptIndex) => <div class="prompt-attempt">
+                <h3 class="prompt-call-attempt">
+                  {attemptIndex + 1}. {attempt.provider ?? 'Tuntematon palvelu'}/{attempt.model ?? 'Tuntematon malli'}
+                  <span class="prompt-size">
+                    {attempt.status === 'success' ? 'onnistui' : 'epäonnistui'}
+                    {typeof attempt.duration_ms === 'number' ? ` · ${formatDurationMs(attempt.duration_ms)}` : ''}
+                  </span>
+                </h3>
+                {attempt.error && <p class="prompt-size">{attempt.error}</p>}
+                {attempt.status === 'failed' && typeof attempt.reasoning === 'string' && <pre class="prompt-text">{attempt.reasoning}</pre>}
+                {attempt.status === 'failed' && typeof attempt.response === 'string' && <pre class="prompt-text">{attempt.response}</pre>}
+              </div>)}
+            </details>
+          )}
         </div>;
       })}
     </details>

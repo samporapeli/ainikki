@@ -523,6 +523,10 @@ def test_make_llm_call_uses_fallback_model(monkeypatch):
     assert requests == ["ornith:35b", "openai/gpt-4o-mini"]
     assert usage["provider"] == "openrouter"
     assert usage["model"] == "openai/gpt-4o-mini"
+    assert [(attempt["model"], attempt["status"]) for attempt in usage["attempts"]] == [
+        ("ornith:35b", "failed"),
+        ("openai/gpt-4o-mini", "success"),
+    ]
 
 
 def test_resolve_step_configs_returns_fallback_chain():

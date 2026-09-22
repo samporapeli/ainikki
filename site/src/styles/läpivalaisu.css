@@ -411,11 +411,16 @@
     gap: 0.75rem;
   }
 
-  .prompt-call h3 {
+  .prompt-call h3,
+  .prompt-call-attempt {
     margin: 0 0 0.5rem;
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--fg-muted);
+  }
+
+  .prompt-call-attempt .prompt-size {
+    margin-left: 0.35rem;
   }
 
   .prompt-menu {

@@ -198,13 +198,15 @@ def _post_chat_completion(
             headers[k] = v
 
     step_prefix = f"[{step}] " if step else ""
+    http_attempts: list[dict] = []
     for attempt in range(_MAX_RETRIES + 1):
         t0 = time.perf_counter()
         logger.info(
-            "%sLLM request started: %s/%s (attempt %d/%d)",
+            "%sLLM request started: %s/%s %s (attempt %d/%d)",
             step_prefix,
             provider.provider,
             model,
+            endpoint,
             attempt + 1,
             _MAX_RETRIES + 1,
         )
@@ -213,7 +215,18 @@ def _post_chat_completion(
             duration_ms = round((time.perf_counter() - t0) * 1000)
             if resp.status_code == 429 or resp.status_code >= 500 or resp.status_code == 408:
                 if attempt == _MAX_RETRIES:
-                    resp.raise_for_status()
+                    http_attempts.append({
+                        "status": "failed",
+                        "error": f"HTTP {resp.status_code}",
+                        "duration_ms": duration_ms,
+                        "response": resp.text,
+                        "reasoning": None,
+                    })
+                    try:
+                        resp.raise_for_status()
+                    except httpx.HTTPStatusError as error:
+                        error.llm_attempts = http_attempts
+                        raise
                 delay = _RETRY_BASE_DELAY * (2 ** attempt)
                 retry_after = resp.headers.get("retry-after")
                 if retry_after:
@@ -229,24 +242,55 @@ def _post_chat_completion(
                     _MAX_RETRIES + 1,
                     delay,
                 )
+                http_attempts.append({
+                    "status": "failed",
+                    "error": f"HTTP {resp.status_code}",
+                    "duration_ms": duration_ms,
+                    "response": resp.text,
+                    "reasoning": None,
+                })
                 time.sleep(delay)
                 continue
 
-            resp.raise_for_status()
-            data = resp.json()
+            try:
+                resp.raise_for_status()
+            except httpx.HTTPStatusError as error:
+                http_attempts.append({
+                    "status": "failed",
+                    "error": f"HTTP {resp.status_code}",
+                    "duration_ms": duration_ms,
+                    "response": resp.text,
+                    "reasoning": None,
+                })
+                error.llm_attempts = http_attempts
+                raise
+            try:
+                data = resp.json()
+            except ValueError as error:
+                http_attempts.append({
+                    "status": "failed",
+                    "error": "invalid JSON response",
+                    "duration_ms": duration_ms,
+                    "response": resp.text,
+                    "reasoning": None,
+                })
+                error.llm_attempts = http_attempts
+                error.llm_response = resp.text
+                raise
             if provider.type == "ollama":
                 message = data.get("message") or {}
                 content = str(message.get("content") or "")
                 prompt_tokens = data.get("prompt_eval_count") or 0
                 completion_tokens = data.get("eval_count") or 0
                 cost = None
+                reasoning = message.get("thinking") or message.get("reasoning")
                 usage = {
                     "prompt_tokens": prompt_tokens,
                     "completion_tokens": completion_tokens,
                     "total_tokens": prompt_tokens + completion_tokens,
                     "cost": cost,
                     "duration_ms": duration_ms,
-                    "reasoning": message.get("thinking") or message.get("reasoning"),
+                    "reasoning": reasoning,
                 }
             else:
                 choices = data.get("choices") or []
@@ -256,9 +300,10 @@ def _post_chat_completion(
                 prompt_tokens = usage.get("prompt_tokens", 0) or 0
                 completion_tokens = usage.get("completion_tokens", 0) or 0
                 cost = usage.get("cost")
+                reasoning = message.get("reasoning")
                 usage["cost"] = cost
                 usage["duration_ms"] = duration_ms
-                usage["reasoning"] = message.get("reasoning")
+                usage["reasoning"] = reasoning
 
             cost_str = f", cost={cost}" if cost is not None else ""
             logger.info(
@@ -271,11 +316,27 @@ def _post_chat_completion(
                 completion_tokens,
                 cost_str,
             )
+            http_attempts.append({
+                "status": "success",
+                "error": None,
+                "duration_ms": duration_ms,
+                "response": content,
+                "reasoning": reasoning if isinstance(reasoning, str) else None,
+            })
+            usage["_http_attempts"] = http_attempts
             return content, usage
         except (httpx.TimeoutException, httpx.NetworkError) as e:
             duration_ms = round((time.perf_counter() - t0) * 1000)
             retry_limit = _TIMEOUT_RETRIES if isinstance(e, httpx.TimeoutException) else _MAX_RETRIES
+            http_attempts.append({
+                "status": "failed",
+                "error": str(e) or type(e).__name__,
+                "duration_ms": duration_ms,
+                "response": None,
+                "reasoning": None,
+            })
             if attempt >= retry_limit:
+                e.llm_attempts = http_attempts
                 raise
             delay = _RETRY_BASE_DELAY * (2 ** attempt)
             logger.warning(
@@ -362,11 +423,15 @@ def make_llm_call(
 
     def _call(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         last_error: Exception | None = None
+        attempts: list[dict] = []
         for index, step_cfg in enumerate(model_chain):
-            provider = _resolve_provider(step_cfg, config)
+            provider = None
+            model_attempts: list[dict] = []
             owns_client = client is None
-            c = client or httpx.Client(timeout=provider.timeout)
+            c = None
             try:
+                provider = _resolve_provider(step_cfg, config)
+                c = client or httpx.Client(timeout=provider.timeout)
                 content, usage = _post_chat_completion(
                     provider=provider,
                     model=step_cfg.model,
@@ -378,11 +443,34 @@ def make_llm_call(
                     step=step,
                 )
                 usage = dict(usage)
+                model_attempts = usage.pop("_http_attempts", [])
+                attempts.extend({
+                    **attempt,
+                    "provider": provider.provider,
+                    "model": step_cfg.model,
+                } for attempt in model_attempts)
                 usage["provider"] = provider.provider
                 usage["model"] = step_cfg.model
+                usage["attempts"] = attempts
                 return content, usage
             except (httpx.HTTPError, ValueError) as error:
                 last_error = error
+                model_attempts = getattr(error, "llm_attempts", [])
+                attempts.extend({
+                    **attempt,
+                    "provider": step_cfg.provider,
+                    "model": step_cfg.model,
+                } for attempt in model_attempts)
+                if not model_attempts:
+                    attempts.append({
+                        "provider": step_cfg.provider,
+                        "model": step_cfg.model,
+                        "status": "failed",
+                        "error": str(error),
+                        "duration_ms": 0,
+                        "response": getattr(error, "llm_response", None),
+                        "reasoning": getattr(error, "llm_reasoning", None),
+                    })
                 if index + 1 < len(model_chain):
                     logger.warning(
                         "LLM model %s/%s failed (%s); trying fallback %s/%s",
@@ -393,10 +481,14 @@ def make_llm_call(
                         model_chain[index + 1].model,
                     )
             finally:
-                if owns_client:
+                if owns_client and c is not None:
                     c.close()
 
         assert last_error is not None
+        try:
+            last_error.llm_attempts = attempts
+        except AttributeError:
+            pass
         raise last_error
 
     return _call

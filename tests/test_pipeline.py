@@ -1,17 +1,53 @@
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 import httpx
 import pytest
 
-from agent.pipeline import run_pipeline
+from agent.pipeline import _resolve_llm_call, run_pipeline
 from agent.score import ScoreValidationError
 from agent.validate import EmptyBriefingError
 from agent.collect.hn import parse_hn_hits
 from agent.schema import Period, Briefing
 
 CLEAN_HTML = Path("tests/fixtures/article_clean.html").read_text()
+
+
+def test_tracked_llm_duration_sums_failed_and_successful_attempts(monkeypatch):
+    attempts = [
+        {"provider": "local", "model": "missing", "status": "failed", "duration_ms": 7},
+        {"provider": "local", "model": "fallback", "status": "success", "duration_ms": 14908},
+    ]
+    monkeypatch.setattr(
+        "agent.pipeline.make_llm_call",
+        lambda *args, **kwargs: lambda *_prompts: (
+            "response",
+            {
+                "provider": "local",
+                "model": "fallback",
+                "duration_ms": 14908,
+                "attempts": attempts,
+            },
+        ),
+    )
+    stats = {}
+    prompts = {}
+    tracked_call = _resolve_llm_call(
+        "score",
+        {},
+        SimpleNamespace(models=Path("models.yaml"), topic_name="test"),
+        {},
+        stats,
+        {},
+        llm_prompts_out=prompts,
+    )
+
+    tracked_call("system", "user")
+
+    assert prompts["score"][0]["duration_ms"] == 14915
+    assert stats["score"]["total_duration_ms"] == 14915
 
 
 def _load_test_raw_items():

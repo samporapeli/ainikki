@@ -133,7 +133,8 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
                       models_used_out: dict[str, str],
                       topic_step_models: dict[str, list[dict]] | None = None,
                       client: httpx.Client | None = None,
-                      llm_prompts_out: dict[str, list[dict]] | None = None):
+                      llm_prompts_out: dict[str, list[dict]] | None = None,
+                      failure_debug_path: Path | None = None):
     """Build an LLM call and collect usage and traceability metadata."""
     provider_override, model_override = overrides.get(step, (None, None))
     step_models_override = (topic_step_models or {}).get(step)
@@ -156,14 +157,53 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
         "total_duration_ms": 0,
     }
     def _tracked_call(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
-        content, usage = llm_fn(system_prompt, user_prompt)
-        models_used_out[step] = (
-            f"{usage.get('provider', 'unknown')}/{usage.get('model', 'unknown')}"
-        )
+        started = perf_counter()
+        try:
+            content, usage = llm_fn(system_prompt, user_prompt)
+        except Exception as error:
+            attempts = getattr(error, "llm_attempts", [])
+            attempt_duration_ms = sum(
+                attempt.get("duration_ms", 0) or 0 for attempt in attempts
+            )
+            if llm_prompts_out is not None:
+                llm_prompts_out[step].append({
+                    "system_prompt": system_prompt,
+                    "user_prompt": user_prompt,
+                    "raw_response": getattr(error, "llm_response", None),
+                    "reasoning": getattr(error, "llm_reasoning", None),
+                    "duration_ms": attempt_duration_ms or round((perf_counter() - started) * 1000),
+                    "status": "failed",
+                    "error": str(error),
+                    "attempts": attempts,
+                })
+                if failure_debug_path is not None:
+                    failure_debug_path.parent.mkdir(parents=True, exist_ok=True)
+                    failure_debug_path.write_text(json.dumps({
+                        "topic": config_paths.topic_name,
+                        "status": "failed",
+                        "failed_step": step,
+                        "error": str(error),
+                        "steps": {step: {"status": "failed"}},
+                        "llm_stats": llm_stats_out,
+                        "llm_prompts": llm_prompts_out,
+                    }, ensure_ascii=False, indent=2))
+            raise
+        attempted_models = [
+            f"{attempt.get('provider', 'unknown')}/{attempt.get('model', 'unknown')}"
+            for attempt in usage.get("attempts", [])
+        ]
+        used_model = f"{usage.get('provider', 'unknown')}/{usage.get('model', 'unknown')}"
+        if used_model not in attempted_models:
+            attempted_models.append(used_model)
+        previous_models = models_used_out.get(step, "").split(", ") if step in models_used_out else []
+        models_used_out[step] = ", ".join(dict.fromkeys(previous_models + attempted_models))
         prompt_tokens = usage.get("prompt_tokens", 0) or 0
         completion_tokens = usage.get("completion_tokens", 0) or 0
         total_tokens = usage.get("total_tokens", 0) or 0
-        duration_ms = usage.get("duration_ms", 0) or 0
+        attempts = usage.get("attempts", [])
+        duration_ms = sum(
+            attempt.get("duration_ms", 0) or 0 for attempt in attempts
+        ) or usage.get("duration_ms", 0) or round((perf_counter() - started) * 1000)
         cost = usage.get("cost")
         step_stats["calls"] += 1
         step_stats["total_prompt_tokens"] += prompt_tokens
@@ -179,6 +219,8 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
                 "raw_response": content,
                 "reasoning": usage.get("reasoning"),
                 "duration_ms": duration_ms,
+                "status": "success",
+                "attempts": usage.get("attempts", []),
             })
         return content, usage
 
@@ -251,20 +293,21 @@ def run_pipeline(
                 logger.warning("collect (%s) failed: %s - continuing", source_name, e)
                 all_warnings.append(f"Keruu ({source_name}): {e}")
 
-    step_durations["collect"] = round(perf_counter() - t0, 2)
+    step_durations["collect"] = perf_counter() - t0
     logger.info("collect: total %d raw items across all sources (%.2fs)", len(raw_items), step_durations["collect"])
 
     # 2. Dedup
     t0 = perf_counter()
     candidates = dedup_candidates(raw_items)
     save_candidates(topic, date_str, candidates, data_dir=data_dir / "dedup")
-    step_durations["dedup"] = round(perf_counter() - t0, 2)
+    step_durations["dedup"] = perf_counter() - t0
     logger.info("dedup: %d -> %d candidates (%.2fs)", len(raw_items), len(candidates), step_durations["dedup"])
 
     models_config = load_models_config(config_paths.models)
     models_used: dict[str, str] = {}
     llm_stats: dict[str, dict] = {}
     llm_prompts: dict[str, list[dict]] = {}
+    failure_debug_path = data_dir / "pipeline" / f"{topic}_{period.value}_{date_str}.json"
     rubric = load_rubric(config_paths.rubric)
 
     # 3. Filter by topic relevance
@@ -272,12 +315,13 @@ def run_pipeline(
     llm_filter = _resolve_llm_call("filter_topic", models_config, config_paths, model_overrides,
                                    llm_stats_out=llm_stats, models_used_out=models_used,
                                    topic_step_models=topic_step_models, client=llm_client,
-                                   llm_prompts_out=llm_prompts)
+                                   llm_prompts_out=llm_prompts,
+                                   failure_debug_path=failure_debug_path)
     topic_description = topic_config.get("topic_description", topic)
     filter_result = filter_topic(candidates, topic_description, llm_filter)
     if filter_result.warning:
         all_warnings.append(filter_result.warning)
-    step_durations["filter_topic"] = round(perf_counter() - t0, 2)
+    step_durations["filter_topic"] = perf_counter() - t0
     logger.info("filter_topic: %d -> %d candidates (%d dropped, %.2fs)",
                 len(candidates), filter_result.n_kept, filter_result.n_dropped, step_durations["filter_topic"])
 
@@ -286,11 +330,12 @@ def run_pipeline(
     llm_cluster = _resolve_llm_call("cluster", models_config, config_paths, model_overrides,
                                     llm_stats_out=llm_stats, models_used_out=models_used,
                                     topic_step_models=topic_step_models, client=llm_client,
-                                    llm_prompts_out=llm_prompts)
+                                    llm_prompts_out=llm_prompts,
+                                    failure_debug_path=failure_debug_path)
     cluster_result = cluster_candidates(filter_result.candidates, llm_cluster)
     if cluster_result.warning:
         all_warnings.append(cluster_result.warning)
-    step_durations["cluster"] = round(perf_counter() - t0, 2)
+    step_durations["cluster"] = perf_counter() - t0
     logger.info("cluster: %d -> %d clusters (%.2fs)", len(filter_result.candidates), len(cluster_result.clusters), step_durations["cluster"])
 
     # 5. Score (CRITICAL - no fallback, ScoreValidationError crashes the entire run)
@@ -298,7 +343,8 @@ def run_pipeline(
     llm_score = _resolve_llm_call("score", models_config, config_paths, model_overrides,
                                   llm_stats_out=llm_stats, models_used_out=models_used,
                                   topic_step_models=topic_step_models, client=llm_client,
-                                  llm_prompts_out=llm_prompts)
+                                  llm_prompts_out=llm_prompts,
+                                  failure_debug_path=failure_debug_path)
     min_items = rubric["items_per_briefing"]["min"]
     previous_stories = load_previous_stories(topic, since.date(), output_dir=out_dir)
     clusters_before = len(cluster_result.clusters)
@@ -315,7 +361,7 @@ def run_pipeline(
                                 previous_stories=previous_stories)
     initial_pool = [sc for sc in scored.scored if sc.rank <= scored.cutoff_rank]
     backfill_pool = [sc for sc in scored.scored if sc.rank > scored.cutoff_rank]
-    step_durations["score"] = round(perf_counter() - t0, 2)
+    step_durations["score"] = perf_counter() - t0
     logger.info("score: %d selected (cutoff %d, %d initial + %d backfill, rubric %s, %.2fs)",
                 len(scored.scored), scored.cutoff_rank, len(initial_pool),
                 len(backfill_pool), rubric.get("version"), step_durations["score"])
@@ -328,7 +374,7 @@ def run_pipeline(
         enrich_result = enrich_candidates(initial_pool, client=ec)
         all_warnings.extend(enrich_result.warnings)
         dropped_stories = enrich_result.dropped_stories
-        step_durations["enrich"] = round(perf_counter() - t0_enrich, 2)
+        step_durations["enrich"] = perf_counter() - t0_enrich
         logger.info("enrich: %d -> %d items (content fetched successfully, %.2fs)",
                     len(initial_pool), len(enrich_result.items), step_durations["enrich"])
 
@@ -336,7 +382,8 @@ def run_pipeline(
         llm_compose = _resolve_llm_call("compose", models_config, config_paths, model_overrides,
                                         llm_stats_out=llm_stats, models_used_out=models_used,
                                         topic_step_models=topic_step_models, client=llm_client,
-                                        llm_prompts_out=llm_prompts)
+                                        llm_prompts_out=llm_prompts,
+                                        failure_debug_path=failure_debug_path)
         compose_result = compose_items(enrich_result.items, config_paths.persona,
                                         config_paths.guardrails, llm_compose,
                                         topic=topic,
@@ -344,7 +391,7 @@ def run_pipeline(
                                         topic_description=topic_config.get("topic_description", topic),
                                         golden_examples_path=config_paths.golden_examples_path)
         all_warnings.extend(compose_result.warnings)
-        step_durations["compose"] = round(perf_counter() - t0_compose, 2)
+        step_durations["compose"] = perf_counter() - t0_compose
         logger.info("compose: %d items written (%.2fs)", len(compose_result.items), step_durations["compose"])
 
         # 6b. Backfill: if initial pool drops below minimum, try backfill pool
@@ -376,12 +423,13 @@ def run_pipeline(
     llm_overview = _resolve_llm_call("overview", models_config, config_paths, model_overrides,
                                      llm_stats_out=llm_stats, models_used_out=models_used,
                                      topic_step_models=topic_step_models, client=llm_client,
-                                     llm_prompts_out=llm_prompts)
+                                     llm_prompts_out=llm_prompts,
+                                     failure_debug_path=failure_debug_path)
     previous_overviews = load_previous_overviews(topic, since.date(), days=5, output_dir=out_dir)
     overview_result = generate_overview(compose_result.items, llm_overview, topic,
                                          examples_path=config_paths.overview_examples,
                                          previous_overviews=previous_overviews or None)
-    step_durations["overview"] = round(perf_counter() - t0, 2)
+    step_durations["overview"] = perf_counter() - t0
 
     tts_cfg = topic_config.get("tts", {})
     tts_text: list[str] = []
@@ -403,8 +451,10 @@ def run_pipeline(
     _silence_between_ms = _voice_cfg.get("silence_between_segments_ms", 600)
 
     tts_result = None
+    tts_status = "skipped"
     if tts_cfg.get("enabled", False) and shutil.which("ffmpeg") is not None and compose_result.items:
         t0_tts = perf_counter()
+        tts_status = "failed"
         try:
             logger.info("tts: generating audio for overview (provider=%s, voice=%s)", provider, voice)
 
@@ -422,6 +472,7 @@ def run_pipeline(
 
             tts_result = synthesize(tts_text, provider, voice)
             if tts_result:
+                tts_status = "success"
                 out_dir.mkdir(parents=True, exist_ok=True)
                 audio_path = out_dir / f"{topic}_{period.value}_{date_str}_audio.ogg"
                 audio_path.write_bytes(tts_result.audio_bytes)
@@ -429,7 +480,7 @@ def run_pipeline(
                 tts_has_audio = True
                 logger.info("tts: audio saved to %s (%.2fs, %d segments)",
                             audio_path, audio_duration_s or 0.0, len(tts_text))
-                step_durations["tts"] = round(perf_counter() - t0_tts, 2)
+                step_durations["tts"] = perf_counter() - t0_tts
             else:
                 total = len(tts_text)
                 too_long = sum(1 for s in tts_text if len(s.encode("utf-8")) > 5000)
@@ -444,9 +495,10 @@ def run_pipeline(
 
     models_used['tts'] = f"{provider}/{voice}"
 
-    total_duration = round(perf_counter() - t_pipeline_start, 2)
+    total_duration = perf_counter() - t_pipeline_start
 
     # 8. Validate (CRITICAL - EmptyBriefingError if nothing remains)
+    t0 = perf_counter()
     briefing = assemble_briefing(
         topic=topic, period=period, period_start=since.date(),
         period_end=(until - timedelta(seconds=1)).date(),
@@ -460,6 +512,7 @@ def run_pipeline(
         llm_stats=llm_stats,
         tts_text=tts_text,
     )
+    step_durations["validate"] = perf_counter() - t0
 
     # 10. Write pipeline debug data
     pipeline_dir = data_dir / "pipeline"
@@ -467,6 +520,7 @@ def run_pipeline(
     pipeline_file = pipeline_dir / f"{topic}_{period.value}_{date_str}.json"
     pipeline_debug = {
         "topic": topic,
+        "status": "success",
         "period": period.value,
         "period_start": since.date().isoformat(),
         "period_end": (until - timedelta(seconds=1)).date().isoformat(),
@@ -476,16 +530,24 @@ def run_pipeline(
         "llm_prompts": llm_prompts,
         "steps": {
             "collect": {
+                "status": "success",
+                "duration_s": step_durations["collect"],
                 "total_raw": len(raw_items),
             },
             "dedup": {
+                "status": "success",
+                "duration_s": step_durations["dedup"],
                 "candidates": len(candidates),
             },
             "filter_topic": {
+                "status": "success",
+                "duration_s": step_durations["filter_topic"],
                 "n_kept": filter_result.n_kept,
                 "n_dropped": filter_result.n_dropped,
             },
             "cluster": {
+                "status": "success",
+                "duration_s": step_durations["cluster"],
                 "n_clusters": len(cluster_result.clusters),
                 "clusters": [
                     {
@@ -501,6 +563,8 @@ def run_pipeline(
                 ],
             },
             "score": {
+                "status": "success",
+                "duration_s": step_durations["score"],
                 "cutoff_rank": scored.cutoff_rank,
                 "candidates": [
                     {
@@ -514,6 +578,8 @@ def run_pipeline(
                 ],
             },
             "enrich": {
+                "status": "success",
+                "duration_s": step_durations["enrich"],
                 "n_success": len(enrich_result.items),
                 "n_failed": len(enrich_result.dropped_stories),
                 "dropped": [
@@ -522,13 +588,19 @@ def run_pipeline(
                 ],
             },
             "compose": {
+                "status": "success",
+                "duration_s": step_durations["compose"],
                 "n_written": len(compose_result.items),
             },
             "overview": {
+                "status": "success",
+                "duration_s": step_durations["overview"],
                 "overview": overview_result.overview,
                 "digest_topic": overview_result.digest_topic,
             },
             "tts": {
+                "status": tts_status,
+                "duration_s": step_durations.get("tts", 0),
                 "enabled": tts_cfg.get("enabled", False),
                 "provider": provider,
                 "voice": voice,
@@ -540,6 +612,10 @@ def run_pipeline(
                     {"index": i, "text": s, "input_bytes": len(s.encode("utf-8"))}
                     for i, s in enumerate(tts_text)
                 ] if tts_text else [],
+            },
+            "validate": {
+                "status": "success",
+                "duration_s": step_durations["validate"],
             },
         },
     }

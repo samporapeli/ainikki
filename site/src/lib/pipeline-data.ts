@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { getSiteTopics } from './site-data';
 
-export { formatDecimal, formatDuration } from './format';
+export { formatDecimal, formatDuration, formatDurationMs } from './format';
 
 const OUTPUT_DIR = path.resolve('../data/output');
 const PIPELINE_DIR = path.resolve('../data/pipeline');
@@ -23,8 +23,20 @@ export type PipelineStepKey =
 export type PromptCall = {
   system_prompt?: string;
   user_prompt?: string;
-  raw_response?: string;
+  raw_response?: string | null;
   reasoning?: string | null;
+  duration_ms?: number;
+  status?: 'success' | 'failed';
+  error?: string;
+  attempts?: Array<{
+    provider?: string;
+    model?: string;
+    status?: 'success' | 'failed';
+    error?: string | null;
+    duration_ms?: number;
+    response?: string | null;
+    reasoning?: string | null;
+  }>;
 };
 
 export type TtsSegment = {

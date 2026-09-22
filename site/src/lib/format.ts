@@ -21,6 +21,11 @@ export function formatDuration(seconds: number | undefined): string {
   return parts.join(' ');
 }
 
+export function formatDurationMs(milliseconds: number | undefined): string {
+  if (typeof milliseconds !== 'number') return '';
+  return formatDuration(milliseconds / 1000);
+}
+
 export function formatDecimal(value: number | undefined, decimals: number): string {
   if (typeof value !== 'number' || value == null) return '';
   return value.toFixed(decimals).replace(/\./g, ',');
