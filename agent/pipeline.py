@@ -414,6 +414,7 @@ def run_pipeline(
                                                golden_examples_path=config_paths.golden_examples_path)
                 all_warnings.extend(batch_compose.warnings)
                 compose_result.items.extend(batch_compose.items)
+                compose_result.off_topic_stories.extend(batch_compose.off_topic_stories)
     finally:
         if owns_enrich_client:
             ec.close()

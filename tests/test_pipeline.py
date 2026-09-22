@@ -10,7 +10,8 @@ from agent.pipeline import _resolve_llm_call, run_pipeline
 from agent.score import ScoreValidationError
 from agent.validate import EmptyBriefingError
 from agent.collect.hn import parse_hn_hits
-from agent.schema import Period, Briefing
+from agent.schema import Period, Briefing, OffTopicStory
+import agent.pipeline as pipeline_module
 
 CLEAN_HTML = Path("tests/fixtures/article_clean.html").read_text()
 
@@ -193,6 +194,43 @@ def test_pipeline_skips_audio_when_ffmpeg_missing(tmp_path):
     briefing = Briefing(**json.loads(path.read_text()))
     assert len(briefing.warnings) == 1
     assert "TTS on: ffmpeg not found in PATH" in briefing.warnings[0]
+
+
+def test_pipeline_keeps_off_topic_stories_from_backfill(tmp_path, monkeypatch):
+    raw_items = _load_test_raw_items()
+    llm_client = httpx.Client(transport=httpx.MockTransport(_make_llm_handler()))
+    enrich_client = httpx.Client(transport=httpx.MockTransport(_enrich_handler))
+    real_compose_items = pipeline_module.compose_items
+    compose_calls = 0
+
+    def compose_with_backfill_rejection(*args, **kwargs):
+        nonlocal compose_calls
+        result = real_compose_items(*args, **kwargs)
+        compose_calls += 1
+        if compose_calls == 1:
+            result.items.clear()
+        elif compose_calls == 2:
+            result.off_topic_stories.append(OffTopicStory(
+                title="Backfill rejection",
+                url="https://example.com/backfill",
+                summary="Rejected backfill story.",
+                reason="Outside the topic.",
+            ))
+        return result
+
+    monkeypatch.setattr(pipeline_module, "compose_items", compose_with_backfill_rejection)
+    since = datetime(2026, 7, 16, tzinfo=timezone.utc)
+    path = run_pipeline(
+        topic="ai", period=Period.daily, since=since,
+        until=since + timedelta(days=1), config_dir=Path("config"),
+        data_dir=tmp_path / "data", out_dir=tmp_path / "out",
+        raw_items_override=raw_items, llm_client=llm_client,
+        enrich_client=enrich_client,
+    )
+
+    briefing = Briefing(**json.loads(path.read_text()))
+    assert compose_calls > 1
+    assert [story.title for story in briefing.off_topic_stories] == ["Backfill rejection"]
 
 
 def test_tts_synthesis_failure_no_crash(tmp_path):
