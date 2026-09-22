@@ -214,9 +214,11 @@ def compose_items(enriched: list[EnrichedCandidate], persona_path: Path,
     warnings: list[str] = []
     off_topic_stories: list[OffTopicStory] = []
 
-    for item in enriched:
+    total_items = len(enriched)
+    for idx, item in enumerate(enriched):
         content_source = item.content_source or item.items[0]
         primary_title = content_source.title
+        logger.info("compose: drafting item %d/%d '%s'", idx + 1, total_items, primary_title)
         user_prompt = build_compose_user_prompt(item)
         raw_response, _usage = llm_call(system_prompt, user_prompt)
 

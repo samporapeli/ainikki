@@ -301,6 +301,7 @@ def test_pipeline_captures_llm_prompts(tmp_path):
         assert "system_prompt" in call
         assert "user_prompt" in call
         assert "raw_response" in call
+        assert "duration_ms" in call and isinstance(call["duration_ms"], int)
         assert isinstance(call["system_prompt"], str) and len(call["system_prompt"]) > 0
         assert isinstance(call["user_prompt"], str) and len(call["user_prompt"]) > 0
         assert isinstance(call["raw_response"], str) and len(call["raw_response"]) > 0

@@ -157,6 +157,7 @@ def _post_chat_completion(
     expect_json: bool = True,
     temperature: float = 0.2,
     thinking: bool | None = None,
+    step: str = "",
 ) -> tuple[str, dict]:
     """Send a provider-specific chat request with shared retry behavior."""
     base_url = provider.base_url.rstrip("/")
@@ -196,9 +197,20 @@ def _post_chat_completion(
         for k, v in h.items():
             headers[k] = v
 
+    step_prefix = f"[{step}] " if step else ""
     for attempt in range(_MAX_RETRIES + 1):
+        t0 = time.perf_counter()
+        logger.info(
+            "%sLLM request started: %s/%s (attempt %d/%d)",
+            step_prefix,
+            provider.provider,
+            model,
+            attempt + 1,
+            _MAX_RETRIES + 1,
+        )
         try:
             resp = client.post(endpoint, json=payload, headers=headers)
+            duration_ms = round((time.perf_counter() - t0) * 1000)
             if resp.status_code == 429 or resp.status_code >= 500 or resp.status_code == 408:
                 if attempt == _MAX_RETRIES:
                     resp.raise_for_status()
@@ -209,8 +221,14 @@ def _post_chat_completion(
                         delay = max(delay, float(retry_after))
                     except ValueError:
                         pass
-                logger.warning("LLM request returned HTTP %d (attempt %d/%d), retrying in %.0fs...",
-                               resp.status_code, attempt + 1, _MAX_RETRIES + 1, delay)
+                logger.warning(
+                    "LLM request returned HTTP %d in %dms (attempt %d/%d), retrying in %.0fs...",
+                    resp.status_code,
+                    duration_ms,
+                    attempt + 1,
+                    _MAX_RETRIES + 1,
+                    delay,
+                )
                 time.sleep(delay)
                 continue
 
@@ -221,11 +239,13 @@ def _post_chat_completion(
                 content = str(message.get("content") or "")
                 prompt_tokens = data.get("prompt_eval_count") or 0
                 completion_tokens = data.get("eval_count") or 0
+                cost = None
                 usage = {
                     "prompt_tokens": prompt_tokens,
                     "completion_tokens": completion_tokens,
                     "total_tokens": prompt_tokens + completion_tokens,
-                    "cost": None,
+                    "cost": cost,
+                    "duration_ms": duration_ms,
                     "reasoning": message.get("thinking") or message.get("reasoning"),
                 }
             else:
@@ -233,16 +253,39 @@ def _post_chat_completion(
                 message = choices[0].get("message") or {} if choices else {}
                 content = str(message.get("content") or "")
                 usage = dict(data.get("usage") or {})
-                usage["cost"] = usage.get("cost")
+                prompt_tokens = usage.get("prompt_tokens", 0) or 0
+                completion_tokens = usage.get("completion_tokens", 0) or 0
+                cost = usage.get("cost")
+                usage["cost"] = cost
+                usage["duration_ms"] = duration_ms
                 usage["reasoning"] = message.get("reasoning")
+
+            cost_str = f", cost={cost}" if cost is not None else ""
+            logger.info(
+                "%sLLM request completed: %s/%s in %dms (prompt=%d, completion=%d%s)",
+                step_prefix,
+                provider.provider,
+                model,
+                duration_ms,
+                prompt_tokens,
+                completion_tokens,
+                cost_str,
+            )
             return content, usage
         except (httpx.TimeoutException, httpx.NetworkError) as e:
+            duration_ms = round((time.perf_counter() - t0) * 1000)
             retry_limit = _TIMEOUT_RETRIES if isinstance(e, httpx.TimeoutException) else _MAX_RETRIES
             if attempt >= retry_limit:
                 raise
             delay = _RETRY_BASE_DELAY * (2 ** attempt)
-            logger.warning("LLM request failed with %s (attempt %d/%d), retrying in %.0fs...",
-                           type(e).__name__, attempt + 1, retry_limit + 1, delay)
+            logger.warning(
+                "LLM request failed with %s in %dms (attempt %d/%d), retrying in %.0fs...",
+                type(e).__name__,
+                duration_ms,
+                attempt + 1,
+                retry_limit + 1,
+                delay,
+            )
             time.sleep(delay)
 
     raise RuntimeError("Retries exhausted")  # unreachable, but satisfies mypy
@@ -332,6 +375,7 @@ def make_llm_call(
                     client=c,
                     temperature=step_cfg.temperature,
                     thinking=step_cfg.thinking,
+                    step=step,
                 )
                 usage = dict(usage)
                 usage["provider"] = provider.provider

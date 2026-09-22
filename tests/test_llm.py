@@ -94,6 +94,7 @@ def test_ollama_request_and_parse():
     assert usage["completion_tokens"] == 5
     assert usage["total_tokens"] == 15
     assert usage["cost"] == 0.0001
+    assert isinstance(usage["duration_ms"], int) and usage["duration_ms"] >= 0
     assert captures["body"]["url"] == "https://openrouter.ai/api/v1/chat/completions"
     body = captures["body"]["body"]
     assert body["model"] == "openai/gpt-4o-mini"

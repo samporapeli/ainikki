@@ -153,6 +153,7 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
         "total_completion_tokens": 0,
         "total_tokens": 0,
         "total_cost": None,
+        "total_duration_ms": 0,
     }
     def _tracked_call(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         content, usage = llm_fn(system_prompt, user_prompt)
@@ -162,11 +163,13 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
         prompt_tokens = usage.get("prompt_tokens", 0) or 0
         completion_tokens = usage.get("completion_tokens", 0) or 0
         total_tokens = usage.get("total_tokens", 0) or 0
+        duration_ms = usage.get("duration_ms", 0) or 0
         cost = usage.get("cost")
         step_stats["calls"] += 1
         step_stats["total_prompt_tokens"] += prompt_tokens
         step_stats["total_completion_tokens"] += completion_tokens
         step_stats["total_tokens"] += total_tokens
+        step_stats["total_duration_ms"] += duration_ms
         if cost is not None:
             step_stats["total_cost"] = (step_stats["total_cost"] or 0) + cost
         if llm_prompts_out is not None:
@@ -175,6 +178,7 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
                 "user_prompt": user_prompt,
                 "raw_response": content,
                 "reasoning": usage.get("reasoning"),
+                "duration_ms": duration_ms,
             })
         return content, usage
 
