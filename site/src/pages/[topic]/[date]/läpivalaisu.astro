@@ -216,6 +216,9 @@ const audioUrl = ttsHasAudio
           pausesAfter={step.isTts ? pausesAfter : undefined}
           silenceMs={step.isTts ? silenceMs : undefined}
           prompts={step.isLlm ? (llmPrompts[step.stepKey] ?? []) : []}
+          status={String(pipe[step.stepKey]?.status ?? '')}
+          statusMessage={typeof pipe[step.stepKey]?.warning === 'string' ? String(pipe[step.stepKey].warning) : null}
+          clusters={step.stepKey === 'cluster' ? clusters : []}
           promptTokenTotal={
             llmStats[step.stepKey]
               ? (llmStats[step.stepKey].total_prompt_tokens ?? 0) + (llmStats[step.stepKey].total_completion_tokens ?? 0)

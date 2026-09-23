@@ -547,7 +547,8 @@ def run_pipeline(
                 "n_dropped": filter_result.n_dropped,
             },
             "cluster": {
-                "status": "success",
+                "status": "degraded" if cluster_result.warning else "success",
+                "warning": cluster_result.warning,
                 "duration_s": step_durations["cluster"],
                 "n_clusters": len(cluster_result.clusters),
                 "clusters": [

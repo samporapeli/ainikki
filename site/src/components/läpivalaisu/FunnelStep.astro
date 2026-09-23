@@ -18,6 +18,9 @@ interface Props {
   silenceMs?: number;
   prompts?: PromptCall[];
   promptTokenTotal?: number | null;
+  status?: string;
+  statusMessage?: string | null;
+  clusters?: Array<{ items: Array<{ title?: string }> }>;
 }
 
 const {
@@ -36,6 +39,9 @@ const {
   silenceMs,
   prompts = [],
   promptTokenTotal = null,
+  status,
+  statusMessage = null,
+  clusters = [],
 } = Astro.props as Props;
 
 const stepClass = isLlm ? 'llm' : 'code';
@@ -51,13 +57,16 @@ const ttsScriptText = ttsSegments
   .join('\n\n');
 ---
 
-<div class={`step ${stepClass}`}>
+<div class={`step ${stepClass}${status === 'failed' || status === 'degraded' ? ' step-error' : ''}`}>
   <div class="step-head">
     <span class="step-num">{stepNumber}</span>
     <span class="step-name">{stepName}</span>
     <span class={badgeClass}>{badgeText}</span>
+    {status === 'failed' && <span class="step-status">Epäonnistui</span>}
+    {status === 'degraded' && <span class="step-status">Toimi varatilassa</span>}
   </div>
   <p class="step-desc">{description}</p>
+  {statusMessage && <p class="step-error-message">{statusMessage}</p>}
   {stats.length > 0 && (
     <ul class="step-stats">
       {stats.map(stat => <li>{stat}</li>)}
@@ -67,6 +76,13 @@ const ttsScriptText = ttsSegments
     <div class="dot-matrix" aria-hidden="true">
       {Array.from({ length: dotsCount }, () => <span class="dot"></span>)}
     </div>
+  )}
+  {clusters.length > 0 && (
+    <ul class="step-clusters">
+      {clusters.map((cluster, index) => (
+        <li><span>{index + 1}.</span> {cluster.items.map(item => item.title || '(tuntematon)').join(' · ')}</li>
+      ))}
+    </ul>
   )}
   {audioUrl && (
     <audio controls preload="metadata" src={audioUrl} class="audio-player" aria-label="Kuunteluvalikko" />

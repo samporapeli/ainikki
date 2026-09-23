@@ -168,6 +168,8 @@ def test_full_pipeline_happy_path(tmp_path):
 
     pipeline_file = tmp_data / "pipeline" / "ai_daily_2026-07-16.json"
     debug = json.loads(pipeline_file.read_text())
+    assert debug["steps"]["cluster"]["status"] == "success"
+    assert debug["steps"]["cluster"]["warning"] is None
     assert debug["steps"]["tts"]["provider"] == "google-cloud"
     assert debug["steps"]["tts"]["voice"] == "fi-FI-Chirp3-HD-Achird"
     assert debug["steps"]["tts"]["audio_duration_s"] == 12.34
