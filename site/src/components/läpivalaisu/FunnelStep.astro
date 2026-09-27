@@ -20,7 +20,9 @@ interface Props {
   promptTokenTotal?: number | null;
   status?: string;
   statusMessage?: string | null;
-  clusters?: Array<{ items: Array<{ title?: string }> }>;
+  modelClusters?: Array<{ candidate_indices?: number[]; reason?: string | null }>;
+  clusterCandidateTitles?: Record<string, string>;
+  clusterResponseReadable?: boolean;
 }
 
 const {
@@ -41,7 +43,9 @@ const {
   promptTokenTotal = null,
   status,
   statusMessage = null,
-  clusters = [],
+  modelClusters = [],
+  clusterCandidateTitles = {},
+  clusterResponseReadable = true,
 } = Astro.props as Props;
 
 const stepClass = isLlm ? 'llm' : 'code';
@@ -77,12 +81,28 @@ const ttsScriptText = ttsSegments
       {Array.from({ length: dotsCount }, () => <span class="dot"></span>)}
     </div>
   )}
-  {clusters.length > 0 && (
-    <ul class="step-clusters">
-      {clusters.map((cluster, index) => (
-        <li><span>{index + 1}.</span> {cluster.items.map(item => item.title || '(tuntematon)').join(' · ')}</li>
-      ))}
-    </ul>
+  {stepKey === 'cluster' && (
+    <div class="step-clusters">
+      <strong>Kielimallin valitsemat ryhmät</strong>
+      {!clusterResponseReadable ? (
+        <p>Kielimallin vastausta ei voitu tulkita.</p>
+      ) : modelClusters.length === 0 ? (
+        <p>Kielimalli ei löytänyt ryhmiä</p>
+      ) : (
+        <ol>
+          {modelClusters.map((cluster, index) => (
+            <li>
+              <strong>{cluster.reason || `Ryhmä ${index + 1}`}</strong>
+              <ul>
+                {(cluster.candidate_indices ?? []).map(index => (
+                  <li>[{index}] {clusterCandidateTitles[String(index)] ?? 'annettu indeksi puuttuu'}</li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
   )}
   {audioUrl && (
     <audio controls preload="metadata" src={audioUrl} class="audio-player" aria-label="Kuunteluvalikko" />

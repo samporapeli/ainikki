@@ -12,12 +12,14 @@ interface NewsItem {
   sources: Source[];
   rank: number;
   reason?: string;
+  selection_reason?: string;
 }
 
-const { item, showRank = false, showAllSources = false } = Astro.props as {
+const { item, showRank = false, showAllSources = false, showSelectionReason = false } = Astro.props as {
   item: NewsItem;
   showRank?: boolean;
   showAllSources?: boolean;
+  showSelectionReason?: boolean;
 };
 
 const sources = showAllSources ? item.sources : item.sources.slice(0, 1);
@@ -36,6 +38,9 @@ function hostname(url: string): string {
   <p class="summary">{item.summary}</p>
   {item.reason && (
     <p class="reason"><span class="reason-label">Perustelu:</span> <em>{item.reason}</em></p>
+  )}
+  {showSelectionReason && item.selection_reason && (
+    <p class="reason"><span class="reason-label">Valinnan peruste:</span> <em>{item.selection_reason}</em></p>
   )}
   {sources.map(source => (
     <p class="source">

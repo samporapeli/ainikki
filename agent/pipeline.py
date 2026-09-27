@@ -550,6 +550,10 @@ def run_pipeline(
                 "status": "degraded" if cluster_result.warning else "success",
                 "warning": cluster_result.warning,
                 "duration_s": step_durations["cluster"],
+                "candidates": [
+                    {"index": index, "title": candidate.primary.title}
+                    for index, candidate in enumerate(filter_result.candidates)
+                ],
                 "n_clusters": len(cluster_result.clusters),
                 "clusters": [
                     {

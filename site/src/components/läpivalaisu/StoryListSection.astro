@@ -35,7 +35,7 @@ function hostname(url: string): string {
 <h2>Koosteen artikkelit</h2>
 <div class="story-list">
   {sortedItems.map(item => (
-    <StoryCard item={item} showRank showAllSources />
+    <StoryCard item={item} showRank showAllSources showSelectionReason />
   ))}
   {notIncluded.length > 0 && (
     <>
