@@ -345,6 +345,13 @@ sources:
     site_url: https://frame.work/
     feed_url: https://frame.work/fi/en/blog.rss
 
+  - key: mistral-blog
+    type: rss
+    pretty_name: Mistral Blog
+    badge: Mistral
+    site_url: https://mistral.ai/news/
+    feed_url: https://mistral.ai/news/rss
+
   - key: test-rss-a
     type: rss
     pretty_name: Testifeed A
