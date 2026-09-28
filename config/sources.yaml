@@ -157,6 +157,12 @@ sources:
     site_url: https://arstechnica.com/tag/steam/
     feed_url: https://arstechnica.com/tag/steam/feed/
 
+  - key: proton-blog
+    type: rss
+    pretty_name: Proton Blog
+    badge: Proton
+    site_url: https://proton.me/blog/
+    feed_url: https://proton.me/blog/feed.xml
 
   - key: blog-google
     type: rss
