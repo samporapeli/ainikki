@@ -352,6 +352,13 @@ sources:
     site_url: https://mistral.ai/news/
     feed_url: https://mistral.ai/news/rss
 
+  - key: openrouter-blog
+    type: rss
+    pretty_name: OpenRouter Blog
+    badge: OpenRouter
+    site_url: https://openrouter.ai/blog/
+    feed_url: https://openrouter.ai/blog/feed.xml
+
   - key: test-rss-a
     type: rss
     pretty_name: Testifeed A
