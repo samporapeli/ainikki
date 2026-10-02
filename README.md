@@ -29,7 +29,7 @@ A/B compare models without editing config, or run against Ollama:
 
     ./pipeline.sh --topic ai --since 2026-07-16 --until 2026-07-16 \
       --model-override score=openrouter:openai/gpt-4o \
-      --model-override compose=openrouter:anthropic/claude-sonnet-5
+      --model-override compose=openrouter:anthropic/claude-sonnet-5.5
 
     OLLAMA_HOST="http://localhost:11434/v1" \
       ./pipeline.sh --topic test --since 2026-07-16 --until 2026-07-16 \

@@ -40,4 +40,4 @@ steps:
   overview:
     models:
       - provider: openrouter
-        model: "anthropic/claude-sonnet-5"
+        model: "anthropic/claude-sonnet-5.5"
