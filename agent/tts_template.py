@@ -148,7 +148,18 @@ class TtsTemplate:
         for term, phonetic in self.template_data.get("pronunciations", {}).items():
             if term and phonetic:
                 text = re.sub(rf"\b{re.escape(str(term))}\b", str(phonetic), text)
+        # Finnish decimals use commas; other dotted numbers are spoken as versions.
+        # Three-digit groups remain available for thousands normalization.
+        text = re.sub(r"(?<!\w)(\d+(?:\.\d+)+)(?!\w)", self._pronounce_dotted_number, text)
         return self._normalize_decimals(text)
+
+    @staticmethod
+    def _pronounce_dotted_number(match: re.Match[str]) -> str:
+        number = match.group(1)
+        parts = number.split(".")
+        if all(len(part) == 3 for part in parts[1:]):
+            return number
+        return " piste ".join(parts)
 
     def _normalize_decimals(self, text: str) -> str:
         """Rewrite Nordic/German decimal commas ("9,5") so the TTS engine

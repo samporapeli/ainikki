@@ -102,6 +102,15 @@ class TestTtsTemplate:
         assert "Open AI" in full
         assert "Qwen" not in full
 
+    def test_dotted_versions_are_spoken_with_piste(self):
+        template = TtsTemplate(Path("config/tts-templates/ainikki-oletus.yaml"))
+
+        assert template._pronounce("Ubuntu 26.10") == "Ubuntu 26 piste 10"
+        assert template._pronounce("Python 3.14.15") == "Python 3 piste 14 piste 15"
+        assert template._pronounce("1.0.15") == "1 piste 0 piste 15"
+        assert template._pronounce("3,14") == "3 pilkku 14"
+        assert template._pronounce("1.000") == "1000"
+
     def test_random_bridge_selection(self):
         """Test that bridges are randomly selected from options."""
         template = TtsTemplate(Path("config/tts-templates/ainikki-oletus.yaml"))
