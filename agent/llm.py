@@ -42,6 +42,7 @@ class StepModelConfig:
     model: str
     temperature: float = 0.2
     thinking: bool | None = None
+    timeout: float | None = None
 
 
 @dataclass
@@ -105,6 +106,7 @@ def resolve_step_configs(
             model=model,
             temperature=first.get("temperature", 0.2),
             thinking=first.get("thinking"),
+            timeout=first.get("timeout"),
         )]
 
     entries = model_entries
@@ -128,6 +130,7 @@ def resolve_step_configs(
             model=str(model).strip(),
             temperature=entry.get("temperature", 0.2),
             thinking=entry.get("thinking"),
+            timeout=entry.get("timeout"),
         ))
     return result
 
@@ -393,7 +396,10 @@ def _resolve_provider(
         api_key = os.environ.get(cfg["api_key_env"])
 
     auth_headers = [{"Authorization": f"Bearer {api_key}"}] if api_key else None
-    timeout = float(cfg.get("timeout") or 60.0)
+    timeout = float(
+        step_config.timeout if step_config.timeout is not None
+        else cfg.get("timeout") or 60.0
+    )
     return ProviderEndpoint(
         provider=step_config.provider,
         type=provider_type,

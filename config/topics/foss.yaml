@@ -60,6 +60,10 @@ steps:
   compose:
     models:
       - provider: local
+        model: "gemma4:31b"
+        timeout: 900
+        thinking: false
+      - provider: local
         model: "gemma4:26b"
         thinking: false
       - provider: openrouter
@@ -67,6 +71,10 @@ steps:
         thinking: false
   overview:
     models:
+      - provider: local
+        model: "gemma4:31b"
+        timeout: 900
+        thinking: false
       - provider: local
         model: "gemma4:26b"
         thinking: false
