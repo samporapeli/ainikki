@@ -9,6 +9,7 @@ import Colophon from '../../components/Colophon.astro';
 import Warnings from '../../components/Warnings.astro';
 import { TOPIC_META } from '../../lib/topics';
 import { fiDate } from '../../lib/date';
+import { getSuccessfulModelsUsed, type PipelineOutput } from '../../lib/pipeline-data';
 import { isSiteTopic } from '../../lib/site-data';
 
 export function getStaticPaths() {
@@ -76,6 +77,13 @@ const TIETOJA_URL = `${import.meta.env.BASE_URL}/tietoja/`;
 const period = briefing.period || "daily";
 const pipelinePath = path.resolve(`../data/pipeline/${topic}_${period}_${dateStr}.json`);
 const hasPipelineDebug = fs.existsSync(pipelinePath);
+const pipelineDebug = hasPipelineDebug
+  ? JSON.parse(fs.readFileSync(pipelinePath, 'utf-8')) as PipelineOutput
+  : undefined;
+const modelsUsed = getSuccessfulModelsUsed(
+  briefing.meta?.models_used ?? {},
+  pipelineDebug?.llm_prompts,
+);
 
 const audioFilename = `${topic}_${period}_${dateStr}_audio.ogg`;
 const audioPath = path.resolve(`../data/output/${audioFilename}`);
@@ -148,7 +156,7 @@ const nextBriefing = briefing._next || null;
 
   <div class="digest-meta">
     <Colophon
-      modelsUsed={briefing.meta?.models_used ?? {}}
+      modelsUsed={modelsUsed}
       llmStats={briefing.meta?.llm_stats ?? {}}
       lapivalaisuUrl={hasPipelineDebug ? `${import.meta.env.BASE_URL}/${topic}/${dateStr}/läpivalaisu/` : undefined}
     />

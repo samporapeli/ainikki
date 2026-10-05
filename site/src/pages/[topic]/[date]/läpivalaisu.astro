@@ -12,9 +12,11 @@ import StoryListSection from '../../../components/läpivalaisu/StoryListSection.
 import {
   formatDecimal,
   formatDuration,
+  getSuccessfulModelsUsed,
   getLapivalaisuStaticPaths,
   getLapivaluisTopicDates,
   normalizeTtsSegments,
+  shortModelNames,
   type BriefingOutput,
   type PipelineOutput,
 } from '../../../lib/pipeline-data';
@@ -47,7 +49,7 @@ const pipe = pipeline?.steps ?? {};
 const stepDurations = pipeline?.step_durations_s ?? {};
 const llmStats = pipeline?.llm_stats ?? {};
 const llmPrompts = pipeline?.llm_prompts ?? {};
-const modelsUsed = output.meta?.models_used ?? {};
+const modelsUsed = getSuccessfulModelsUsed(output.meta?.models_used ?? {}, llmPrompts);
 
 const displayDate = output.display_date || output.period_start;
 const topicUpper = topicLabels[topic] ?? topic.toUpperCase();
@@ -76,7 +78,7 @@ const ttsTotalWords = ttsSegments.reduce((total, segment) => {
 
 function modelName(stepKey: string): string | null {
   const model = modelsUsed[stepKey];
-  return model ? model.split('/').pop() ?? model : null;
+  return model ? shortModelNames(model) : null;
 }
 
 const collectRaw = pipe.collect?.total_raw as number | undefined;

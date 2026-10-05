@@ -1,4 +1,6 @@
 ---
+import { shortModelNames } from '../lib/pipeline-data';
+
 interface Props {
   modelsUsed: Record<string, string>;
   llmStats: Record<string, Record<string, number>>;
@@ -21,7 +23,7 @@ const stepRows = LLM_ORDER
   .filter(step => modelsUsed[step])
   .map(step => {
     const modelRaw = modelsUsed[step];
-    const modelShort = modelRaw.split("/").pop() || modelRaw;
+    const modelShort = shortModelNames(modelRaw);
     const stats = llmStats[step];
     const hasStats = stats != null;
     const calls = stats?.calls ?? 0;

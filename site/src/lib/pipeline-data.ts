@@ -39,6 +39,27 @@ export type PromptCall = {
   }>;
 };
 
+export function getSuccessfulModelsUsed(
+  modelsUsed: Record<string, string>,
+  prompts: Record<string, PromptCall[]> = {},
+): Record<string, string> {
+  const result = { ...modelsUsed };
+  for (const [step, calls] of Object.entries(prompts)) {
+    const models = [...new Set(calls.flatMap(call => (call.attempts ?? [])
+      .filter(attempt => attempt.status === 'success' && attempt.model)
+      .map(attempt => `${attempt.provider ?? 'unknown'}/${attempt.model}`)))];
+    if (models.length > 0) result[step] = models.join(', ');
+  }
+  return result;
+}
+
+export function shortModelNames(models: string): string {
+  return models.split(',').map(model => {
+    const trimmed = model.trim();
+    return trimmed.split('/').pop() || trimmed;
+  }).join(', ');
+}
+
 export type TtsSegment = {
   index?: number;
   text?: string;

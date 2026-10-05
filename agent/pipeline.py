@@ -188,15 +188,16 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
                         "llm_prompts": llm_prompts_out,
                     }, ensure_ascii=False, indent=2))
             raise
-        attempted_models = [
+        successful_models = [
             f"{attempt.get('provider', 'unknown')}/{attempt.get('model', 'unknown')}"
             for attempt in usage.get("attempts", [])
+            if attempt.get("status") == "success"
         ]
         used_model = f"{usage.get('provider', 'unknown')}/{usage.get('model', 'unknown')}"
-        if used_model not in attempted_models:
-            attempted_models.append(used_model)
+        if used_model not in successful_models:
+            successful_models.append(used_model)
         previous_models = models_used_out.get(step, "").split(", ") if step in models_used_out else []
-        models_used_out[step] = ", ".join(dict.fromkeys(previous_models + attempted_models))
+        models_used_out[step] = ", ".join(dict.fromkeys(previous_models + successful_models))
         prompt_tokens = usage.get("prompt_tokens", 0) or 0
         completion_tokens = usage.get("completion_tokens", 0) or 0
         total_tokens = usage.get("total_tokens", 0) or 0
