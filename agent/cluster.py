@@ -17,7 +17,7 @@ import json
 import logging
 from typing import Protocol, NamedTuple
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from agent.json_utils import strip_code_fences
 from agent.schema import Candidate, ClusteredCandidate
@@ -46,8 +46,8 @@ class ClusterResult(NamedTuple):
 
 
 class ClusterAssignment(BaseModel):
-    candidate_indices: list[int]
     reason: str | None = None
+    candidate_indices: list[int] = Field(default_factory=list)
 
 
 class ClusterResponse(BaseModel):
@@ -70,17 +70,21 @@ tarvitse palauttaa: koodi käsittelee kaikki puuttuvat ehdokkaat automaattisesti
 erillisinä ryhminä. Jos et löydä varmasti samaa tarinaa käsitteleviä ehdokkaita,
 palauta tyhjä lista.
 
-Järjestä jokaisen ryhmän candidate_indices-lista lähteiden tärkeysjärjestykseen:
+Kirjoita jokaiselle ryhmälle ensin reason-kenttään konkreettinen perustelu:
+mainitse yhteinen tuote, julkaisu, tapahtuma tai päätös ja kerro, miksi eri URL:t
+käsittelevät samaa tarinaa. Älä käytä pelkkää ilmausta kuten "sama julkaisu" tai
+"sama aihe".
+
+Listaa sen jälkeen candidate_indices-kenttään VAIN ne ehdokkaat, jotka reason-perustelun
+mukaan varmasti kuuluvat yhteen. Järjestä lista lähteiden tärkeysjärjestykseen:
 listan ensimmäinen ehdokas on päälähde. Suosi alkuperäistä julkaisijaa ja suoraa
 lähdettä aggregaatin, keskustelulangan tai myöhemmän kommentaarin sijaan.
 Käytä candidate_indices-kentässä Ehdokkaat-listan alkuperäisiä globaaleja indeksejä sellaisinaan.
-
-Kirjoita reason-kenttään konkreettinen perustelu: mainitse yhteinen tuote, julkaisu,
-tapahtuma tai päätös ja kerro, miksi eri URL:t käsittelevät samaa tarinaa. Älä käytä
-pelkkää ilmausta kuten "sama julkaisu" tai "sama aihe".
+Jos huomaat perustelua kirjoittaessasi, etteivät ehdokkaat olekaan samaa tapahtumaa,
+palauta tyhjä lista candidate_indices: [].
 
 Vastaa VAIN JSON-muodossa, ei muuta tekstiä:
-{"clusters": [{"candidate_indices": [19, 20, 3], "reason": "Kaikki kolme käsittelevät Aurora-mallin julkaisua paikalliseen ajoon: ehdokas 19 kertoo julkaisusta ja ehdokkaat 20 ja 3 mallin saatavuudesta omilla laitteilla eri URL:eilla."}]}
+{"clusters": [{"reason": "Kaikki kolme käsittelevät Aurora-mallin julkaisua paikalliseen ajoon: ehdokas 19 kertoo julkaisusta ja ehdokkaat 20 ja 3 mallin saatavuudesta omilla laitteilla eri URL:eilla.", "candidate_indices": [19, 20, 3]}]}
 Jos sopivia ryhmiä ei ole:
 {"clusters": []}"""
 
@@ -104,7 +108,7 @@ def _validate_assignments(response: ClusterResponse, n_candidates: int) -> bool:
     seen: set[int] = set()
     for cluster in response.clusters:
         if not cluster.candidate_indices:
-            return False
+            continue
         for index in cluster.candidate_indices:
             if index < 0 or index >= n_candidates or index in seen:
                 return False
@@ -180,7 +184,7 @@ def cluster_candidates(candidates: list[Candidate], llm_call: LlmCall) -> Cluste
         return _recover_missing(response, len(candidates), candidates)
 
     result = []
-    for cluster in response.clusters:
+    for cluster in [c for c in response.clusters if c.candidate_indices]:
         ordered_indices = [cluster.candidate_indices[0]] + [
             idx for idx in cluster.candidate_indices if idx != cluster.candidate_indices[0]
         ]

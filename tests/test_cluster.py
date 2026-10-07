@@ -188,3 +188,73 @@ def test_code_fenced_json_is_parsed():
     result = cluster_candidates(candidates, mock_llm_code_fence)
     assert result.warning is None
     assert len(result.clusters) == len(candidates)
+
+
+def test_empty_candidate_indices_merged_with_valid_clusters():
+    """A cluster that explicitly returns candidate_indices: [] alongside a
+    valid 2-item cluster must be ignored while valid clusters are still
+    merged and missing candidates recovered as singletons."""
+    candidates = _build_test_candidates()
+    anthropic_idx = next(i for i, c in enumerate(candidates)
+                         if "Fable 5 and Claude Mythos 5" in c.primary.title)
+    techcrunch_idx = next(i for i, c in enumerate(candidates)
+                          if "mixed reactions" in c.primary.title)
+
+    def partial_response(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
+        remaining = [i for i in range(len(candidates))
+                     if i not in (anthropic_idx, techcrunch_idx)]
+        clusters = [
+            {"candidate_indices": [], "reason": "dummy empty cluster"},
+            {"candidate_indices": [anthropic_idx, techcrunch_idx],
+             "reason": "sama tapahtuma"},
+        ]
+        clusters.extend({"candidate_indices": [i], "reason": None} for i in remaining)
+        return json.dumps({"clusters": clusters}), {}
+
+    result = cluster_candidates(candidates, partial_response)
+    assert result.warning is None, "empty candidate_clusters must not trigger fallback"
+
+    merged = next(c for c in result.clusters if len(c.items) == 2)
+    assert len(merged.items) == 2
+    assert {ito.source_type for ito in merged.items} == {SourceType.hn, SourceType.other}
+    assert merged.cluster_reason == "sama tapahtuma"
+
+    # all candidates accounted for: 1 merged group (2 items) + singletons
+    singleton_count = sum(1 for c in result.clusters if len(c.items) == 1)
+    assert singleton_count == len(candidates) - 2
+    assert len(result.clusters) == len(candidates) - 1
+
+
+def test_missing_candidate_indices_key_merged_with_valid_clusters():
+    """A cluster dict that omits the candidate_indices key entirely (or has
+    it empty) alongside a valid cluster must still parse correctly with no
+    fallback warning."""
+    candidates = _build_test_candidates()
+    anthropic_idx = next(i for i, c in enumerate(candidates)
+                         if "Fable 5 and Claude Mythos 5" in c.primary.title)
+    techcrunch_idx = next(i for i, c in enumerate(candidates)
+                          if "mixed reactions" in c.primary.title)
+
+    def partial_response(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
+        remaining = [i for i in range(len(candidates))
+                     if i not in (anthropic_idx, techcrunch_idx)]
+        clusters = [
+            {"reason": "cluster without candidate_indices key"},
+            {"candidate_indices": [], "reason": "explicitly empty"},
+            {"candidate_indices": [anthropic_idx, techcrunch_idx],
+             "reason": "sama tapahtuma"},
+        ]
+        clusters.extend({"candidate_indices": [i], "reason": None} for i in remaining)
+        return json.dumps({"clusters": clusters}), {}
+
+    result = cluster_candidates(candidates, partial_response)
+    assert result.warning is None, "missing/empty candidate_indices must not trigger fallback"
+
+    merged = next(c for c in result.clusters if len(c.items) == 2)
+    assert len(merged.items) == 2
+    assert {ito.source_type for ito in merged.items} == {SourceType.hn, SourceType.other}
+    assert merged.cluster_reason == "sama tapahtuma"
+
+    singleton_count = sum(1 for c in result.clusters if len(c.items) == 1)
+    assert singleton_count == len(candidates) - 2
+    assert len(result.clusters) == len(candidates) - 1
