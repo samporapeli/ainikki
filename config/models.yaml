@@ -36,8 +36,12 @@ steps:
   compose:
     models:
       - provider: openrouter
+        model: "mistralai/mistral-large-4-0"
+      - provider: openrouter
         model: "google/gemini-3.8-flash"
   overview:
     models:
+      - provider: openrouter
+        model: "google/gemini-3.8-flash"
       - provider: openrouter
         model: "anthropic/claude-sonnet-5.5"
