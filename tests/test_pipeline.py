@@ -361,6 +361,17 @@ def test_full_pipeline_happy_path(tmp_path):
     assert briefing.meta.models_used["tts"] == "google-cloud/fi-FI-Chirp3-HD-Achird"
     assert len(briefing.warnings) == 0
 
+    raw = json.loads(path.read_text())
+    assert len(briefing.tts_text) > 0, "tts_text should be non-empty"
+    assert raw["tts_text"] == briefing.tts_text
+    all_tts_text = " ".join(briefing.tts_text)
+    assert briefing.overview in all_tts_text, (
+        "tts_text should contain the generated overview"
+    )
+    assert any(
+        item.headline in all_tts_text for item in briefing.items
+    ), "tts_text should contain at least one generated headline"
+
     audio_file = tmp_out / "ai_daily_2026-07-16_audio.ogg"
     assert audio_file.exists()
     assert audio_file.read_bytes() == b"OggS_test_audio_bytes"
