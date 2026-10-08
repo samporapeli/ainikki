@@ -47,6 +47,14 @@ steps:
         temperature: 0.6
       - provider: openrouter
         model: "openai/gpt-4o-mini"
+  compose:
+    models:
+      - provider: openrouter
+        model: "anthropic/claude-haiku-5.5"
+      - provider: openrouter
+        model: "mistralai/mistral-large-4-0"
+      - provider: openrouter
+        model: "google/gemini-3.8-flash"
 
 tts:
   enabled: true
