@@ -26,16 +26,15 @@ and Ainikki is credited as author in the header.
 
 ## Open question: one Ainikki, or many personas under Ainikki?
 
-Today there is exactly one topic (`ai`) and one persona file
-(`config/personas/ainikki_v1.yaml`), loaded unconditionally regardless
-of topic (`ConfigPaths.persona` in `agent/pipeline.py` is not
-topic-parameterized, unlike `ConfigPaths.rubric`). The persona's
-`target_audience` is explicitly "kokenut ohjelmistokehittäjä" — a voice
-tuned for the current AI-news audience.
+Several topics are configured, but there is one persona file
+(`config/personas/ainikki_v1.yaml`), loaded regardless of topic
+(`ConfigPaths.persona` in `agent/pipeline.py` is not topic-parameterized,
+unlike `ConfigPaths.rubric`). The persona's `target_audience` is
+explicitly "kokenut ohjelmistokehittäjä" — a voice tuned for the AI-news
+audience, even though the topic configuration passes a separate target
+audience into Compose.
 
-Adding a topic with a genuinely different audience (design, Linux,
-mechanical keyboards, electronic music — see
-`planning/multi-source-and-topics.md`) raises a real question: is
+Adding a topic with a genuinely different audience raises a real question: is
 "Ainikki" one consistent author-voice across every topic, or does each
 topic get its own named voice under an "Ainikki" umbrella brand?
 

@@ -5,7 +5,7 @@
 - Nine-step pipeline: collect, dedup, cluster, score, enrich, compose, overview, validate, write
 - Pytest test suite with integration and unit tests
 - `run_digest.sh` for topic-specific scheduled runs, deploy, and Telegram notification
-- Astro static site with newspaper-style design, zero JS
+- Astro static site with newspaper-style design and small interaction scripts
 - Plausible Analytics
 - Finnish date formatting with weekday names
 - OG tags and favicon for link previews
@@ -25,51 +25,29 @@
 - Dropped "olet toimittaja" framing from LLM prompts (compose/score/
   overview) - the app doesn't claim to do actual journalism, see
   `planning/identity-and-voice.md`
+- Failure alerts for pipeline and deployment errors in `run_digest.sh`
+- Pipeline observability: per-step status and duration, per-call provider/model
+  attempts, fallback/retry outcomes, and failure context in pipeline data and
+  `/läpivalaisu/`
+- Multi-source collection with per-topic source lists and HN/RSS adapters
+- Weekly and monthly digest periods alongside daily runs
+- Topic-specific golden examples selected through each topic configuration
 
 ## Next
 
-- **Failure alerting for `run_digest.sh`** — right now a pipeline crash
-  (e.g. `ScoreValidationError`) just exits and gets logged to
-  `ainikki-cron.log`; nobody is notified. Send a Telegram/email message
-  on failure, not just on success.
-- **Pipeline observability** — improve structured logging and metadata so
-  each step records its status, duration, actual provider/model attempts,
-  fallback and retry outcomes, and useful failure context.
-- **Multi-source collection** — currently HN-only, which limits topic
-  diversity and weakens the rubric's "source independence" criterion
-  (multiple HN submissions of the same link aren't independent sources).
-  See `planning/multi-source-and-topics.md` for source candidates (Yle
-  RSS, HS, Reddit, topic-specific feeds) and the adapter design.
-  - Per-topic source configuration (`config/sources/`)
-  - RSS adapter as second source type
-- **Per-topic persona/guardrails** — `ConfigPaths` in `agent/pipeline.py`
-  only parameterizes the rubric by topic; persona and guardrails are
-  hardcoded to one file regardless of topic. Blocks adding a topic with
-  a different voice/audience. See `planning/identity-and-voice.md`.
-- Lightweight groundedness check after Compose/Overview (LLM-as-judge
-  or heuristic entity/number overlap against source text) — log as a
-  non-blocking warning, consistent with the existing failure-policy
-  philosophy, to catch drift now that nothing reviews output before
-  publish.
-- Extract Telegram logic into its own script
 
 ## Ideas
 
 - Experimenting with Telegram message formats (current vs. full digest content vs. summary + links only)
-- Weekly or monthly digest variants — could fit lower-velocity topics
-  (e.g. mechanical keyboards) better than a daily cadence
+- Groundedness check after Compose/Overview to catch factual drift against
+  source material; report findings as non-blocking warnings.
+- Link sources directly from the overview: give the Overview model stable
+  source references that the site renderer turns into links.
 - Async compose step for parallel LLM calls
 - Reddit and ArXiv adapters
-- Topic-specific golden examples
-- New topic candidates once multi-source collection exists — see
-  `planning/multi-source-and-topics.md` for source fit per topic:
-  Linux/FOSS, design, mechanical keyboards, electronic music
-
-## Open questions
-
-- How should Ainikki's identity/branding work once there's more than
-  one persona (different topics likely want different voices/target
-  audiences)? Is "Ainikki" one author across all topics, or does each
-  topic get its own named persona under the Ainikki umbrella? See
-  `planning/identity-and-voice.md` for the options considered — no
-  decision made yet.
+- New topic candidates:
+  design, mechanical keyboards, electronic music
+- **Per-topic persona** — `ConfigPaths` in `agent/pipeline.py` still loads
+  one persona regardless of topic, limiting voice and audience adaptation.
+  Guardrails are intentionally shared across topics. See
+  `planning/identity-and-voice.md`.
