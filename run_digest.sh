@@ -13,26 +13,8 @@ fi
 TOPIC="$1"
 validate_env
 
-CONFIG_VALUES=$("$VENV_PYTHON" - "$SCRIPT_DIR/config/topics/${TOPIC}.yaml" <<'PY'
-import sys
-from pathlib import Path
-
-import yaml
-
-path = Path(sys.argv[1])
-if not path.exists():
-    raise SystemExit(f"Topic configuration not found: {path}")
-
-data = yaml.safe_load(path.read_text()) or {}
-period = data.get("period")
-channel_env = data.get("telegram_channel_id_env")
-if period not in {"daily", "weekly", "monthly"}:
-    raise SystemExit(f"Unsupported period for {path}: {period!r}")
-if not isinstance(channel_env, str) or not channel_env:
-    raise SystemExit(f"Missing telegram_channel_id_env in {path}")
-print(f"{period}\t{channel_env}")
-PY
-)
+CONFIG_VALUES=$("$VENV_PYTHON" "$SCRIPT_DIR/agent/topic_config.py" \
+    "$SCRIPT_DIR/config/topics/${TOPIC}.yaml")
 IFS=$'\t' read -r PERIOD TELEGRAM_CHANNEL_ID_ENV <<< "$CONFIG_VALUES"
 
 END_DATE=$(date -d yesterday +%Y-%m-%d)

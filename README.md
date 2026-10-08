@@ -92,8 +92,7 @@ For example, separate weekly topics can run on separate days:
     30 08 * * 1 /path/to/ainikki/run_digest.sh teknologia
 
 Each topic declares its Telegram chat environment variable in its topic
-configuration, for example `TELEGRAM_CHAT_ID_FOSS`. `daily.sh` and
-`weekly.sh` remain compatibility wrappers for the AI and Teknologia topics.
+configuration, for example `TELEGRAM_CHAT_ID_FOSS`.
 Set keys and target directly in the cron entry, not in profile files.
 Telegram is optional: if bot token and chat ID are missing, Telegram
 steps are silently skipped.

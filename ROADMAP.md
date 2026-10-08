@@ -4,7 +4,7 @@
 
 - Nine-step pipeline: collect, dedup, cluster, score, enrich, compose, overview, validate, write
 - Pytest test suite with integration and unit tests
-- `daily.sh` for automated daily run, deploy, and Telegram notification
+- `run_digest.sh` for topic-specific scheduled runs, deploy, and Telegram notification
 - Astro static site with newspaper-style design, zero JS
 - Plausible Analytics
 - Finnish date formatting with weekday names
@@ -28,7 +28,7 @@
 
 ## Next
 
-- **Failure alerting for `daily.sh`** — right now a pipeline crash
+- **Failure alerting for `run_digest.sh`** — right now a pipeline crash
   (e.g. `ScoreValidationError`) just exits and gets logged to
   `ainikki-cron.log`; nobody is notified. Send a Telegram/email message
   on failure, not just on success.
@@ -51,7 +51,6 @@
   non-blocking warning, consistent with the existing failure-policy
   philosophy, to catch drift now that nothing reviews output before
   publish.
-- Parameterize `daily.sh` for multiple topics
 - Extract Telegram logic into its own script
 
 ## Ideas
