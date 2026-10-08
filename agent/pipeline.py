@@ -33,8 +33,17 @@ from agent.filter_topic import filter_topic
 from agent.score import (score_clusters, load_rubric, load_previous_stories,
                           filter_previous_clusters, ScoreValidationError, ScoreResult)
 from agent.enrich import enrich_candidates
-from agent.compose import compose_items
-from agent.overview import generate_overview, load_previous_overviews
+from agent.compose import (
+    compose_items,
+    GoldenExamplesConfig,
+    GuardrailsConfig,
+    Persona,
+)
+from agent.overview import (
+    generate_overview,
+    load_previous_overviews,
+    OverviewExamplesConfig,
+)
 from agent.validate import assemble_briefing, EmptyBriefingError
 from agent.write import write_briefing, WriteRoundtripError
 from agent.llm import (
@@ -287,6 +296,128 @@ def _configured_topics(config_dir: Path) -> list[str]:
     topics = sorted(path.stem for path in (config_dir / "topics").glob("*.yaml"))
     if not topics:
         raise ValueError(f"No topic configurations found in {config_dir / 'topics'}")
+    return topics
+
+
+def _check_static_config(config_dir: Path) -> list[str]:
+    """Validate configured topics and static references without contacting providers."""
+    yaml_files = sorted(config_dir.rglob("*.yaml"))
+    if not yaml_files:
+        raise ValueError(f"No YAML configuration files found in {config_dir}")
+    for path in yaml_files:
+        try:
+            yaml.safe_load(path.read_text())
+        except (OSError, yaml.YAMLError) as error:
+            raise ValueError(f"Invalid YAML in {path}: {error}") from None
+
+    models_config = load_models_config(config_dir / "models.yaml")
+    if not isinstance(models_config, dict):
+        raise ValueError(f"{config_dir / 'models.yaml'} must be a mapping")
+    providers = models_config.get("providers")
+    if not isinstance(providers, dict) or not providers:
+        raise ValueError(f"{config_dir / 'models.yaml'} must define providers")
+    configured_steps = models_config.get("steps")
+    if not isinstance(configured_steps, dict):
+        raise ValueError(f"{config_dir / 'models.yaml'} must define steps")
+    unknown_steps = set(configured_steps) - set(LLM_STEPS)
+    if unknown_steps:
+        names = ", ".join(sorted(map(str, unknown_steps)))
+        raise ValueError(f"{config_dir / 'models.yaml'} has unknown LLM steps: {names}")
+
+    sources_path = config_dir / "sources.yaml"
+    sources_config = yaml.safe_load(sources_path.read_text())
+    source_entries = (
+        sources_config.get("sources") if isinstance(sources_config, dict) else None
+    )
+    if not isinstance(source_entries, list):
+        raise ValueError(f"{sources_path} must define a sources list")
+    source_keys = []
+    for index, entry in enumerate(source_entries):
+        if not isinstance(entry, dict) or not isinstance(entry.get("key"), str) or not entry["key"].strip():
+            raise ValueError(f"{sources_path} source {index} must define a non-empty key")
+        source_keys.append(entry["key"])
+    if len(source_keys) != len(set(source_keys)):
+        raise ValueError(f"{sources_path} contains duplicate source keys")
+    known_sources = set(source_keys)
+
+    topics = _configured_topics(config_dir)
+    for topic in topics:
+        topic_path = config_dir / "topics" / f"{topic}.yaml"
+        try:
+            topic_config = yaml.safe_load(topic_path.read_text())
+            if not isinstance(topic_config, dict):
+                raise ValueError("must be a mapping")
+            target_audience = topic_config.get("target_audience")
+            if not isinstance(target_audience, str) or not target_audience.strip():
+                raise ValueError("must define a non-empty target_audience")
+
+            topic_sources = topic_config.get("sources", [])
+            if not isinstance(topic_sources, list):
+                raise ValueError("sources must be a list")
+            for source in topic_sources:
+                if not isinstance(source, str) or source not in known_sources:
+                    raise ValueError(f"unknown source key {source!r}")
+
+            topic_step_models = _load_topic_step_models(topic_config)
+            unknown_steps = set(topic_step_models) - set(LLM_STEPS)
+            if unknown_steps:
+                names = ", ".join(sorted(map(str, unknown_steps)))
+                raise ValueError(f"unknown LLM steps: {names}")
+            model_chains = _resolve_model_chains(models_config, topic_step_models, {})
+            for step, chain in model_chains.items():
+                for model in chain:
+                    if model.provider not in providers:
+                        raise ValueError(
+                            f"step {step} references unknown provider {model.provider!r}"
+                        )
+                    provider_config = providers[model.provider]
+                    if not isinstance(provider_config, dict):
+                        raise ValueError(f"provider {model.provider!r} must be a mapping")
+                    provider_type = provider_config.get("type", "ollama")
+                    if provider_type not in {"ollama", "openrouter"}:
+                        raise ValueError(
+                            f"provider {model.provider!r} has unsupported type {provider_type!r}"
+                        )
+                    base_url = provider_config.get("base_url")
+                    base_url_env = provider_config.get("base_url_env")
+                    if not (isinstance(base_url, str) and base_url.strip()) and not (
+                        isinstance(base_url_env, str) and base_url_env.strip()
+                    ):
+                        raise ValueError(
+                            f"provider {model.provider!r} must define base_url or base_url_env"
+                        )
+
+            paths = ConfigPaths(config_dir, topic)
+            required_paths = (
+                paths.rubric,
+                paths.golden_examples_path,
+                paths.overview_examples,
+                paths.persona,
+                paths.guardrails,
+                paths.template_path,
+            )
+            for path in required_paths:
+                if not path.is_file():
+                    raise ValueError(f"required configuration file not found: {path}")
+
+            Persona.load(paths.persona)
+            GoldenExamplesConfig.load(paths.golden_examples_path)
+            GuardrailsConfig.load(paths.guardrails)
+            OverviewExamplesConfig.load(paths.overview_examples)
+            rubric = load_rubric(paths.rubric)
+            if not isinstance(rubric, dict):
+                raise ValueError(f"rubric {paths.rubric} must be a mapping")
+            item_bounds = rubric.get("items_per_briefing")
+            if not isinstance(item_bounds, dict):
+                raise ValueError(f"rubric {paths.rubric} must define items_per_briefing")
+            if any(not isinstance(item_bounds.get(key), int) for key in ("min", "max")):
+                raise ValueError(f"rubric {paths.rubric} items_per_briefing must define integer min and max")
+            if item_bounds["min"] < 1 or item_bounds["max"] < item_bounds["min"]:
+                raise ValueError(f"rubric {paths.rubric} has invalid items_per_briefing bounds")
+            TtsTemplate(paths.template_path)
+        except (OSError, KeyError, TypeError, ValueError, yaml.YAMLError) as error:
+            raise ValueError(f"Invalid configuration for topic {topic!r}: {error}") from None
+
     return topics
 
 
@@ -732,6 +863,11 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Check online model availability and exit without running the pipeline",
     )
+    parser.add_argument(
+        "--check-config",
+        action="store_true",
+        help="Check all configuration files and references without running the pipeline",
+    )
     parser.add_argument("--period", choices=[p.value for p in Period], default="daily")
     parser.add_argument("--since", help="ISO date, e.g. 2026-07-16")
     parser.add_argument("--until", help="ISO date (inclusive)")
@@ -748,6 +884,20 @@ def main(argv: list[str] | None = None) -> None:
 
     logging.basicConfig(level=logging.INFO if args.verbose else logging.WARNING,
                          format="%(levelname)s %(name)s: %(message)s")
+
+    if args.check_config:
+        if args.check_models:
+            parser.error("--check-config and --check-models cannot be combined")
+        if args.topic or args.all_topics:
+            parser.error("--check-config checks all topics; do not pass --topic or --all-topics")
+        if args.model_override:
+            parser.error("--model-override does not apply to --check-config")
+        try:
+            topics = _check_static_config(args.config_dir)
+        except (OSError, ValueError, yaml.YAMLError) as error:
+            parser.exit(1, f"ERROR (static config check): {error}\n")
+        print(f"Static config check passed for {len(topics)} topics: {', '.join(topics)}")
+        return
 
     model_overrides = _parse_model_overrides(args.model_override)
     if args.check_models:

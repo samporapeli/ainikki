@@ -53,6 +53,8 @@ Collect → Dedup → Cluster → Score → Enrich → Compose → Overview → 
 - OpenRouter LLM, paid models required
 - `strip_code_fences()` for all LLM responses before `json.loads()`
 - `response_format: {"type": "json_object"}` in OpenAI-compatible requests
+- After changing files under `config/`, run `./config-check.sh` to validate all topics and static references. This check is offline and does not write digest data.
+- When changing model chains, provider definitions, or endpoint settings, recommend `./preflight.sh --topic <topic>` before the next pipeline run. Recommend `./preflight.sh --all-topics` when shared model/provider config changes affect multiple topics. Preflight calls configured endpoints and needs their environment settings; it does not run the pipeline or write digest data.
 
 ## Site
 

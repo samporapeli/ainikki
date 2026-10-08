@@ -1,9 +1,9 @@
 # Ainikki — AI news digest agent
 
 Collects news from Hacker News and RSS feeds, deduplicates, clusters,
-scores, enriches, and writes Finnish-language digests. Two topics:
-**tekoäly** (daily) and **teknologia** (weekly). The Astro site renders
-output as static HTML.
+scores, enriches, and writes Finnish-language digests for AI (daily), FOSS
+(weekly), and technology (weekly). An internal test topic is also configured.
+The Astro site renders output as static HTML.
 
 ## Setup
 
@@ -29,6 +29,14 @@ Check configured models without running the pipeline or writing digest data:
 
     ./preflight.sh --topic ai
     ./preflight.sh --all-topics
+
+Preflight queries the configured model endpoints, so provider environment
+settings must be available. Run it after changing model/provider settings or
+before a pipeline run when endpoint availability may have changed.
+
+Check all configuration files and topic references without network access:
+
+    ./config-check.sh
 
 A/B compare models without editing config, or run against Ollama:
 

@@ -153,6 +153,68 @@ steps:
     assert "Model preflight passed for all topics" in capsys.readouterr().out
 
 
+def test_static_config_check_passes_production_config():
+    topics = pipeline_module._check_static_config(Path("config"))
+
+    assert topics == ["ai", "foss", "teknologia", "test"]
+
+
+def _write_minimal_static_config(config_dir, topic_source="known", compose_provider="local"):
+    topics_dir = config_dir / "topics"
+    topics_dir.mkdir(parents=True)
+    (config_dir / "models.yaml").write_text(f"""
+providers:
+  local: {{type: ollama, base_url_env: OLLAMA_HOST}}
+steps:
+  filter_topic: {{models: [{{provider: local, model: filter}}]}}
+  cluster: {{models: [{{provider: local, model: cluster}}]}}
+  score: {{models: [{{provider: local, model: score}}]}}
+  compose: {{models: [{{provider: local, model: compose}}]}}
+  overview: {{models: [{{provider: local, model: overview}}]}}
+""")
+    (config_dir / "sources.yaml").write_text("sources: [{key: known}]\n")
+    (topics_dir / "sample.yaml").write_text(f"""
+target_audience: test readers
+sources: [{topic_source}]
+steps:
+  compose:
+    models:
+      - provider: {compose_provider}
+        model: compose
+""")
+
+
+def test_static_config_check_rejects_unknown_topic_source(tmp_path):
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    _write_minimal_static_config(config_dir, topic_source="missing")
+
+    with pytest.raises(ValueError, match="topic 'sample'.*unknown source key 'missing'"):
+        pipeline_module._check_static_config(config_dir)
+
+
+def test_static_config_check_rejects_unknown_model_provider(tmp_path):
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    _write_minimal_static_config(config_dir, compose_provider="missing")
+
+    with pytest.raises(ValueError, match="topic 'sample'.*unknown provider 'missing'"):
+        pipeline_module._check_static_config(config_dir)
+
+
+def test_check_config_cli_exits_without_pipeline_or_dates(monkeypatch, capsys):
+    monkeypatch.setattr(pipeline_module, "_check_static_config", lambda _config_dir: ["ai", "foss"])
+    monkeypatch.setattr(
+        pipeline_module,
+        "run_pipeline",
+        lambda **_kwargs: pytest.fail("config-check mode ran the pipeline"),
+    )
+
+    pipeline_module.main(["--check-config"])
+
+    assert "Static config check passed for 2 topics: ai, foss" in capsys.readouterr().out
+
+
 def test_tracked_llm_duration_sums_failed_and_successful_attempts(monkeypatch):
     attempts = [
         {"provider": "local", "model": "missing", "status": "failed", "duration_ms": 7},
