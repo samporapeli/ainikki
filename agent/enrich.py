@@ -29,7 +29,7 @@ USER_AGENT = "ai-briefing-agent/0.1 (+https://github.com/samporapeli/ainikki; he
 # Context management: truncate article length before passing to Compose step.
 # Rough cut — can be improved later (e.g. cut at paragraph boundary instead
 # of at exact character limit).
-DEFAULT_MAX_CHARS = 6000
+DEFAULT_MAX_CHARS = 12000
 
 
 def fetch_html_raw(url: str, client: httpx.Client) -> str:
@@ -46,13 +46,20 @@ def extract_article_text(html: str, url: str | None = None,
     content was found (e.g. paywall/consent wall/blank page).
     Testable without network, see tests/test_enrich.py.
     """
+    text = _extract_article_text(html, url)
+    if text is None:
+        return None
+    return text[:max_chars]
+
+
+def _extract_article_text(html: str, url: str | None = None) -> str | None:
     text = trafilatura.extract(
         html, url=url, include_comments=False, include_tables=False,
         favor_precision=True,
     )
     if not text or len(text.strip()) < 100:
-        return None  # too little/no content — likely failed extraction
-    return text[:max_chars]
+        return None
+    return text
 
 
 def _is_allowed_by_robots(url: str, client: httpx.Client,
@@ -84,10 +91,19 @@ def _is_allowed_by_robots(url: str, client: httpx.Client,
     return allowed
 
 
+class ContentLength(NamedTuple):
+    rank: int
+    title: str
+    url: str
+    original_chars: int
+    passed_chars: int
+
+
 class EnrichResult(NamedTuple):
     items: list[EnrichedCandidate]
     dropped_stories: list[DroppedStory]
     warnings: list[str]
+    content_lengths: list[ContentLength]
 
 
 def enrich_candidates(scored: list[ScoredCandidate], client: httpx.Client,
@@ -95,11 +111,13 @@ def enrich_candidates(scored: list[ScoredCandidate], client: httpx.Client,
     kept: list[EnrichedCandidate] = []
     dropped_stories: list[DroppedStory] = []
     warnings: list[str] = []
+    content_lengths: list[ContentLength] = []
     robots_cache: dict[str, bool] = {}
 
     for sc in scored:
         primary = sc.items[0]
         content = None
+        original_chars = 0
         content_source = None
         failures: list[str] = []
 
@@ -111,7 +129,10 @@ def enrich_candidates(scored: list[ScoredCandidate], client: httpx.Client,
 
             try:
                 html = fetch_html_raw(url_str, client=client)
-                content = extract_article_text(html, url=url_str, max_chars=max_chars)
+                extracted_text = _extract_article_text(html, url=url_str)
+                if extracted_text is not None:
+                    original_chars = len(extracted_text)
+                    content = extracted_text[:max_chars]
             except httpx.HTTPError as e:
                 failures.append(f"'{source.title}': {e}")
                 continue
@@ -139,6 +160,14 @@ def enrich_candidates(scored: list[ScoredCandidate], client: httpx.Client,
             logger.warning(msg)
             warnings.append(msg)
 
+        content_lengths.append(ContentLength(
+            rank=sc.rank,
+            title=content_source.title,
+            url=str(content_source.url),
+            original_chars=original_chars,
+            passed_chars=len(content),
+        ))
+
         kept.append(EnrichedCandidate(
             items=sc.items, cluster_reason=sc.cluster_reason,
             n_urls=sc.n_urls,
@@ -146,4 +175,9 @@ def enrich_candidates(scored: list[ScoredCandidate], client: httpx.Client,
             content=content, content_source=content_source,
         ))
 
-    return EnrichResult(items=kept, dropped_stories=dropped_stories, warnings=warnings)
+    return EnrichResult(
+        items=kept,
+        dropped_stories=dropped_stories,
+        warnings=warnings,
+        content_lengths=content_lengths,
+    )

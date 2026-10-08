@@ -572,6 +572,7 @@ def run_pipeline(
     try:
         t0_enrich = perf_counter()
         enrich_result = enrich_candidates(initial_pool, client=ec)
+        enrich_content_lengths = list(enrich_result.content_lengths)
         all_warnings.extend(enrich_result.warnings)
         dropped_stories = enrich_result.dropped_stories
         step_durations["enrich"] = perf_counter() - t0_enrich
@@ -603,6 +604,7 @@ def run_pipeline(
                 if len(compose_result.items) >= min_items:
                     break
                 batch = enrich_candidates([sc], client=ec)
+                enrich_content_lengths.extend(batch.content_lengths)
                 all_warnings.extend(batch.warnings)
                 dropped_stories.extend(batch.dropped_stories)
                 if not batch.items:
@@ -790,6 +792,25 @@ def run_pipeline(
                 "duration_s": step_durations["enrich"],
                 "n_success": len(enrich_result.items),
                 "n_failed": len(enrich_result.dropped_stories),
+                "n_truncated": sum(
+                    entry.original_chars > entry.passed_chars
+                    for entry in enrich_content_lengths
+                ),
+                "total_truncated_chars": sum(
+                    entry.original_chars - entry.passed_chars
+                    for entry in enrich_content_lengths
+                ),
+                "content_lengths": [
+                    {
+                        "rank": entry.rank,
+                        "title": entry.title,
+                        "url": entry.url,
+                        "original_chars": entry.original_chars,
+                        "passed_chars": entry.passed_chars,
+                        "truncated_chars": entry.original_chars - entry.passed_chars,
+                    }
+                    for entry in enrich_content_lengths
+                ],
                 "dropped": [
                     {"title": d.title, "url": d.url}
                     for d in enrich_result.dropped_stories
