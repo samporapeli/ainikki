@@ -25,6 +25,11 @@ Each module has its own test file under `tests/test_*.py`.
 `--verbose` shows INFO-level logs for each step (item counts in/out) —
 recommended for first runs.
 
+Check configured models without running the pipeline or writing digest data:
+
+    ./preflight.sh --topic ai
+    ./preflight.sh --all-topics
+
 A/B compare models without editing config, or run against Ollama:
 
     ./pipeline.sh --topic ai --since 2026-07-16 --until 2026-07-16 \

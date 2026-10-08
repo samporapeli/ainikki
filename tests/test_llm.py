@@ -12,9 +12,11 @@ import pytest
 
 from agent.llm import (
     ProviderEndpoint,
+    StepModelConfig,
     _post_chat_completion,
     _resolve_provider,
     make_llm_call,
+    preflight,
     resolve_step_config,
     resolve_step_configs,
 )
@@ -580,3 +582,180 @@ def test_resolve_local_provider_missing_env_var_raises(monkeypatch):
     cfg = resolve_step_config("cluster", config)
     with pytest.raises(ValueError, match="OLLAMA_HOST"):
         _resolve_provider(cfg, config)
+
+
+# -- preflight tests ----------------------------------------------------------
+
+def _preflight_ollama_handler(models):
+    """A capture handler that records the first request and serves tags."""
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        assert request.method == "GET"
+        # The local (ollama) provider has no api_key/api_key_env, so no
+        # Authorization header is sent for the ollama preflight request.
+        assert request.headers.get("Authorization") is None
+        return httpx.Response(200, json={"models": models})
+
+    return handler, captured
+
+
+def test_preflight_ollama_success():
+    """Both configured Ollama models are verified present by model name."""
+    handler, captured = _preflight_ollama_handler(
+        [{"name": "ornith:35b"}, {"model": "some/model"}]
+    )
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+
+    preflight(
+        {"cluster": [
+            StepModelConfig(provider="local", model="ornith:35b"),
+            StepModelConfig(provider="local", model="some/model"),
+        ]},
+        _fixture_config(),
+        client=client,
+    )
+
+    assert captured["url"] == "http://test.invalid/api/tags"
+
+
+def test_preflight_openrouter_success():
+    """Configured OpenRouter model is verified present by id."""
+    router_cfg = {
+        "providers": {
+            "openrouter": {
+                "type": "openrouter",
+                "base_url": "https://openrouter.ai/api/v1",
+                "api_key": "test-key",
+            }
+        },
+        "steps": {},
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/v1/models"
+        assert request.headers["Authorization"].startswith("Bearer test-key")
+        return httpx.Response(200, json={
+            "data": [{"id": "meta/llama"}],
+        })
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+
+    preflight(
+        {"score": [StepModelConfig(provider="openrouter", model="meta/llama")]},
+        router_cfg,
+        client=client,
+    )
+
+
+def test_preflight_checks_each_openrouter_endpoint_once():
+    config = {
+        "providers": {
+            "router_a": {"type": "openrouter", "base_url": "https://one.example/api/v1"},
+            "router_b": {"type": "openrouter", "base_url": "https://two.example/api/v1"},
+        },
+        "steps": {},
+    }
+    requests = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(str(request.url))
+        model = "org/a" if request.url.host == "one.example" else "org/b"
+        return httpx.Response(200, json={"data": [{"id": model}]})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    preflight(
+        {
+            "score": [StepModelConfig(provider="router_a", model="org/a")],
+            "compose": [StepModelConfig(provider="router_b", model="org/b")],
+        },
+        config,
+        client=client,
+    )
+
+    assert requests == [
+        "https://one.example/api/v1/models",
+        "https://two.example/api/v1/models",
+    ]
+
+
+def test_preflight_ollama_missing_model_raises():
+    """A configured Ollama model absent from /api/tags raises a clean
+    ``ValueError`` that names the step and model but omits the url and
+    response body."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"models": [{"name": "other:7b"}]})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+
+    with pytest.raises(ValueError) as exc:
+        preflight(
+            {"cluster": [StepModelConfig(provider="local", model="ornith:35b")]},
+            _fixture_config(),
+            client=client,
+        )
+    message = str(exc.value)
+    assert "ornith:35b" in message
+    assert "step cluster" in message
+    assert "not installed" in message
+    assert "test.invalid" not in message
+    assert "other:7b" not in message
+
+
+def test_preflight_openrouter_rejects_mandatory_reasoning(monkeypatch):
+    """A ``thinking=False`` model whose metadata marks ``reasoning.mandatory``
+    is rejected."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={
+            "data": [{"id": "meta/llama", "reasoning": {"effort": "low",
+                                                        "mandatory": True}}],
+        })
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    monkeypatch.setenv("OPENROUTER_PROD_API_KEY", "test-key")
+
+    with pytest.raises(ValueError, match="step score.*mandatory"):
+        preflight(
+            {"score": [StepModelConfig(provider="openrouter", model="meta/llama", thinking=False)]},
+            _fixture_config(),
+            client=client,
+        )
+
+
+def test_preflight_request_failure_raises(monkeypatch):
+    """A non-2xx model request raises a clean error that never leaks
+    responses or credentials."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, json={"error": "secret-status-body"})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    monkeypatch.setenv("OPENROUTER_PROD_API_KEY", "test-key")
+
+    with pytest.raises(ValueError) as exc:
+        preflight(
+            {"score": [StepModelConfig(provider="openrouter", model="meta/llama")]},
+            _fixture_config(),
+            client=client,
+        )
+    message = str(exc.value)
+    assert "openrouter" in message
+    assert "meta/llama" in message
+    assert "secret-status-body" not in message
+    assert "Bearer notoken" not in message
+    assert "client.close" not in message
+
+
+def test_preflight_requires_configured_api_key_env(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_PROD_API_KEY", raising=False)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        pytest.fail(f"unexpected request to {request.url}")
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    with pytest.raises(ValueError, match="OPENROUTER_PROD_API_KEY.*not set"):
+        preflight(
+            {"score": [StepModelConfig(provider="openrouter", model="meta/llama")]},
+            _fixture_config(),
+            client=client,
+        )

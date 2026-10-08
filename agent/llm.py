@@ -409,6 +409,179 @@ def _resolve_provider(
     )
 
 
+def _preflight_strip_v1(base_url: str) -> str:
+    """Strip a trailing ``/v1`` segment, mirroring the chat request logic."""
+    if base_url.endswith("/v1"):
+        return base_url[:-3]
+    return base_url
+
+
+def _preflight_identity(step: str, config: StepModelConfig) -> str:
+    return f"step {step}, provider {config.provider}, model {config.model}"
+
+
+def _preflight_check_ollama(provider: ProviderEndpoint, configs, client: httpx.Client) -> None:
+    identity = _preflight_identity(*configs[0])
+    try:
+        tags_url = f"{_preflight_strip_v1(provider.base_url)}/api/tags"
+        resp = client.request("GET", tags_url, timeout=provider.timeout)
+        resp.raise_for_status()
+        payload = resp.json()
+    except httpx.HTTPError:
+        raise ValueError(
+            f"Model preflight failed for {identity}: "
+            "the remote Ollama endpoint was unreachable or returned a "
+            "non-success HTTP status."
+        ) from None
+    except ValueError:
+        raise ValueError(
+            f"Model preflight failed for {identity}: "
+            "the remote Ollama endpoint returned invalid JSON."
+        ) from None
+    if not isinstance(payload, dict) or not isinstance(payload.get("models"), list):
+        raise ValueError(
+            f"Model preflight failed for {identity}: "
+            "the Ollama endpoint returned an invalid model list."
+        )
+    available = set()
+    for entry in payload["models"]:
+        if not isinstance(entry, dict):
+            continue
+        for key in ("name", "model"):
+            value = entry.get(key)
+            if value:
+                available.add(str(value))
+    for step, config in configs:
+        if config.model not in available:
+            raise ValueError(
+                f"Model preflight failed for {_preflight_identity(step, config)}: "
+                "the model is not installed at the Ollama endpoint."
+            )
+
+
+def _preflight_check_openrouter(provider: ProviderEndpoint, configs, client: httpx.Client) -> None:
+    identity = _preflight_identity(*configs[0])
+    headers = {k: v for chunk in provider.auth_headers or [] for k, v in chunk.items()}
+    try:
+        models_url = f"{provider.base_url.rstrip('/')}/models"
+        resp = client.request("GET", models_url, headers=headers, timeout=provider.timeout)
+        resp.raise_for_status()
+        payload = resp.json()
+    except httpx.HTTPError:
+        raise ValueError(
+            f"Model preflight failed for {identity}: "
+            "the remote OpenRouter endpoint was unreachable or returned a "
+            "non-success HTTP status."
+        ) from None
+    except ValueError:
+        raise ValueError(
+            f"Model preflight failed for {identity}: "
+            "the OpenRouter endpoint returned invalid JSON."
+        ) from None
+    if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
+        raise ValueError(
+            f"Model preflight failed for {identity}: "
+            "the OpenRouter endpoint returned an invalid model list."
+        )
+    known = {
+        entry["id"]: entry for entry in payload["data"]
+        if isinstance(entry, dict) and isinstance(entry.get("id"), str)
+    }
+    for step, config in configs:
+        model = config.model
+        metadata = known.get(model)
+        if metadata is None:
+            raise ValueError(
+                f"Model preflight failed for {_preflight_identity(step, config)}: "
+                "the model id is not listed by OpenRouter."
+            )
+        if config.thinking is False:
+            reasoning = metadata.get("reasoning")
+            if isinstance(reasoning, dict) and reasoning.get("mandatory") is True:
+                raise ValueError(
+                    f"Model preflight failed for {_preflight_identity(step, config)}: "
+                    "reasoning is mandatory, so thinking: false is not supported."
+                )
+
+
+def preflight(
+    model_chains: dict[str, list[StepModelConfig]],
+    config: dict,
+    client: httpx.Client | None = None,
+    resolved_providers: dict[tuple[str, str, float | None], ProviderEndpoint] | None = None,
+) -> dict[tuple[str, str, float | None], ProviderEndpoint]:
+    """Validate all resolved model chains against their provider endpoints.
+
+    Runs one HTTP request per unique provider endpoint and returns the resolved
+    endpoints for reuse by the model calls.
+
+    * Ollama endpoints: ``GET /api/tags`` (trailing ``/v1`` stripped like the
+      chat request) and every configured model name is confirmed present in the
+      returned ``models`` list under ``name`` or ``model``.
+    * OpenRouter endpoints: ``GET /models`` once (with the resolved auth
+      headers) and every configured model id is confirmed present. A model
+      configured with ``thinking=False`` is only rejected when its returned
+      metadata reports ``reasoning.mandatory`` as ``true``.
+
+    Uses each provider's timeout and never surfaces credentials, base URLs or
+    raw response bodies in error messages.
+    """
+    resolved_providers = resolved_providers if resolved_providers is not None else {}
+
+    owns_client = client is None
+    client = client or httpx.Client()
+    try:
+        groups: dict[tuple[str, str, tuple[tuple[str, str], ...]], tuple[ProviderEndpoint, list]] = {}
+        for step, step_configs in model_chains.items():
+            for step_config in step_configs:
+                provider_key = (
+                    step_config.provider, step_config.model, step_config.timeout
+                )
+                provider = resolved_providers.get(provider_key)
+                if provider is None:
+                    try:
+                        provider = _resolve_provider(step_config, config)
+                    except ValueError as error:
+                        raise ValueError(
+                            f"Model preflight failed for "
+                            f"{_preflight_identity(step, step_config)}: {error}"
+                        ) from None
+                    resolved_providers[provider_key] = provider
+                provider_config = (config.get("providers") or {}).get(
+                    step_config.provider, {}
+                )
+                if (provider_config.get("api_key_env") or
+                        provider_config.get("api_key") is not None) and not provider.auth_headers:
+                    key_env = provider_config.get("api_key_env")
+                    detail = (
+                        f"environment variable {key_env!r} is not set"
+                        if key_env else "the configured API key is empty"
+                    )
+                    raise ValueError(
+                        f"Model preflight failed for "
+                        f"{_preflight_identity(step, step_config)}: {detail}."
+                    )
+                headers = tuple(sorted(
+                    (key, value)
+                    for chunk in provider.auth_headers or []
+                    for key, value in chunk.items()
+                ))
+                endpoint_key = (provider.type, provider.base_url.rstrip("/"), headers)
+                if endpoint_key not in groups:
+                    groups[endpoint_key] = (provider, [])
+                groups[endpoint_key][1].append((step, step_config))
+
+        for provider, configs in groups.values():
+            if provider.type == "ollama":
+                _preflight_check_ollama(provider, configs, client)
+            elif provider.type == "openrouter":
+                _preflight_check_openrouter(provider, configs, client)
+        return resolved_providers
+    finally:
+        if owns_client:
+            client.close()
+
+
 def make_llm_call(
     step: str,
     config_path: Path = Path("config/models.yaml"),
@@ -416,9 +589,17 @@ def make_llm_call(
     override_provider: str | None = None,
     step_models_override: list[dict] | None = None,
     client: httpx.Client | None = None,
+    models_config: dict | None = None,
+    resolved_providers: dict[tuple[str, str, float | None], ProviderEndpoint] | None = None,
 ):
-    """Return an LLM call function with an ordered model fallback chain."""
-    config = load_models_config(config_path)
+    """Return an LLM call function with an ordered model fallback chain.
+
+    When ``models_config`` is supplied the model YAML is not re-read; the
+    caller already loaded it once. Likewise, ``resolved_providers`` (produced
+    by :func:`preflight`) reuses provider endpoints without re-interpolating
+    their credentials.
+    """
+    config = models_config if models_config is not None else load_models_config(config_path)
     model_chain = resolve_step_configs(
         step,
         config,
@@ -430,13 +611,24 @@ def make_llm_call(
     def _call(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
         last_error: Exception | None = None
         attempts: list[dict] = []
+        # Distinct provider/model entries with different explicit timeouts may
+        # share the cached resolved ProviderEndpoint; the timeout difference is
+        # captured in the cache key so a wrong timeout is never shared.
+        provider_cache: dict[tuple[str, str, float | None], ProviderEndpoint] = {}
         for index, step_cfg in enumerate(model_chain):
             provider = None
             model_attempts: list[dict] = []
             owns_client = client is None
             c = None
             try:
-                provider = _resolve_provider(step_cfg, config)
+                key = (step_cfg.provider, step_cfg.model, step_cfg.timeout)
+                provider = provider_cache.get(key)
+                if provider is None:
+                    if resolved_providers is not None:
+                        provider = resolved_providers.get(key)
+                    if provider is None:
+                        provider = _resolve_provider(step_cfg, config)
+                    provider_cache[key] = provider
                 c = client or httpx.Client(timeout=provider.timeout)
                 content, usage = _post_chat_completion(
                     provider=provider,

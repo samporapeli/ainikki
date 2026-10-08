@@ -37,7 +37,12 @@ from agent.compose import compose_items
 from agent.overview import generate_overview, load_previous_overviews
 from agent.validate import assemble_briefing, EmptyBriefingError
 from agent.write import write_briefing, WriteRoundtripError
-from agent.llm import make_llm_call, load_models_config
+from agent.llm import (
+    make_llm_call,
+    load_models_config,
+    preflight,
+    resolve_step_configs,
+)
 from agent.tts import synthesize, load_tts_config, read_audio_duration_s
 from agent.tts_template import TtsTemplate
 
@@ -134,7 +139,8 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
                       topic_step_models: dict[str, list[dict]] | None = None,
                       client: httpx.Client | None = None,
                       llm_prompts_out: dict[str, list[dict]] | None = None,
-                      failure_debug_path: Path | None = None):
+                      failure_debug_path: Path | None = None,
+                      resolved_providers: dict | None = None):
     """Build an LLM call and collect usage and traceability metadata."""
     provider_override, model_override = overrides.get(step, (None, None))
     step_models_override = (topic_step_models or {}).get(step)
@@ -146,6 +152,8 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
         override_provider=provider_override,
         step_models_override=step_models_override,
         client=client,
+        models_config=models_config,
+        resolved_providers=resolved_providers,
     )
 
     step_stats = {
@@ -233,6 +241,55 @@ def _resolve_llm_call(step: str, models_config: dict, config_paths: ConfigPaths,
     return _tracked_call
 
 
+def _resolve_model_chains(
+    models_config: dict,
+    topic_step_models: dict[str, list[dict]],
+    model_overrides: dict[str, tuple[str | None, str | None]],
+) -> dict[str, list]:
+    return {
+        step: resolve_step_configs(
+            step,
+            models_config,
+            model_entries=topic_step_models.get(step),
+            override_model=model_overrides.get(step, (None, None))[1],
+            override_provider=model_overrides.get(step, (None, None))[0],
+        )
+        for step in LLM_STEPS
+    }
+
+
+def _check_topics_models(
+    topics: list[str],
+    config_dir: Path,
+    model_overrides: dict[str, tuple[str | None, str | None]],
+) -> dict[str, list]:
+    models_config = load_models_config(config_dir / "models.yaml")
+    model_chains: dict[str, list] = {}
+    for topic in topics:
+        topic_config_path = config_dir / "topics" / f"{topic}.yaml"
+        if not topic_config_path.exists():
+            raise ValueError(f"Topic configuration not found: {topic_config_path}")
+        topic_config = yaml.safe_load(topic_config_path.read_text())
+        if not isinstance(topic_config, dict):
+            raise ValueError(f"Topic configuration must be a mapping: {topic_config_path}")
+        topic_step_models = _load_topic_step_models(topic_config)
+        topic_chains = _resolve_model_chains(
+            models_config, topic_step_models, model_overrides
+        )
+        model_chains.update({
+            f"{topic}.{step}": chain for step, chain in topic_chains.items()
+        })
+    preflight(model_chains, models_config)
+    return model_chains
+
+
+def _configured_topics(config_dir: Path) -> list[str]:
+    topics = sorted(path.stem for path in (config_dir / "topics").glob("*.yaml"))
+    if not topics:
+        raise ValueError(f"No topic configurations found in {config_dir / 'topics'}")
+    return topics
+
+
 def run_pipeline(
     topic: str, period: Period, since: datetime, until: datetime,
     config_dir: Path = Path("config"), data_dir: Path = Path("data"),
@@ -259,6 +316,15 @@ def run_pipeline(
         )
     topic_step_models = _load_topic_step_models(topic_config)
     target_audience = topic_config["target_audience"]
+
+    # Resolve and preflight every LLM model chain once, up front, so the
+    # resolved provider endpoints can be reused by the actual model calls
+    # without re-reading models.yaml or interpolating env values per call.
+    models_config = load_models_config(config_paths.models)
+    model_chains = _resolve_model_chains(
+        models_config, topic_step_models, model_overrides
+    )
+    resolved_providers = preflight(model_chains, models_config, client=llm_client)
     effective_display_date = display_date or since.date()
     date_str = effective_display_date.isoformat()
     all_warnings: list[str] = []
@@ -304,7 +370,6 @@ def run_pipeline(
     step_durations["dedup"] = perf_counter() - t0
     logger.info("dedup: %d -> %d candidates (%.2fs)", len(raw_items), len(candidates), step_durations["dedup"])
 
-    models_config = load_models_config(config_paths.models)
     models_used: dict[str, str] = {}
     llm_stats: dict[str, dict] = {}
     llm_prompts: dict[str, list[dict]] = {}
@@ -317,7 +382,8 @@ def run_pipeline(
                                    llm_stats_out=llm_stats, models_used_out=models_used,
                                    topic_step_models=topic_step_models, client=llm_client,
                                    llm_prompts_out=llm_prompts,
-                                   failure_debug_path=failure_debug_path)
+                                   failure_debug_path=failure_debug_path,
+                                   resolved_providers=resolved_providers)
     topic_description = topic_config.get("topic_description", topic)
     filter_result = filter_topic(candidates, topic_description, llm_filter)
     if filter_result.warning:
@@ -332,7 +398,8 @@ def run_pipeline(
                                     llm_stats_out=llm_stats, models_used_out=models_used,
                                     topic_step_models=topic_step_models, client=llm_client,
                                     llm_prompts_out=llm_prompts,
-                                    failure_debug_path=failure_debug_path)
+                                    failure_debug_path=failure_debug_path,
+                                    resolved_providers=resolved_providers)
     cluster_result = cluster_candidates(filter_result.candidates, llm_cluster)
     if cluster_result.warning:
         all_warnings.append(cluster_result.warning)
@@ -345,7 +412,8 @@ def run_pipeline(
                                   llm_stats_out=llm_stats, models_used_out=models_used,
                                   topic_step_models=topic_step_models, client=llm_client,
                                   llm_prompts_out=llm_prompts,
-                                  failure_debug_path=failure_debug_path)
+                                  failure_debug_path=failure_debug_path,
+                                  resolved_providers=resolved_providers)
     min_items = rubric["items_per_briefing"]["min"]
     previous_stories = load_previous_stories(topic, since.date(), output_dir=out_dir)
     clusters_before = len(cluster_result.clusters)
@@ -384,7 +452,8 @@ def run_pipeline(
                                         llm_stats_out=llm_stats, models_used_out=models_used,
                                         topic_step_models=topic_step_models, client=llm_client,
                                         llm_prompts_out=llm_prompts,
-                                        failure_debug_path=failure_debug_path)
+                                        failure_debug_path=failure_debug_path,
+                                        resolved_providers=resolved_providers)
         compose_result = compose_items(enrich_result.items, config_paths.persona,
                                         config_paths.guardrails, llm_compose,
                                         topic=topic,
@@ -426,7 +495,8 @@ def run_pipeline(
                                      llm_stats_out=llm_stats, models_used_out=models_used,
                                      topic_step_models=topic_step_models, client=llm_client,
                                      llm_prompts_out=llm_prompts,
-                                     failure_debug_path=failure_debug_path)
+                                     failure_debug_path=failure_debug_path,
+                                     resolved_providers=resolved_providers)
     previous_overviews = load_previous_overviews(topic, since.date(), days=5, output_dir=out_dir)
     overview_result = generate_overview(compose_result.items, llm_overview, topic,
                                          examples_path=config_paths.overview_examples,
@@ -654,10 +724,17 @@ def _parse_model_overrides(raw_overrides: list[str]) -> dict[str, tuple[str | No
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="AI news digest agent")
-    parser.add_argument("--topic", required=True)
+    topic_group = parser.add_mutually_exclusive_group()
+    topic_group.add_argument("--topic")
+    topic_group.add_argument("--all-topics", action="store_true")
+    parser.add_argument(
+        "--check-models",
+        action="store_true",
+        help="Check online model availability and exit without running the pipeline",
+    )
     parser.add_argument("--period", choices=[p.value for p in Period], default="daily")
-    parser.add_argument("--since", required=True, help="ISO date, e.g. 2026-07-16")
-    parser.add_argument("--until", required=True, help="ISO date (inclusive)")
+    parser.add_argument("--since", help="ISO date, e.g. 2026-07-16")
+    parser.add_argument("--until", help="ISO date (inclusive)")
     parser.add_argument("--config-dir", default="config", type=Path)
     parser.add_argument("--data-dir", default="data", type=Path)
     parser.add_argument("--out-dir", default=None, type=Path)
@@ -672,12 +749,34 @@ def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=logging.INFO if args.verbose else logging.WARNING,
                          format="%(levelname)s %(name)s: %(message)s")
 
+    model_overrides = _parse_model_overrides(args.model_override)
+    if args.check_models:
+        if not args.topic and not args.all_topics:
+            parser.error("--check-models requires --topic or --all-topics")
+        try:
+            topics = _configured_topics(args.config_dir) if args.all_topics else [args.topic]
+            model_chains = _check_topics_models(topics, args.config_dir, model_overrides)
+        except (OSError, ValueError, yaml.YAMLError) as error:
+            parser.exit(1, f"ERROR (model preflight): {error}\n")
+        scope = "all topics" if args.all_topics else f"topic '{args.topic}'"
+        print(f"Model preflight passed for {scope}:")
+        for step, chain in model_chains.items():
+            models = ", ".join(f"{model.provider}/{model.model}" for model in chain)
+            print(f"  {step}: {models}")
+        return
+
+    if args.all_topics:
+        parser.error("--all-topics is only valid with --check-models")
+    if not args.topic:
+        parser.error("--topic is required unless --all-topics is set with --check-models")
+    if not args.since or not args.until:
+        parser.error("--since and --until are required unless --check-models is set")
+
     since_date = date.fromisoformat(args.since)
     until_date = date.fromisoformat(args.until)
     since_dt = datetime.combine(since_date, time.min, tzinfo=timezone.utc)
     until_dt = datetime.combine(until_date + timedelta(days=1), time.min, tzinfo=timezone.utc)
 
-    model_overrides = _parse_model_overrides(args.model_override)
     display_date = date.fromisoformat(args.display_date) if args.display_date else None
 
     try:

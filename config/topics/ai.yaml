@@ -26,6 +26,14 @@ tts:
   enabled: true
   provider: google-cloud
   voice: fi-FI-Chirp3-HD-Achird
+steps:
+  compose:
+    models:
+      - provider: openrouter
+        model: "mistralai/mistral-large-4-0"
+        thinking: false
+      - provider: openrouter
+        model: "google/gemini-3.8-flash"
 sources:
   - hn
   - yle-tiede

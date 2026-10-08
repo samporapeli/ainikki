@@ -16,6 +16,143 @@ import agent.pipeline as pipeline_module
 CLEAN_HTML = Path("tests/fixtures/article_clean.html").read_text()
 
 
+@pytest.fixture(autouse=True)
+def skip_online_preflight_by_default(monkeypatch):
+    monkeypatch.setattr(pipeline_module, "preflight", lambda *_args, **_kwargs: {})
+
+
+def test_pipeline_preflights_active_chains_before_collection(tmp_path, monkeypatch):
+    config_dir = tmp_path / "config"
+    topics_dir = config_dir / "topics"
+    topics_dir.mkdir(parents=True)
+    (config_dir / "models.yaml").write_text("""
+providers:
+  local:
+    type: ollama
+    base_url: http://localhost:11434
+  openrouter:
+    type: openrouter
+    base_url: https://openrouter.ai/api/v1
+steps:
+  filter_topic: {models: [{provider: local, model: default-filter}]}
+  cluster: {models: [{provider: local, model: default-cluster}]}
+  score: {models: [{provider: local, model: default-score}]}
+  compose: {models: [{provider: local, model: default-compose}]}
+  overview: {models: [{provider: local, model: default-overview}]}
+""")
+    (topics_dir / "sample.yaml").write_text("""
+target_audience: test readers
+public: false
+steps:
+  compose:
+    models:
+      - provider: local
+        model: topic-compose
+""")
+    observed = {}
+
+    def preflight_probe(model_chains, _config, client=None):
+        observed.update(model_chains)
+        raise RuntimeError("preflight complete")
+
+    monkeypatch.setattr(pipeline_module, "preflight", preflight_probe)
+    monkeypatch.setattr(
+        pipeline_module,
+        "_load_sources_config",
+        lambda *_args: pytest.fail("collection started before preflight"),
+    )
+
+    since = datetime(2026, 7, 16, tzinfo=timezone.utc)
+    with pytest.raises(RuntimeError, match="preflight complete"):
+        run_pipeline(
+            topic="sample",
+            period=Period.daily,
+            since=since,
+            until=since + timedelta(days=1),
+            config_dir=config_dir,
+            data_dir=tmp_path / "data",
+            out_dir=tmp_path / "out",
+            model_overrides={"score": ("openrouter", "cli-score")},
+        )
+
+    assert set(observed) == set(pipeline_module.LLM_STEPS)
+    assert observed["compose"][0].model == "topic-compose"
+    assert observed["score"][0].provider == "openrouter"
+    assert observed["score"][0].model == "cli-score"
+
+
+def test_check_models_cli_exits_without_running_pipeline(tmp_path, monkeypatch, capsys):
+    config_dir = tmp_path / "config"
+    topics_dir = config_dir / "topics"
+    topics_dir.mkdir(parents=True)
+    (config_dir / "models.yaml").write_text("""
+providers:
+  local: {type: ollama, base_url: http://localhost:11434}
+steps:
+  filter_topic: {models: [{provider: local, model: filter}]}
+  cluster: {models: [{provider: local, model: cluster}]}
+  score: {models: [{provider: local, model: score}]}
+  compose: {models: [{provider: local, model: compose}]}
+  overview: {models: [{provider: local, model: overview}]}
+""")
+    (topics_dir / "sample.yaml").write_text("steps: {}\n")
+    monkeypatch.setattr(
+        pipeline_module,
+        "run_pipeline",
+        lambda **_kwargs: pytest.fail("check-only mode ran the pipeline"),
+    )
+
+    pipeline_module.main([
+        "--check-models",
+        "--topic",
+        "sample",
+        "--config-dir",
+        str(config_dir),
+    ])
+
+    assert "Model preflight passed for topic 'sample'" in capsys.readouterr().out
+
+
+def test_check_models_cli_checks_all_topics_in_one_preflight(tmp_path, monkeypatch, capsys):
+    config_dir = tmp_path / "config"
+    topics_dir = config_dir / "topics"
+    topics_dir.mkdir(parents=True)
+    (config_dir / "models.yaml").write_text("""
+providers:
+  local: {type: ollama, base_url: http://localhost:11434}
+steps:
+  filter_topic: {models: [{provider: local, model: filter}]}
+  cluster: {models: [{provider: local, model: cluster}]}
+  score: {models: [{provider: local, model: score}]}
+  compose: {models: [{provider: local, model: compose}]}
+  overview: {models: [{provider: local, model: overview}]}
+""")
+    (topics_dir / "alpha.yaml").write_text("steps: {}\n")
+    (topics_dir / "beta.yaml").write_text("steps: {}\n")
+    calls = []
+    monkeypatch.setattr(
+        pipeline_module,
+        "preflight",
+        lambda chains, _config: calls.append(chains),
+    )
+    monkeypatch.setattr(
+        pipeline_module,
+        "run_pipeline",
+        lambda **_kwargs: pytest.fail("check-only mode ran the pipeline"),
+    )
+
+    pipeline_module.main([
+        "--check-models",
+        "--all-topics",
+        "--config-dir",
+        str(config_dir),
+    ])
+
+    assert len(calls) == 1
+    assert {key.split(".")[0] for key in calls[0]} == {"alpha", "beta"}
+    assert "Model preflight passed for all topics" in capsys.readouterr().out
+
+
 def test_tracked_llm_duration_sums_failed_and_successful_attempts(monkeypatch):
     attempts = [
         {"provider": "local", "model": "missing", "status": "failed", "duration_ms": 7},
